@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ProjectFlow</h1>
+            <p>Workflow Management for AI-Assisted Development</p>
+        </header>
+
+        <div class="actions">
+            <div class="view-controls">
+                <button id="kanban-view-btn" class="btn btn-secondary view-btn active">Kanban View</button>
+                <button id="hierarchy-view-btn" class="btn btn-secondary view-btn">Hierarchy View</button>
+            </div>
+            <button id="new-task-btn" class="btn btn-primary">New Task</button>
+        </div>
+
+        <div class="task-board">
+            <div class="column" data-status="todo">
+                <h3>To Do</h3>
+                <div class="task-list" id="todo-tasks">
+                    {{range .Tasks}}
+                        {{if eq .Status "todo"}}
+                            <div class="task-card" data-id="{{.ID}}">
+                                <div class="task-header">
+                                    <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
+                                    <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
+                                </div>
+                                <h4 class="task-title">{{.Title}}</h4>
+                                <p class="task-description">{{.Description}}</p>
+                                <div class="task-meta">
+                                    <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .Children}}
+                                        <span class="task-children">{{len .Children}} subtasks</span>
+                                    {{end}}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="btn btn-sm btn-secondary edit-task" data-id="{{.ID}}">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-task" data-id="{{.ID}}">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="column" data-status="in_progress">
+                <h3>In Progress</h3>
+                <div class="task-list" id="in-progress-tasks">
+                    {{range .Tasks}}
+                        {{if eq .Status "in_progress"}}
+                            <div class="task-card" data-id="{{.ID}}">
+                                <div class="task-header">
+                                    <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
+                                    <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
+                                </div>
+                                <h4 class="task-title">{{.Title}}</h4>
+                                <p class="task-description">{{.Description}}</p>
+                                <div class="task-meta">
+                                    <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .Children}}
+                                        <span class="task-children">{{len .Children}} subtasks</span>
+                                    {{end}}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="btn btn-sm btn-secondary edit-task" data-id="{{.ID}}">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-task" data-id="{{.ID}}">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="column" data-status="done">
+                <h3>Done</h3>
+                <div class="task-list" id="done-tasks">
+                    {{range .Tasks}}
+                        {{if eq .Status "done"}}
+                            <div class="task-card" data-id="{{.ID}}">
+                                <div class="task-header">
+                                    <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
+                                    <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
+                                </div>
+                                <h4 class="task-title">{{.Title}}</h4>
+                                <p class="task-description">{{.Description}}</p>
+                                <div class="task-meta">
+                                    <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .Children}}
+                                        <span class="task-children">{{len .Children}} subtasks</span>
+                                    {{end}}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="btn btn-sm btn-secondary edit-task" data-id="{{.ID}}">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-task" data-id="{{.ID}}">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Hierarchy View (initially hidden) -->
+        <div id="hierarchy-view" class="hierarchy-view" style="display: none;">
+            <div class="hierarchy-container">
+                <!-- Hierarchy content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">New Task</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Title *</label>
+                    <input type="text" id="task-title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" name="description" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-type">Type</label>
+                        <select id="task-type" name="type">
+                            <option value="task">Task</option>
+                            <option value="story">Story</option>
+                            <option value="epic">Epic</option>
+                            <option value="subtask">Subtask</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="task-status">Status</label>
+                    <select id="task-status" name="status">
+                        <option value="todo" selected>To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
