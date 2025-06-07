@@ -462,8 +462,9 @@ function renderTimelineView(tasks) {
         return;
     }
     
-    // Get current date and range
+    // Get current date and range (normalize to start of day for consistent comparison)
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day
     const endDate = new Date(today.getTime() + (timelineRange * 24 * 60 * 60 * 1000));
     
     // Filter tasks with due dates within range and sort by due date
@@ -471,6 +472,7 @@ function renderTimelineView(tasks) {
         .filter(task => {
             if (!task.due_date) return false;
             const dueDate = new Date(task.due_date);
+            dueDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
             return dueDate >= today && dueDate <= endDate;
         })
         .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
