@@ -401,6 +401,8 @@ function createHierarchyElement(hierarchyTask, level) {
                 <div class="hierarchy-meta">
                     <span class="hierarchy-badge status-${task.status}">${task.status.replace('_', ' ')}</span>
                     <span class="hierarchy-badge priority-${task.priority}">${task.priority}</span>
+                    ${task.start_date ? `<span class="task-start-date">Started: ${new Date(task.start_date).toLocaleDateString()}</span>` : ''}
+                    ${task.due_date ? `<span class="task-due-date">Due: ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
                     ${hasChildren ? `<span>${childTasks.length} child${childTasks.length !== 1 ? 'ren' : ''}</span>` : ''}
                 </div>
             </div>
@@ -451,6 +453,7 @@ function toggleHierarchyItem(taskId) {
 
 // Timeline view functions
 let timelineRange = 60; // Default 60 days
+let timelineMode = 'due'; // Default to due dates mode
 
 async function loadTimelineView() {
     try {
@@ -494,20 +497,26 @@ function renderTimelineView(tasks) {
     
     console.log('Timeline date range:', today, 'to', endDate);
     
-    // Filter tasks with due dates within range and sort by due date
-    const tasksWithDueDates = tasks
+    // Filter tasks based on timeline mode (due dates or start dates)
+    const filteredTasks = tasks
         .filter(task => {
-            if (!task.due_date) return false;
-            const dueDate = new Date(task.due_date);
-            dueDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
-            return dueDate >= today && dueDate <= endDate;
+            const dateField = timelineMode === 'due' ? task.due_date : task.start_date;
+            if (!dateField) return false;
+            const taskDate = new Date(dateField);
+            taskDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
+            return taskDate >= today && taskDate <= endDate;
         })
-        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+        .sort((a, b) => {
+            const dateFieldA = timelineMode === 'due' ? a.due_date : a.start_date;
+            const dateFieldB = timelineMode === 'due' ? b.due_date : b.start_date;
+            return new Date(dateFieldA) - new Date(dateFieldB);
+        });
     
-    console.log('Tasks with due dates in range:', tasksWithDueDates);
+    console.log(`Tasks with ${timelineMode} dates in range:`, filteredTasks);
     
-    if (tasksWithDueDates.length === 0) {
-        container.innerHTML = `<p>No tasks with due dates found in the next ${timelineRange} days. Add due dates to tasks to see them in timeline view.</p>`;
+    if (filteredTasks.length === 0) {
+        const modeText = timelineMode === 'due' ? 'due dates' : 'start dates';
+        container.innerHTML = `<p>No tasks with ${modeText} found in the next ${timelineRange} days. Add ${modeText} to tasks to see them in timeline view.</p>`;
         return;
     }
     
@@ -520,9 +529,9 @@ function renderTimelineView(tasks) {
     timelineTasksContainer.className = 'timeline-tasks';
     
     // Assign lanes to prevent overlapping
-    const lanes = assignTimelineLanes(tasksWithDueDates, today, endDate);
+    const lanes = assignTimelineLanes(filteredTasks, today, endDate);
     
-    tasksWithDueDates.forEach((task, index) => {
+    filteredTasks.forEach((task, index) => {
         const taskElement = createTimelineTaskElement(task, today, endDate, lanes[index]);
         timelineTasksContainer.appendChild(taskElement);
     });
@@ -562,8 +571,9 @@ function assignTimelineLanes(tasks, startDate, endDate) {
     const laneOccupancy = []; // Track which positions are occupied in each lane
     
     tasks.forEach((task, index) => {
-        const dueDate = new Date(task.due_date);
-        const daysFromStart = Math.ceil((dueDate - startDate) / (24 * 60 * 60 * 1000));
+        const dateField = timelineMode === 'due' ? task.due_date : task.start_date;
+        const taskDate = new Date(dateField);
+        const daysFromStart = Math.ceil((taskDate - startDate) / (24 * 60 * 60 * 1000));
         const position = (daysFromStart / totalDays) * 100;
         
         // Calculate the range this task will occupy (task width is 200px, timeline is typically 800-1000px)
@@ -605,13 +615,15 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
     const taskElement = document.createElement('div');
     taskElement.className = `timeline-task ${task.status}`;
     
-    const dueDate = new Date(task.due_date);
+    // Get the primary date based on timeline mode
+    const primaryDateField = timelineMode === 'due' ? task.due_date : task.start_date;
+    const primaryDate = new Date(primaryDateField);
     const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
-    const daysFromStart = Math.ceil((dueDate - startDate) / (24 * 60 * 60 * 1000));
+    const daysFromStart = Math.ceil((primaryDate - startDate) / (24 * 60 * 60 * 1000));
     const position = (daysFromStart / totalDays) * 100;
     
-    // Check if task is overdue
-    const isOverdue = new Date() > dueDate && task.status !== 'done';
+    // Check if task is overdue (only applies to due date mode)
+    const isOverdue = timelineMode === 'due' && new Date() > primaryDate && task.status !== 'done';
     if (isOverdue) {
         taskElement.classList.add('overdue');
     }
@@ -629,6 +641,22 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
         case 'blocked': progress = 25; break;
     }
     
+    // Build date display based on mode and available dates
+    let primaryDateDisplay = '';
+    let secondaryDateDisplay = '';
+    
+    if (timelineMode === 'due') {
+        primaryDateDisplay = `Due: ${primaryDate.toLocaleDateString()}`;
+        if (task.start_date) {
+            secondaryDateDisplay = `Started: ${new Date(task.start_date).toLocaleDateString()} ${new Date(task.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+    } else {
+        primaryDateDisplay = `Started: ${primaryDate.toLocaleDateString()} ${primaryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        if (task.due_date) {
+            secondaryDateDisplay = `Due: ${new Date(task.due_date).toLocaleDateString()}`;
+        }
+    }
+    
     taskElement.innerHTML = `
         <div class="timeline-task-content">
             <div class="timeline-task-header">
@@ -640,7 +668,8 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
                 <div class="progress-bar" style="width: ${progress}%"></div>
             </div>
             <div class="timeline-task-meta">
-                <span class="task-due-date">Due: ${dueDate.toLocaleDateString()}</span>
+                <span class="task-${timelineMode === 'due' ? 'due' : 'start'}-date">${primaryDateDisplay}</span>
+                ${secondaryDateDisplay ? `<span class="task-${timelineMode === 'due' ? 'start' : 'due'}-date">${secondaryDateDisplay}</span>` : ''}
                 ${isOverdue ? '<span class="overdue-indicator">OVERDUE</span>' : ''}
             </div>
         </div>
@@ -652,11 +681,21 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
 // Timeline control handlers
 function initializeTimelineControls() {
     const rangeSelect = document.getElementById('timeline-range');
+    const modeSelect = document.getElementById('timeline-mode');
     const todayBtn = document.getElementById('timeline-today-btn');
     
     if (rangeSelect) {
         rangeSelect.addEventListener('change', (e) => {
             timelineRange = parseInt(e.target.value);
+            if (currentView === 'timeline') {
+                loadTimelineView();
+            }
+        });
+    }
+    
+    if (modeSelect) {
+        modeSelect.addEventListener('change', (e) => {
+            timelineMode = e.target.value;
             if (currentView === 'timeline') {
                 loadTimelineView();
             }
