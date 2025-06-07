@@ -12,11 +12,14 @@ func TestFileStorage_CreateTask(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	task := models.NewTask("Test Task", "Test Description")
 
-	err := storage.CreateTask(task)
+	err = storage.CreateTask(task)
 	if err != nil {
 		t.Fatalf("CreateTask() error = %v", err)
 	}
@@ -34,11 +37,14 @@ func TestFileStorage_CreateTask(t *testing.T) {
 
 func TestFileStorage_GetTask(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	// Create a task first
 	originalTask := models.NewTask("Test Task", "Test Description")
-	err := storage.CreateTask(originalTask)
+	err = storage.CreateTask(originalTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -60,9 +66,12 @@ func TestFileStorage_GetTask(t *testing.T) {
 
 func TestFileStorage_GetTask_NotFound(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
-	_, err := storage.GetTask("nonexistent-id")
+	_, err = storage.GetTask("nonexistent-id")
 	if err == nil {
 		t.Error("GetTask() with nonexistent ID should return error")
 	}
@@ -70,11 +79,14 @@ func TestFileStorage_GetTask_NotFound(t *testing.T) {
 
 func TestFileStorage_UpdateTask(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	// Create a task first
 	task := models.NewTask("Original Title", "Original Description")
-	err := storage.CreateTask(task)
+	err = storage.CreateTask(task)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -104,11 +116,14 @@ func TestFileStorage_UpdateTask(t *testing.T) {
 
 func TestFileStorage_DeleteTask(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	// Create a task first
 	task := models.NewTask("Test Task", "Test Description")
-	err := storage.CreateTask(task)
+	err = storage.CreateTask(task)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -134,13 +149,16 @@ func TestFileStorage_DeleteTask(t *testing.T) {
 
 func TestFileStorage_ListTasks(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	// Create multiple tasks
 	task1 := models.NewTask("Task 1", "Description 1")
 	task2 := models.NewTask("Task 2", "Description 2")
 
-	err := storage.CreateTask(task1)
+	err = storage.CreateTask(task1)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -181,12 +199,15 @@ func TestFileStorage_ListTasks(t *testing.T) {
 
 func TestFileStorage_GetTaskHierarchy(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewFileStorage(tempDir)
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
 
 	// Create parent task
 	parentTask := models.NewTask("Parent Task", "Parent Description")
 	parentTask.Type = models.TypeEpic
-	err := storage.CreateTask(parentTask)
+	err = storage.CreateTask(parentTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
