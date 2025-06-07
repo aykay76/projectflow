@@ -101,16 +101,16 @@ function populateForm(task) {
     document.getElementById('task-due-date').value = task.due_date ? task.due_date.split('T')[0] : '';
     
     // Handle start date - convert from RFC3339 to datetime-local format
-    if (task.start_date) {
-        const startDate = new Date(task.start_date);
+    if (task.started_at) {
+        const startDate = new Date(task.started_at);
         const year = startDate.getFullYear();
         const month = String(startDate.getMonth() + 1).padStart(2, '0');
         const day = String(startDate.getDate()).padStart(2, '0');
         const hours = String(startDate.getHours()).padStart(2, '0');
         const minutes = String(startDate.getMinutes()).padStart(2, '0');
-        document.getElementById('task-start-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        document.getElementById('task-started-at').value = `${year}-${month}-${day}T${hours}:${minutes}`;
     } else {
-        document.getElementById('task-start-date').value = '';
+        document.getElementById('task-started-at').value = '';
     }
 }
 
@@ -125,7 +125,7 @@ async function handleTaskSubmit(event) {
         priority: formData.get('priority'),
         status: formData.get('status'),
         due_date: formData.get('due_date') || null,
-        start_date: formData.get('start_date') ? new Date(formData.get('start_date')).toISOString() : null
+        started_at: formData.get('started_at') ? new Date(formData.get('started_at')).toISOString() : null
     };
 
     try {
@@ -401,7 +401,7 @@ function createHierarchyElement(hierarchyTask, level) {
                 <div class="hierarchy-meta">
                     <span class="hierarchy-badge status-${task.status}">${task.status.replace('_', ' ')}</span>
                     <span class="hierarchy-badge priority-${task.priority}">${task.priority}</span>
-                    ${task.start_date ? `<span class="task-start-date">Started: ${new Date(task.start_date).toLocaleDateString()}</span>` : ''}
+                    ${task.started_at ? `<span class="task-started-at">Started: ${new Date(task.started_at).toLocaleDateString()}</span>` : ''}
                     ${task.due_date ? `<span class="task-due-date">Due: ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
                     ${hasChildren ? `<span>${childTasks.length} child${childTasks.length !== 1 ? 'ren' : ''}</span>` : ''}
                 </div>
@@ -500,15 +500,15 @@ function renderTimelineView(tasks) {
     // Filter tasks based on timeline mode (due dates or start dates)
     const filteredTasks = tasks
         .filter(task => {
-            const dateField = timelineMode === 'due' ? task.due_date : task.start_date;
+            const dateField = timelineMode === 'due' ? task.due_date : task.started_at;
             if (!dateField) return false;
             const taskDate = new Date(dateField);
             taskDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
             return taskDate >= today && taskDate <= endDate;
         })
         .sort((a, b) => {
-            const dateFieldA = timelineMode === 'due' ? a.due_date : a.start_date;
-            const dateFieldB = timelineMode === 'due' ? b.due_date : b.start_date;
+            const dateFieldA = timelineMode === 'due' ? a.due_date : a.started_at;
+            const dateFieldB = timelineMode === 'due' ? b.due_date : b.started_at;
             return new Date(dateFieldA) - new Date(dateFieldB);
         });
     
@@ -571,7 +571,7 @@ function assignTimelineLanes(tasks, startDate, endDate) {
     const laneOccupancy = []; // Track which positions are occupied in each lane
     
     tasks.forEach((task, index) => {
-        const dateField = timelineMode === 'due' ? task.due_date : task.start_date;
+        const dateField = timelineMode === 'due' ? task.due_date : task.started_at;
         const taskDate = new Date(dateField);
         const daysFromStart = Math.ceil((taskDate - startDate) / (24 * 60 * 60 * 1000));
         const position = (daysFromStart / totalDays) * 100;
@@ -616,7 +616,7 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
     taskElement.className = `timeline-task ${task.status}`;
     
     // Get the primary date based on timeline mode
-    const primaryDateField = timelineMode === 'due' ? task.due_date : task.start_date;
+    const primaryDateField = timelineMode === 'due' ? task.due_date : task.started_at;
     const primaryDate = new Date(primaryDateField);
     const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
     const daysFromStart = Math.ceil((primaryDate - startDate) / (24 * 60 * 60 * 1000));
@@ -647,8 +647,8 @@ function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
     
     if (timelineMode === 'due') {
         primaryDateDisplay = `Due: ${primaryDate.toLocaleDateString()}`;
-        if (task.start_date) {
-            secondaryDateDisplay = `Started: ${new Date(task.start_date).toLocaleDateString()} ${new Date(task.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        if (task.started_at) {
+            secondaryDateDisplay = `Started: ${new Date(task.started_at).toLocaleDateString()} ${new Date(task.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
         }
     } else {
         primaryDateDisplay = `Started: ${primaryDate.toLocaleDateString()} ${primaryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
