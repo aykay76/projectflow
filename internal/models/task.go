@@ -44,6 +44,7 @@ type Task struct {
 	Type        TaskType     `json:"type"`
 	ParentID    string       `json:"parent_id,omitempty"`
 	Children    []string     `json:"children"`
+	StartDate   *time.Time   `json:"start_date,omitempty"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
@@ -157,6 +158,66 @@ func (t *Task) GetDueDateString() string {
 		return ""
 	}
 	return t.DueDate.Format("2006-01-02")
+}
+
+// SetStartDate sets the start date from a string in RFC3339 format
+func (t *Task) SetStartDate(dateStr string) error {
+	if dateStr == "" {
+		t.StartDate = nil
+		return nil
+	}
+
+	parsedDate, err := time.Parse(time.RFC3339, dateStr)
+	if err != nil {
+		return err
+	}
+
+	t.StartDate = &parsedDate
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
+// GetStartDateString returns the start date as a string in RFC3339 format
+func (t *Task) GetStartDateString() string {
+	if t.StartDate == nil {
+		return ""
+	}
+	return t.StartDate.Format(time.RFC3339)
+}
+
+// StartTask sets the task status to in_progress and sets the start date to now if not already set
+func (t *Task) StartTask() {
+	if t.StartDate == nil {
+		now := time.Now()
+		t.StartDate = &now
+	}
+	t.Status = StatusInProgress
+	t.UpdatedAt = time.Now()
+}
+
+// GetActualDuration returns the duration from start date to completion (or now if not completed)
+func (t *Task) GetActualDuration() time.Duration {
+	if t.StartDate == nil {
+		return 0
+	}
+
+	endTime := time.Now()
+	if t.Status == StatusDone && t.UpdatedAt.After(*t.StartDate) {
+		endTime = t.UpdatedAt
+	}
+
+	return endTime.Sub(*t.StartDate)
+}
+
+// GetActualDurationDays returns the actual duration in days
+func (t *Task) GetActualDurationDays() int {
+	duration := t.GetActualDuration()
+	return int(duration.Hours() / 24)
+}
+
+// IsStarted returns true if the task has been started (has a start date)
+func (t *Task) IsStarted() bool {
+	return t.StartDate != nil
 }
 
 // HierarchyTask represents a task with its nested children for hierarchy view
