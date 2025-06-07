@@ -405,10 +405,61 @@ function renderHierarchyView() {
         return;
     }
     
-    hierarchyData.forEach(hierarchyTask => {
+    // Sort epics in ascending order by title/number before rendering
+    const sortedHierarchyData = sortEpicsAscending(hierarchyData);
+    
+    sortedHierarchyData.forEach(hierarchyTask => {
         const element = createHierarchyElement(hierarchyTask, 0);
         container.appendChild(element);
     });
+}
+
+/**
+ * Sort epics in ascending order by title/number while preserving child task order
+ * Supports natural sorting for numeric prefixes (e.g., "Epic 1", "Epic 2", "Epic 10")
+ */
+function sortEpicsAscending(hierarchyData) {
+    // Only sort root-level items that are epics
+    // Create a copy to avoid mutating the original array
+    const sortedData = [...hierarchyData];
+    
+    return sortedData.sort((a, b) => {
+        const taskA = a.task || a;
+        const taskB = b.task || b;
+        
+        // Only sort epics - leave other types in their original order
+        if (taskA.type !== 'epic' || taskB.type !== 'epic') {
+            return 0; // Maintain original order for non-epics
+        }
+        
+        const titleA = taskA.title || '';
+        const titleB = taskB.title || '';
+        
+        // Extract numeric prefix for natural sorting
+        const numericPartA = extractNumericPrefix(titleA);
+        const numericPartB = extractNumericPrefix(titleB);
+        
+        // If both have numeric prefixes, sort numerically
+        if (numericPartA !== null && numericPartB !== null) {
+            if (numericPartA !== numericPartB) {
+                return numericPartA - numericPartB;
+            }
+            // If numeric parts are equal, fall back to string comparison
+        }
+        
+        // Default to lexicographic sorting (case-insensitive)
+        return titleA.toLowerCase().localeCompare(titleB.toLowerCase());
+    });
+}
+
+/**
+ * Extract numeric prefix from title for natural sorting
+ * Examples: "Epic 1" -> 1, "Epic 10" -> 10, "Story-005" -> 5, "No number" -> null
+ */
+function extractNumericPrefix(title) {
+    // Match patterns like "Epic 1", "Epic-2", "EPIC_3", "Story 10", etc.
+    const match = title.match(/^(?:epic|story|task)\s*[-_]?\s*(\d+)/i);
+    return match ? parseInt(match[1], 10) : null;
 }
 
 function createHierarchyElement(hierarchyTask, level) {
