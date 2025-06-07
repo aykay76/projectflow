@@ -37,6 +37,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .StartDate}}
+                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
                                     {{end}}
@@ -68,6 +71,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .StartDate}}
+                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
                                     {{end}}
@@ -99,6 +105,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .StartDate}}
+                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
                                     {{end}}
@@ -129,6 +138,10 @@
             <div class="timeline-header">
                 <h3>Project Timeline</h3>
                 <div class="timeline-controls">
+                    <select id="timeline-mode" class="form-control">
+                        <option value="due">Due Dates</option>
+                        <option value="start">Start Dates</option>
+                    </select>
                     <button id="timeline-today-btn" class="btn btn-sm btn-secondary">Today</button>
                     <select id="timeline-range" class="form-control">
                         <option value="30">30 Days</option>
@@ -162,6 +175,11 @@
                 <div class="form-group">
                     <label for="task-due-date">Due Date</label>
                     <input type="date" id="task-due-date" name="due_date">
+                </div>
+                <div class="form-group">
+                    <label for="task-start-date">Start Date</label>
+                    <input type="datetime-local" id="task-start-date" name="start_date">
+                    <small class="form-text">Set automatically when status changes to 'In Progress'</small>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
