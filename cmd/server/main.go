@@ -30,7 +30,7 @@ func main() {
 	mux.HandleFunc("/api/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
 		parts := strings.Split(path, "/")
-		
+
 		if len(parts) >= 2 && parts[1] == "children" {
 			if len(parts) == 2 {
 				// /api/tasks/{id}/children
