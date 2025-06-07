@@ -56,19 +56,28 @@ function initializeEventListeners() {
         }
     });
 
-    // Make task cards draggable (for future drag-and-drop functionality)
-    const taskCards = document.querySelectorAll('.task-card');
-    taskCards.forEach(card => {
-        card.draggable = true;
-        card.addEventListener('dragstart', handleDragStart);
+    // Make task cards draggable using event delegation
+    document.addEventListener('dragstart', (event) => {
+        if (event.target.classList.contains('task-card')) {
+            handleDragStart(event);
+        }
     });
 
-    // Make columns drop targets
-    const columns = document.querySelectorAll('.column');
-    columns.forEach(column => {
-        column.addEventListener('dragover', handleDragOver);
-        column.addEventListener('drop', handleDrop);
+    // Make columns drop targets using event delegation
+    document.addEventListener('dragover', (event) => {
+        if (event.target.closest('.column')) {
+            handleDragOver(event);
+        }
     });
+
+    document.addEventListener('drop', (event) => {
+        if (event.target.closest('.column')) {
+            handleDrop(event);
+        }
+    });
+
+    // Initialize draggable attribute for existing task cards
+    initializeDraggableCards();
 }
 
 function openTaskModal(task = null) {
@@ -229,24 +238,37 @@ function showMessage(text, type) {
 
 // Drag and drop functionality (basic implementation)
 function handleDragStart(event) {
-    event.dataTransfer.setData('text/plain', event.target.getAttribute('data-id'));
+    const taskId = event.target.getAttribute('data-id');
+    console.log('Drag started for task:', taskId);
+    event.dataTransfer.setData('text/plain', taskId);
     event.target.style.opacity = '0.5';
 }
 
 function handleDragOver(event) {
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#f0f8ff';
+    const column = event.target.closest('.column');
+    if (column) {
+        column.style.backgroundColor = '#f0f8ff';
+    }
 }
 
 function handleDrop(event) {
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '';
+    const column = event.target.closest('.column');
+    if (column) {
+        column.style.backgroundColor = '';
+    }
     
     const taskId = event.dataTransfer.getData('text/plain');
-    const newStatus = event.currentTarget.getAttribute('data-status');
+    const newStatus = column ? column.getAttribute('data-status') : null;
+    
+    console.log('Drop event:', { taskId, newStatus, column });
     
     if (taskId && newStatus) {
         updateTaskStatus(taskId, newStatus);
+    } else {
+        console.error('Missing taskId or newStatus:', { taskId, newStatus });
+        showMessage('Failed to update task status: Missing task ID or status', 'error');
     }
     
     // Reset opacity
@@ -258,12 +280,23 @@ function handleDrop(event) {
 
 async function updateTaskStatus(taskId, newStatus) {
     try {
+        console.log(`Updating task ${taskId} to status ${newStatus}`);
+        
         // First get the current task data
         const getResponse = await fetch(`/api/tasks/${taskId}`);
-        if (!getResponse.ok) return;
+        if (!getResponse.ok) {
+            console.error(`Failed to get task ${taskId}:`, getResponse.status, getResponse.statusText);
+            const errorText = await getResponse.text();
+            console.error('Error response:', errorText);
+            showMessage(`Failed to get task: ${getResponse.status} ${getResponse.statusText}`, 'error');
+            return;
+        }
         
         const task = await getResponse.json();
+        console.log('Current task data:', task);
+        
         task.status = newStatus;
+        console.log('Updated task data:', task);
         
         // Update the task
         const updateResponse = await fetch(`/api/tasks/${taskId}`, {
@@ -275,20 +308,30 @@ async function updateTaskStatus(taskId, newStatus) {
         });
 
         if (updateResponse.ok) {
+            console.log('Task updated successfully');
+            
             // Move the task card to the appropriate column
             const taskCard = document.querySelector(`[data-id="${taskId}"]`);
             const targetColumn = document.querySelector(`[data-status="${newStatus}"] .task-list`);
             
             if (taskCard && targetColumn) {
                 targetColumn.appendChild(taskCard);
+                // Ensure the moved card remains draggable
+                taskCard.draggable = true;
                 showMessage('Task status updated!', 'success');
+            } else {
+                console.warn('Could not find task card or target column', { taskCard, targetColumn });
+                showMessage('Task updated but UI not refreshed. Please reload.', 'warning');
             }
         } else {
-            showMessage('Failed to update task status.', 'error');
+            console.error(`Failed to update task ${taskId}:`, updateResponse.status, updateResponse.statusText);
+            const errorText = await updateResponse.text();
+            console.error('Update error response:', errorText);
+            showMessage(`Failed to update task status: ${updateResponse.status} ${errorText}`, 'error');
         }
     } catch (error) {
         console.error('Error updating task status:', error);
-        showMessage('Failed to update task status.', 'error');
+        showMessage(`Failed to update task status: ${error.message}`, 'error');
     }
 }
 
@@ -711,4 +754,11 @@ function initializeTimelineControls() {
             }
         });
     }
+}
+
+function initializeDraggableCards() {
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach(card => {
+        card.draggable = true;
+    });
 }
