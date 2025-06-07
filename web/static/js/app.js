@@ -287,42 +287,13 @@ function handleDrop(event) {
 
 async function updateTaskStatus(taskId, newStatus) {
     try {
-        console.log(`Updating task ${taskId} to status ${newStatus}`);
-        
-        // First get the current task data
-        const getResponse = await fetch(`/api/tasks/${taskId}`);
-        if (!getResponse.ok) {
-            console.error(`Failed to get task ${taskId}:`, getResponse.status, getResponse.statusText);
-            const errorText = await getResponse.text();
-            console.error('Error response:', errorText);
-            showMessage(`Failed to get task: ${getResponse.status} ${getResponse.statusText}`, 'error');
-            return;
-        }
-        
-        const task = await getResponse.json();
-        console.log('Current task data:', task);
-        
-        // Create a copy of the task with only the fields needed for update
-        const taskUpdate = {
-            title: task.title,
-            description: task.description,
-            status: newStatus,
-            priority: task.priority,
-            type: task.type,
-            parent_id: task.parent_id || "",
-            due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "", // Convert to YYYY-MM-DD
-            started_at: task.started_at || ""
-        };
-        
-        console.log('Updated task data:', taskUpdate);
-        
-        // Update the task
+        // Update the task with just the new status
         const updateResponse = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(taskUpdate)
+            body: JSON.stringify({ status: newStatus })
         });
 
         if (updateResponse.ok) {
