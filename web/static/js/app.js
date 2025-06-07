@@ -501,14 +501,21 @@ function renderTimelineView(tasks) {
     const timelineScale = createTimelineScale(today, endDate);
     container.appendChild(timelineScale);
     
-    // Create timeline tasks
+    // Create timeline tasks with proper lane assignment
     const timelineTasksContainer = document.createElement('div');
     timelineTasksContainer.className = 'timeline-tasks';
     
-    tasksWithDueDates.forEach(task => {
-        const taskElement = createTimelineTaskElement(task, today, endDate);
+    // Assign lanes to prevent overlapping
+    const lanes = assignTimelineLanes(tasksWithDueDates, today, endDate);
+    
+    tasksWithDueDates.forEach((task, index) => {
+        const taskElement = createTimelineTaskElement(task, today, endDate, lanes[index]);
         timelineTasksContainer.appendChild(taskElement);
     });
+    
+    // Set the height of the timeline container based on the number of lanes used
+    const maxLane = Math.max(...lanes);
+    timelineTasksContainer.style.minHeight = `${(maxLane + 1) * 140}px`;
     
     container.appendChild(timelineTasksContainer);
 }
@@ -534,7 +541,53 @@ function createTimelineScale(startDate, endDate) {
     return scale;
 }
 
-function createTimelineTaskElement(task, startDate, endDate) {
+// Assign lanes to timeline tasks to prevent overlapping
+function assignTimelineLanes(tasks, startDate, endDate) {
+    const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
+    const lanes = [];
+    const laneOccupancy = []; // Track which positions are occupied in each lane
+    
+    tasks.forEach((task, index) => {
+        const dueDate = new Date(task.due_date);
+        const daysFromStart = Math.ceil((dueDate - startDate) / (24 * 60 * 60 * 1000));
+        const position = (daysFromStart / totalDays) * 100;
+        
+        // Calculate the range this task will occupy (task width is 200px, timeline is typically 800-1000px)
+        const taskWidth = 20; // Approximate percentage width of task card
+        const startPos = Math.max(0, position - taskWidth/2);
+        const endPos = Math.min(100, position + taskWidth/2);
+        
+        // Find the first available lane
+        let assignedLane = 0;
+        let laneFound = false;
+        
+        while (!laneFound) {
+            // Initialize lane if it doesn't exist
+            if (!laneOccupancy[assignedLane]) {
+                laneOccupancy[assignedLane] = [];
+            }
+            
+            // Check if this lane is available for this position range
+            const isLaneAvailable = !laneOccupancy[assignedLane].some(occupied => 
+                (startPos < occupied.end && endPos > occupied.start)
+            );
+            
+            if (isLaneAvailable) {
+                // Assign this lane and mark it as occupied
+                laneOccupancy[assignedLane].push({ start: startPos, end: endPos });
+                lanes[index] = assignedLane;
+                laneFound = true;
+            } else {
+                // Try next lane
+                assignedLane++;
+            }
+        }
+    });
+    
+    return lanes;
+}
+
+function createTimelineTaskElement(task, startDate, endDate, lane = 0) {
     const taskElement = document.createElement('div');
     taskElement.className = `timeline-task ${task.status}`;
     
@@ -549,7 +602,9 @@ function createTimelineTaskElement(task, startDate, endDate) {
         taskElement.classList.add('overdue');
     }
     
+    // Position task horizontally and vertically
     taskElement.style.left = `${Math.max(0, Math.min(100, position))}%`;
+    taskElement.style.top = `${lane * 140}px`; // 140px spacing between lanes
     
     // Calculate progress based on status
     let progress = 0;
