@@ -585,12 +585,14 @@ header p {
     position: absolute;
     width: 200px;
     height: auto;
+    min-height: 100px;
     margin-bottom: 10px;
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 6px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
+    z-index: 1;
 }
 
 .timeline-task:hover {
@@ -667,23 +669,6 @@ header p {
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-}
-
-/* Arrange timeline tasks in vertical lanes */
-.timeline-task:nth-child(odd) {
-    top: 0;
-}
-
-.timeline-task:nth-child(even) {
-    top: 120px;
-}
-
-.timeline-task:nth-child(3n) {
-    top: 240px;
-}
-
-.timeline-task:nth-child(4n) {
-    top: 360px;
 }
 
 /* Responsive */
