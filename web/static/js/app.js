@@ -440,11 +440,14 @@ let timelineRange = 60; // Default 60 days
 
 async function loadTimelineView() {
     try {
+        console.log('Loading timeline view...');
         const response = await fetch('/api/tasks');
         if (response.ok) {
             const tasks = await response.json();
+            console.log('Loaded tasks for timeline:', tasks.length);
             renderTimelineView(tasks);
         } else {
+            console.error('Failed to load tasks, status:', response.status);
             showMessage('Failed to load timeline view.', 'error');
         }
     } catch (error) {
@@ -454,7 +457,15 @@ async function loadTimelineView() {
 }
 
 function renderTimelineView(tasks) {
+    console.log('Rendering timeline view with tasks:', tasks);
     const container = document.querySelector('.timeline-container');
+    
+    if (!container) {
+        console.error('Timeline container not found!');
+        showMessage('Timeline container not found in DOM.', 'error');
+        return;
+    }
+    
     container.innerHTML = '';
     
     if (tasks.length === 0) {
@@ -462,18 +473,24 @@ function renderTimelineView(tasks) {
         return;
     }
     
-    // Get current date and range
+    // Get current date and range (normalize to start of day for consistent comparison)
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day
     const endDate = new Date(today.getTime() + (timelineRange * 24 * 60 * 60 * 1000));
+    
+    console.log('Timeline date range:', today, 'to', endDate);
     
     // Filter tasks with due dates within range and sort by due date
     const tasksWithDueDates = tasks
         .filter(task => {
             if (!task.due_date) return false;
             const dueDate = new Date(task.due_date);
+            dueDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
             return dueDate >= today && dueDate <= endDate;
         })
         .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    
+    console.log('Tasks with due dates in range:', tasksWithDueDates);
     
     if (tasksWithDueDates.length === 0) {
         container.innerHTML = `<p>No tasks with due dates found in the next ${timelineRange} days. Add due dates to tasks to see them in timeline view.</p>`;
