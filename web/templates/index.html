@@ -37,8 +37,8 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
-                                    {{if .StartDate}}
-                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{if .StartedAt}}
+                                        <span class="task-start-date">Started: {{.StartedAt.Format "Jan 2, 15:04"}}</span>
                                     {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
@@ -71,8 +71,8 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
-                                    {{if .StartDate}}
-                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{if .StartedAt}}
+                                        <span class="task-start-date">Started: {{.StartedAt.Format "Jan 2, 15:04"}}</span>
                                     {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
@@ -105,8 +105,8 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
-                                    {{if .StartDate}}
-                                        <span class="task-start-date">Started: {{.StartDate.Format "Jan 2, 15:04"}}</span>
+                                    {{if .StartedAt}}
+                                        <span class="task-start-date">Started: {{.StartedAt.Format "Jan 2, 15:04"}}</span>
                                     {{end}}
                                     {{if .DueDate}}
                                         <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
