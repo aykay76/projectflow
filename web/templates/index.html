@@ -17,6 +17,7 @@
             <div class="view-controls">
                 <button id="kanban-view-btn" class="btn btn-secondary view-btn active">Kanban View</button>
                 <button id="hierarchy-view-btn" class="btn btn-secondary view-btn">Hierarchy View</button>
+                <button id="timeline-view-btn" class="btn btn-secondary view-btn">Timeline View</button>
             </div>
             <button id="new-task-btn" class="btn btn-primary">New Task</button>
         </div>
@@ -36,6 +37,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .DueDate}}
+                                        <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
+                                    {{end}}
                                     {{if .Children}}
                                         <span class="task-children">{{len .Children}} subtasks</span>
                                     {{end}}
@@ -64,6 +68,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .DueDate}}
+                                        <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
+                                    {{end}}
                                     {{if .Children}}
                                         <span class="task-children">{{len .Children}} subtasks</span>
                                     {{end}}
@@ -92,6 +99,9 @@
                                 <p class="task-description">{{.Description}}</p>
                                 <div class="task-meta">
                                     <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .DueDate}}
+                                        <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
+                                    {{end}}
                                     {{if .Children}}
                                         <span class="task-children">{{len .Children}} subtasks</span>
                                     {{end}}
@@ -113,6 +123,24 @@
                 <!-- Hierarchy content will be loaded dynamically -->
             </div>
         </div>
+
+        <!-- Timeline View (initially hidden) -->
+        <div id="timeline-view" class="timeline-view" style="display: none;">
+            <div class="timeline-header">
+                <h3>Project Timeline</h3>
+                <div class="timeline-controls">
+                    <button id="timeline-today-btn" class="btn btn-sm btn-secondary">Today</button>
+                    <select id="timeline-range" class="form-control">
+                        <option value="30">30 Days</option>
+                        <option value="60" selected>60 Days</option>
+                        <option value="90">90 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="timeline-container">
+                <!-- Timeline content will be loaded dynamically -->
+            </div>
+        </div>
     </div>
 
     <!-- Task Modal -->
@@ -130,6 +158,10 @@
                 <div class="form-group">
                     <label for="task-description">Description</label>
                     <textarea id="task-description" name="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="task-due-date">Due Date</label>
+                    <input type="date" id="task-due-date" name="due_date">
                 </div>
                 <div class="form-row">
                     <div class="form-group">

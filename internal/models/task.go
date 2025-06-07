@@ -44,6 +44,7 @@ type Task struct {
 	Type        TaskType     `json:"type"`
 	ParentID    string       `json:"parent_id,omitempty"`
 	Children    []string     `json:"children"`
+	DueDate     *time.Time   `json:"due_date,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 }
@@ -113,6 +114,49 @@ func IsValidType(taskType string) bool {
 	default:
 		return false
 	}
+}
+
+// IsOverdue checks if the task is overdue
+func (t *Task) IsOverdue() bool {
+	if t.DueDate == nil || t.Status == StatusDone {
+		return false
+	}
+	return time.Now().After(*t.DueDate)
+}
+
+// DaysUntilDue returns the number of days until the task is due
+// Returns negative values for overdue tasks
+func (t *Task) DaysUntilDue() int {
+	if t.DueDate == nil {
+		return 0
+	}
+	duration := time.Until(*t.DueDate)
+	return int(duration.Hours() / 24)
+}
+
+// SetDueDate sets the due date from a string in YYYY-MM-DD format
+func (t *Task) SetDueDate(dateStr string) error {
+	if dateStr == "" {
+		t.DueDate = nil
+		return nil
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return err
+	}
+
+	t.DueDate = &parsedDate
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
+// GetDueDateString returns the due date as a string in YYYY-MM-DD format
+func (t *Task) GetDueDateString() string {
+	if t.DueDate == nil {
+		return ""
+	}
+	return t.DueDate.Format("2006-01-02")
 }
 
 // HierarchyTask represents a task with its nested children for hierarchy view

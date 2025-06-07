@@ -123,10 +123,34 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
-	var task models.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	// Use a temporary struct to handle due_date as string
+	var taskCreate struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Status      string `json:"status"`
+		Priority    string `json:"priority"`
+		Type        string `json:"type"`
+		ParentID    string `json:"parent_id"`
+		DueDate     string `json:"due_date"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&taskCreate); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
+	}
+
+	// Create task struct and populate fields
+	var task models.Task
+	task.Title = taskCreate.Title
+	task.Description = taskCreate.Description
+	task.ParentID = taskCreate.ParentID
+
+	// Handle due_date
+	if taskCreate.DueDate != "" {
+		if err := task.SetDueDate(taskCreate.DueDate); err != nil {
+			http.Error(w, "Invalid due date format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Validate required fields
@@ -136,14 +160,20 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set defaults if not provided
-	if task.Status == "" {
+	if taskCreate.Status == "" {
 		task.Status = models.StatusTodo
+	} else {
+		task.Status = models.TaskStatus(taskCreate.Status)
 	}
-	if task.Priority == "" {
+	if taskCreate.Priority == "" {
 		task.Priority = models.PriorityMedium
+	} else {
+		task.Priority = models.TaskPriority(taskCreate.Priority)
 	}
-	if task.Type == "" {
+	if taskCreate.Type == "" {
 		task.Type = models.TypeTask
+	} else {
+		task.Type = models.TaskType(taskCreate.Type)
 	}
 
 	// Validate enum values
@@ -194,10 +224,38 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string)
 }
 
 func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	var task models.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	// Use a temporary struct to handle due_date as string
+	var taskUpdate struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Status      string `json:"status"`
+		Priority    string `json:"priority"`
+		Type        string `json:"type"`
+		ParentID    string `json:"parent_id"`
+		DueDate     string `json:"due_date"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&taskUpdate); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
+	}
+
+	// Create task struct and populate fields
+	var task models.Task
+	task.Title = taskUpdate.Title
+	task.Description = taskUpdate.Description
+	task.Status = models.TaskStatus(taskUpdate.Status)
+	task.Priority = models.TaskPriority(taskUpdate.Priority)
+	task.Type = models.TaskType(taskUpdate.Type)
+	task.ParentID = taskUpdate.ParentID
+	task.Children = []string{} // Will be preserved by storage layer
+
+	// Handle due_date
+	if taskUpdate.DueDate != "" {
+		if err := task.SetDueDate(taskUpdate.DueDate); err != nil {
+			http.Error(w, "Invalid due date format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Ensure the ID matches the URL

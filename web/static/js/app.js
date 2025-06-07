@@ -12,18 +12,23 @@ const cancelBtn = document.getElementById('cancel-btn');
 const closeBtn = document.querySelector('.close');
 const kanbanViewBtn = document.getElementById('kanban-view-btn');
 const hierarchyViewBtn = document.getElementById('hierarchy-view-btn');
+const timelineViewBtn = document.getElementById('timeline-view-btn');
 const taskBoard = document.querySelector('.task-board');
 const hierarchyView = document.getElementById('hierarchy-view');
+const timelineView = document.getElementById('timeline-view');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeEventListeners();
+    initializeTimelineControls();
+    updateOverdueIndicators();
 });
 
 function initializeEventListeners() {
     // View switching
     kanbanViewBtn.addEventListener('click', () => switchToView('kanban'));
     hierarchyViewBtn.addEventListener('click', () => switchToView('hierarchy'));
+    timelineViewBtn.addEventListener('click', () => switchToView('timeline'));
 
     // Modal controls
     newTaskBtn.addEventListener('click', () => openTaskModal());
@@ -93,6 +98,7 @@ function populateForm(task) {
     document.getElementById('task-type').value = task.type || 'task';
     document.getElementById('task-priority').value = task.priority || 'medium';
     document.getElementById('task-status').value = task.status || 'todo';
+    document.getElementById('task-due-date').value = task.due_date ? task.due_date.split('T')[0] : '';
 }
 
 async function handleTaskSubmit(event) {
@@ -104,7 +110,8 @@ async function handleTaskSubmit(event) {
         description: formData.get('description'),
         type: formData.get('type'),
         priority: formData.get('priority'),
-        status: formData.get('status')
+        status: formData.get('status'),
+        due_date: formData.get('due_date') || null
     };
 
     try {
@@ -271,21 +278,60 @@ async function updateTaskStatus(taskId, newStatus) {
     }
 }
 
+// Update overdue indicators for Kanban view
+function updateOverdueIndicators() {
+    const taskCards = document.querySelectorAll('.task-card');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+    
+    taskCards.forEach(card => {
+        const dueDateElement = card.querySelector('.task-due-date');
+        if (dueDateElement) {
+            // Extract date from "Due: Month Day, Year" format
+            const dueDateText = dueDateElement.textContent.replace('Due: ', '');
+            const dueDate = new Date(dueDateText);
+            dueDate.setHours(0, 0, 0, 0);
+            
+            // Get task status from the parent column
+            const column = card.closest('.column');
+            const status = column ? column.getAttribute('data-status') : '';
+            
+            // Only mark as overdue if not done and past due date
+            if (status !== 'done' && dueDate < today) {
+                card.classList.add('overdue');
+            } else if (status !== 'done' && dueDate <= new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000))) {
+                // Due within 3 days
+                card.classList.add('due-soon');
+            }
+        }
+    });
+}
+
 // View switching functions
 function switchToView(viewType) {
     currentView = viewType;
     
+    // Hide all views
+    taskBoard.style.display = 'none';
+    hierarchyView.style.display = 'none';
+    timelineView.style.display = 'none';
+    
+    // Remove active class from all buttons
+    kanbanViewBtn.classList.remove('active');
+    hierarchyViewBtn.classList.remove('active');
+    timelineViewBtn.classList.remove('active');
+    
     if (viewType === 'kanban') {
         taskBoard.style.display = 'grid';
-        hierarchyView.style.display = 'none';
         kanbanViewBtn.classList.add('active');
-        hierarchyViewBtn.classList.remove('active');
     } else if (viewType === 'hierarchy') {
-        taskBoard.style.display = 'none';
         hierarchyView.style.display = 'block';
-        kanbanViewBtn.classList.remove('active');
         hierarchyViewBtn.classList.add('active');
         loadHierarchyView();
+    } else if (viewType === 'timeline') {
+        timelineView.style.display = 'block';
+        timelineViewBtn.classList.add('active');
+        loadTimelineView();
     }
 }
 
@@ -389,24 +435,155 @@ function toggleHierarchyItem(taskId) {
     }
 }
 
-// Utility functions
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
+// Timeline view functions
+let timelineRange = 60; // Default 60 days
+
+async function loadTimelineView() {
+    try {
+        const response = await fetch('/api/tasks');
+        if (response.ok) {
+            const tasks = await response.json();
+            renderTimelineView(tasks);
+        } else {
+            showMessage('Failed to load timeline view.', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading timeline:', error);
+        showMessage('Failed to load timeline view.', 'error');
+    }
 }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+function renderTimelineView(tasks) {
+    const container = document.querySelector('.timeline-container');
+    container.innerHTML = '';
+    
+    if (tasks.length === 0) {
+        container.innerHTML = '<p>No tasks found. Create your first task to get started!</p>';
+        return;
+    }
+    
+    // Get current date and range
+    const today = new Date();
+    const endDate = new Date(today.getTime() + (timelineRange * 24 * 60 * 60 * 1000));
+    
+    // Filter tasks with due dates within range and sort by due date
+    const tasksWithDueDates = tasks
+        .filter(task => {
+            if (!task.due_date) return false;
+            const dueDate = new Date(task.due_date);
+            return dueDate >= today && dueDate <= endDate;
+        })
+        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    
+    if (tasksWithDueDates.length === 0) {
+        container.innerHTML = `<p>No tasks with due dates found in the next ${timelineRange} days. Add due dates to tasks to see them in timeline view.</p>`;
+        return;
+    }
+    
+    // Create timeline scale
+    const timelineScale = createTimelineScale(today, endDate);
+    container.appendChild(timelineScale);
+    
+    // Create timeline tasks
+    const timelineTasksContainer = document.createElement('div');
+    timelineTasksContainer.className = 'timeline-tasks';
+    
+    tasksWithDueDates.forEach(task => {
+        const taskElement = createTimelineTaskElement(task, today, endDate);
+        timelineTasksContainer.appendChild(taskElement);
+    });
+    
+    container.appendChild(timelineTasksContainer);
+}
+
+function createTimelineScale(startDate, endDate) {
+    const scale = document.createElement('div');
+    scale.className = 'timeline-scale';
+    
+    const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
+    const interval = Math.max(1, Math.floor(totalDays / 10)); // Show about 10 markers
+    
+    for (let i = 0; i <= totalDays; i += interval) {
+        const date = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        const marker = document.createElement('div');
+        marker.className = 'timeline-marker';
+        marker.style.left = `${(i / totalDays) * 100}%`;
+        marker.innerHTML = `
+            <div class="timeline-date">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+        `;
+        scale.appendChild(marker);
+    }
+    
+    return scale;
+}
+
+function createTimelineTaskElement(task, startDate, endDate) {
+    const taskElement = document.createElement('div');
+    taskElement.className = `timeline-task ${task.status}`;
+    
+    const dueDate = new Date(task.due_date);
+    const totalDays = Math.ceil((endDate - startDate) / (24 * 60 * 60 * 1000));
+    const daysFromStart = Math.ceil((dueDate - startDate) / (24 * 60 * 60 * 1000));
+    const position = (daysFromStart / totalDays) * 100;
+    
+    // Check if task is overdue
+    const isOverdue = new Date() > dueDate && task.status !== 'done';
+    if (isOverdue) {
+        taskElement.classList.add('overdue');
+    }
+    
+    taskElement.style.left = `${Math.max(0, Math.min(100, position))}%`;
+    
+    // Calculate progress based on status
+    let progress = 0;
+    switch (task.status) {
+        case 'todo': progress = 0; break;
+        case 'in_progress': progress = 50; break;
+        case 'done': progress = 100; break;
+        case 'blocked': progress = 25; break;
+    }
+    
+    taskElement.innerHTML = `
+        <div class="timeline-task-content">
+            <div class="timeline-task-header">
+                <span class="task-type task-type-${task.type}">${task.type}</span>
+                <span class="task-priority priority-${task.priority}">${task.priority}</span>
+            </div>
+            <h5 class="timeline-task-title">${task.title}</h5>
+            <div class="timeline-task-progress">
+                <div class="progress-bar" style="width: ${progress}%"></div>
+            </div>
+            <div class="timeline-task-meta">
+                <span class="task-due-date">Due: ${dueDate.toLocaleDateString()}</span>
+                ${isOverdue ? '<span class="overdue-indicator">OVERDUE</span>' : ''}
+            </div>
+        </div>
+    `;
+    
+    return taskElement;
+}
+
+// Timeline control handlers
+function initializeTimelineControls() {
+    const rangeSelect = document.getElementById('timeline-range');
+    const todayBtn = document.getElementById('timeline-today-btn');
+    
+    if (rangeSelect) {
+        rangeSelect.addEventListener('change', (e) => {
+            timelineRange = parseInt(e.target.value);
+            if (currentView === 'timeline') {
+                loadTimelineView();
+            }
+        });
+    }
+    
+    if (todayBtn) {
+        todayBtn.addEventListener('click', () => {
+            // Scroll timeline to today (if implemented with horizontal scroll)
+            const container = document.querySelector('.timeline-container');
+            if (container) {
+                container.scrollLeft = 0;
+            }
+        });
+    }
 }
