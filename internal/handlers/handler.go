@@ -514,7 +514,7 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 	}
 
 	response := struct {
-		Message string      `json:"message"`
+		Message string       `json:"message"`
 		Parent  *models.Task `json:"parent"`
 		Child   *models.Task `json:"child"`
 	}{
@@ -581,7 +581,7 @@ func (h *Handler) removeTaskChild(w http.ResponseWriter, r *http.Request, parent
 	}
 
 	response := struct {
-		Message string      `json:"message"`
+		Message string       `json:"message"`
 		Parent  *models.Task `json:"parent"`
 		Child   *models.Task `json:"child"`
 	}{
@@ -662,7 +662,7 @@ func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string
 	}
 
 	response := struct {
-		Message   string      `json:"message"`
+		Message   string       `json:"message"`
 		Task      *models.Task `json:"task"`
 		NewParent *models.Task `json:"new_parent,omitempty"`
 	}{
