@@ -244,6 +244,9 @@ func (t *Task) GetActualDuration() time.Duration {
 	endTime := time.Now()
 	if t.CompletedAt != nil {
 		endTime = *t.CompletedAt
+	} else if t.Status == StatusDone && t.UpdatedAt.After(*t.StartDate) {
+		// Backward compatibility: use UpdatedAt for completed tasks without CompletedAt
+		endTime = t.UpdatedAt
 	}
 
 	return endTime.Sub(*t.StartDate)
@@ -260,20 +263,26 @@ func (t *Task) IsStarted() bool {
 	return t.StartDate != nil
 }
 
-// IsDeliveredEarly returns true if the task was completed before the due date
+// IsDeliveredEarly returns true if the task was completed before the due date (different day)
 func (t *Task) IsDeliveredEarly() bool {
 	if t.CompletedAt == nil || t.DueDate == nil {
 		return false
 	}
-	return t.CompletedAt.Before(*t.DueDate)
+	// Check if completed on a different (earlier) day
+	completedDay := t.CompletedAt.Truncate(24 * time.Hour)
+	dueDay := t.DueDate.Truncate(24 * time.Hour)
+	return completedDay.Before(dueDay)
 }
 
-// IsDeliveredLate returns true if the task was completed after the due date
+// IsDeliveredLate returns true if the task was completed after the due date (different day)
 func (t *Task) IsDeliveredLate() bool {
 	if t.CompletedAt == nil || t.DueDate == nil {
 		return false
 	}
-	return t.CompletedAt.After(*t.DueDate)
+	// Check if completed on a different (later) day
+	completedDay := t.CompletedAt.Truncate(24 * time.Hour)
+	dueDay := t.DueDate.Truncate(24 * time.Hour)
+	return completedDay.After(dueDay)
 }
 
 // IsDeliveredOnTime returns true if the task was completed on the due date
@@ -299,7 +308,13 @@ func (t *Task) GetDeliveryVariance() time.Duration {
 // GetDeliveryVarianceDays returns the delivery variance in days
 func (t *Task) GetDeliveryVarianceDays() int {
 	variance := t.GetDeliveryVariance()
-	return int(variance.Hours() / 24)
+	// Round to nearest day for more intuitive results
+	hours := variance.Hours()
+	days := hours / 24
+	if days >= 0 {
+		return int(days + 0.5) // Round up for positive values
+	}
+	return int(days - 0.5) // Round down for negative values
 }
 
 // HierarchyTask represents a task with its nested children for hierarchy view
