@@ -99,6 +99,19 @@ function populateForm(task) {
     document.getElementById('task-priority').value = task.priority || 'medium';
     document.getElementById('task-status').value = task.status || 'todo';
     document.getElementById('task-due-date').value = task.due_date ? task.due_date.split('T')[0] : '';
+    
+    // Handle start date - convert from RFC3339 to datetime-local format
+    if (task.start_date) {
+        const startDate = new Date(task.start_date);
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, '0');
+        const day = String(startDate.getDate()).padStart(2, '0');
+        const hours = String(startDate.getHours()).padStart(2, '0');
+        const minutes = String(startDate.getMinutes()).padStart(2, '0');
+        document.getElementById('task-start-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    } else {
+        document.getElementById('task-start-date').value = '';
+    }
 }
 
 async function handleTaskSubmit(event) {
@@ -111,7 +124,8 @@ async function handleTaskSubmit(event) {
         type: formData.get('type'),
         priority: formData.get('priority'),
         status: formData.get('status'),
-        due_date: formData.get('due_date') || null
+        due_date: formData.get('due_date') || null,
+        start_date: formData.get('start_date') ? new Date(formData.get('start_date')).toISOString() : null
     };
 
     try {
