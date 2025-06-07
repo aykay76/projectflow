@@ -237,6 +237,17 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string)
 }
 
 func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID string) {
+	// First get the existing task
+	existingTask, err := h.storage.GetTask(taskID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get task", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	// Use a temporary struct to handle due_date and started_at as strings
 	var taskUpdate struct {
 		Title       string `json:"title"`
@@ -254,15 +265,26 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		return
 	}
 
-	// Create task struct and populate fields
-	var task models.Task
-	task.Title = taskUpdate.Title
-	task.Description = taskUpdate.Description
-	task.Status = models.TaskStatus(taskUpdate.Status)
-	task.Priority = models.TaskPriority(taskUpdate.Priority)
-	task.Type = models.TaskType(taskUpdate.Type)
-	task.ParentID = taskUpdate.ParentID
-	task.Children = []string{} // Will be preserved by storage layer
+	// Start with existing task and only update provided fields
+	task := *existingTask
+	if taskUpdate.Title != "" {
+		task.Title = taskUpdate.Title
+	}
+	if taskUpdate.Description != "" {
+		task.Description = taskUpdate.Description
+	}
+	if taskUpdate.Status != "" {
+		task.Status = models.TaskStatus(taskUpdate.Status)
+	}
+	if taskUpdate.Priority != "" {
+		task.Priority = models.TaskPriority(taskUpdate.Priority)
+	}
+	if taskUpdate.Type != "" {
+		task.Type = models.TaskType(taskUpdate.Type)
+	}
+	if taskUpdate.ParentID != "" {
+		task.ParentID = taskUpdate.ParentID
+	}
 
 	// Handle due_date
 	if taskUpdate.DueDate != "" {
@@ -281,29 +303,25 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 	}
 
 	// Auto-set start date if status changes to in_progress and no start date provided
-	if task.Status == models.StatusInProgress && taskUpdate.StartedAt == "" {
-		// Need to check current task to see if it already has a start date
-		currentTask, err := h.storage.GetTask(taskID)
-		if err == nil && currentTask.StartedAt == nil {
-			now := time.Now()
-			task.StartedAt = &now
-		}
+	if task.Status == models.StatusInProgress && task.StartedAt == nil {
+		now := time.Now()
+		task.StartedAt = &now
 	}
 
-	// Ensure the ID matches the URL
+	// Ensure the ID matches the URL and update timestamp
 	task.ID = taskID
 	task.UpdatedAt = time.Now()
 
 	// Validate enum values if provided
-	if task.Status != "" && !models.IsValidStatus(string(task.Status)) {
+	if taskUpdate.Status != "" && !models.IsValidStatus(string(task.Status)) {
 		http.Error(w, "Invalid status", http.StatusBadRequest)
 		return
 	}
-	if task.Priority != "" && !models.IsValidPriority(string(task.Priority)) {
+	if taskUpdate.Priority != "" && !models.IsValidPriority(string(task.Priority)) {
 		http.Error(w, "Invalid priority", http.StatusBadRequest)
 		return
 	}
-	if task.Type != "" && !models.IsValidType(string(task.Type)) {
+	if taskUpdate.Type != "" && !models.IsValidType(string(task.Type)) {
 		http.Error(w, "Invalid type", http.StatusBadRequest)
 		return
 	}

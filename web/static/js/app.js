@@ -258,20 +258,13 @@ function handleDrop(event) {
 
 async function updateTaskStatus(taskId, newStatus) {
     try {
-        // First get the current task data
-        const getResponse = await fetch(`/api/tasks/${taskId}`);
-        if (!getResponse.ok) return;
-        
-        const task = await getResponse.json();
-        task.status = newStatus;
-        
-        // Update the task
+        // Update the task with just the new status
         const updateResponse = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(task)
+            body: JSON.stringify({ status: newStatus })
         });
 
         if (updateResponse.ok) {
