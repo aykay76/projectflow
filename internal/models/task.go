@@ -46,6 +46,7 @@ type Task struct {
 	Children    []string     `json:"children"`
 	StartDate   *time.Time   `json:"start_date,omitempty"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
+	CompletedAt *time.Time   `json:"completed_at,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 }
@@ -195,6 +196,45 @@ func (t *Task) StartTask() {
 	t.UpdatedAt = time.Now()
 }
 
+// CompleteTask marks the task as done and sets the completion date
+func (t *Task) CompleteTask() {
+	now := time.Now()
+	t.CompletedAt = &now
+	t.Status = StatusDone
+	t.UpdatedAt = now
+}
+
+// IsCompleted returns true if the task has been completed (has a completion date)
+func (t *Task) IsCompleted() bool {
+	return t.CompletedAt != nil
+}
+
+// GetCompletedDateString returns the completion date as a string in RFC3339 format
+func (t *Task) GetCompletedDateString() string {
+	if t.CompletedAt == nil {
+		return ""
+	}
+	return t.CompletedAt.Format(time.RFC3339)
+}
+
+// SetCompletedDate sets the completion date from a string in RFC3339 format
+func (t *Task) SetCompletedDate(dateStr string) error {
+	if dateStr == "" {
+		t.CompletedAt = nil
+		return nil
+	}
+
+	parsedDate, err := time.Parse(time.RFC3339, dateStr)
+	if err != nil {
+		return err
+	}
+
+	t.CompletedAt = &parsedDate
+	t.Status = StatusDone
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
 // GetActualDuration returns the duration from start date to completion (or now if not completed)
 func (t *Task) GetActualDuration() time.Duration {
 	if t.StartDate == nil {
@@ -202,8 +242,8 @@ func (t *Task) GetActualDuration() time.Duration {
 	}
 
 	endTime := time.Now()
-	if t.Status == StatusDone && t.UpdatedAt.After(*t.StartDate) {
-		endTime = t.UpdatedAt
+	if t.CompletedAt != nil {
+		endTime = *t.CompletedAt
 	}
 
 	return endTime.Sub(*t.StartDate)
@@ -218,6 +258,48 @@ func (t *Task) GetActualDurationDays() int {
 // IsStarted returns true if the task has been started (has a start date)
 func (t *Task) IsStarted() bool {
 	return t.StartDate != nil
+}
+
+// IsDeliveredEarly returns true if the task was completed before the due date
+func (t *Task) IsDeliveredEarly() bool {
+	if t.CompletedAt == nil || t.DueDate == nil {
+		return false
+	}
+	return t.CompletedAt.Before(*t.DueDate)
+}
+
+// IsDeliveredLate returns true if the task was completed after the due date
+func (t *Task) IsDeliveredLate() bool {
+	if t.CompletedAt == nil || t.DueDate == nil {
+		return false
+	}
+	return t.CompletedAt.After(*t.DueDate)
+}
+
+// IsDeliveredOnTime returns true if the task was completed on the due date
+func (t *Task) IsDeliveredOnTime() bool {
+	if t.CompletedAt == nil || t.DueDate == nil {
+		return false
+	}
+	// Consider same day as on time (truncate to day level)
+	completedDay := t.CompletedAt.Truncate(24 * time.Hour)
+	dueDay := t.DueDate.Truncate(24 * time.Hour)
+	return completedDay.Equal(dueDay)
+}
+
+// GetDeliveryVariance returns the duration between completion and due date
+// Positive values indicate late delivery, negative values indicate early delivery
+func (t *Task) GetDeliveryVariance() time.Duration {
+	if t.CompletedAt == nil || t.DueDate == nil {
+		return 0
+	}
+	return t.CompletedAt.Sub(*t.DueDate)
+}
+
+// GetDeliveryVarianceDays returns the delivery variance in days
+func (t *Task) GetDeliveryVarianceDays() int {
+	variance := t.GetDeliveryVariance()
+	return int(variance.Hours() / 24)
 }
 
 // HierarchyTask represents a task with its nested children for hierarchy view
