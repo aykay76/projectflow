@@ -147,11 +147,70 @@ go build -o bin/projectflow cmd/server/main.go
 
 ## Model Context Protocol (MCP)
 
-ProjectFlow supports MCP for AI agent integration. See the [MCP documentation](docs/mcp.md) for detailed information on:
+ProjectFlow includes a Model Context Protocol (MCP) server that enables AI agents to interact with tasks programmatically. This allows AI assistants to create, read, update, and delete tasks as part of their workflow.
 
-- Setting up MCP server
-- Available MCP tools and resources
-- AI agent integration examples
+### MCP Server Setup
+
+1. **Start the MCP server:**
+   ```bash
+   go run cmd/mcp-server/main.go
+   ```
+   The MCP server runs on port 3001 by default.
+
+2. **Configure your MCP client:**
+   Use the provided `mcp-config.json` file or configure manually:
+   ```json
+   {
+     "mcpServers": {
+       "projectflow": {
+         "command": "go",
+         "args": ["run", "cmd/mcp-server/main.go"],
+         "cwd": "/path/to/projectflow"
+       }
+     }
+   }
+   ```
+
+### Available MCP Tools
+
+The MCP server provides these tools for task management:
+
+- **`list_tasks`** - List all tasks with optional filtering
+- **`create_task`** - Create a new task
+- **`get_task`** - Get a specific task by ID
+- **`update_task`** - Update an existing task
+- **`delete_task`** - Delete a task
+- **`get_task_hierarchy`** - Get tasks in hierarchical structure
+
+### Available MCP Resources
+
+The MCP server exposes these resources:
+
+- **`tasks://all`** - List of all tasks
+- **`tasks://hierarchy`** - Hierarchical task structure
+- **`tasks://summary`** - Project summary with statistics
+
+### Example Usage
+
+```bash
+# Start both servers
+go run cmd/server/main.go &          # HTTP server on :8080
+go run cmd/mcp-server/main.go &      # MCP server on :3001
+
+# Use with MCP-compatible AI clients
+# The AI can now create, manage, and query tasks programmatically
+```
+
+### Integration with AI Agents
+
+AI agents can use the MCP interface to:
+- Create and manage development tasks
+- Track project progress
+- Generate reports and summaries
+- Automate workflow processes
+- Integrate with other development tools
+
+For detailed MCP documentation, see [docs/mcp.md](docs/mcp.md).
 
 ## Contributing
 
