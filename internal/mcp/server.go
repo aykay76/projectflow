@@ -31,10 +31,10 @@ func NewMCPServer(storage storage.Storage) *MCPServer {
 // Start starts the MCP server and handles incoming requests
 func (s *MCPServer) Start(ctx context.Context) error {
 	log.Printf("Starting MCP server for ProjectFlow")
-	
+
 	decoder := json.NewDecoder(s.stdin)
 	encoder := json.NewEncoder(s.stdout)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,7 +48,7 @@ func (s *MCPServer) Start(ctx context.Context) error {
 				s.sendError(encoder, "", -32700, "Parse error", nil)
 				continue
 			}
-			
+
 			response := s.handleRequest(request)
 			if err := encoder.Encode(response); err != nil {
 				log.Printf("Error encoding response: %v", err)
@@ -87,7 +87,7 @@ func (s *MCPServer) handleInitialize(request JSONRPCRequest) JSONRPCResponse {
 			ListChanged: false,
 		},
 	}
-	
+
 	result := InitializeResult{
 		ProtocolVersion: "2024-11-05",
 		Capabilities:    capabilities,
@@ -96,7 +96,7 @@ func (s *MCPServer) handleInitialize(request JSONRPCRequest) JSONRPCResponse {
 			Version: "1.0.0",
 		},
 	}
-	
+
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -240,11 +240,11 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 			},
 		},
 	}
-	
+
 	result := ToolsListResult{
 		Tools: tools,
 	}
-	
+
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
