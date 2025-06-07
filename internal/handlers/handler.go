@@ -350,3 +350,357 @@ func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID stri
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// HandleTaskChildren handles /api/tasks/{id}/children endpoint
+func (h *Handler) HandleTaskChildren(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract task ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 2 || parts[1] != "children" {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+	parentID := parts[0]
+
+	if parentID == "" {
+		http.Error(w, "Parent task ID required", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getTaskChildren(w, r, parentID)
+	case http.MethodPost:
+		h.addTaskChild(w, r, parentID)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleTaskChildRelation handles /api/tasks/{id}/children/{child_id} endpoint
+func (h *Handler) HandleTaskChildRelation(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract parent and child IDs from URL
+	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 3 || parts[1] != "children" {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+	parentID := parts[0]
+	childID := parts[2]
+
+	if parentID == "" || childID == "" {
+		http.Error(w, "Parent and child task IDs required", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodDelete:
+		h.removeTaskChild(w, r, parentID, childID)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleTaskMove handles /api/tasks/{id}/move endpoint
+func (h *Handler) HandleTaskMove(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract task ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 2 || parts[1] != "move" {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+	taskID := parts[0]
+
+	if taskID == "" {
+		http.Error(w, "Task ID required", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		h.moveTask(w, r, taskID)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) getTaskChildren(w http.ResponseWriter, r *http.Request, parentID string) {
+	children, err := h.storage.GetTaskChildren(parentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Parent task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get task children", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	json.NewEncoder(w).Encode(children)
+}
+
+func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID string) {
+	var request struct {
+		ChildID string `json:"child_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if request.ChildID == "" {
+		http.Error(w, "child_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify both tasks exist
+	parentTask, err := h.storage.GetTask(parentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Parent task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get parent task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	childTask, err := h.storage.GetTask(request.ChildID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Child task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get child task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Check for circular references
+	if h.wouldCreateCircularReference(parentID, request.ChildID) {
+		http.Error(w, "Operation would create circular reference", http.StatusBadRequest)
+		return
+	}
+
+	// Remove child from its current parent if it has one
+	if childTask.ParentID != "" {
+		currentParent, err := h.storage.GetTask(childTask.ParentID)
+		if err == nil {
+			currentParent.RemoveChild(request.ChildID)
+			h.storage.UpdateTask(currentParent)
+		}
+	}
+
+	// Add child to new parent
+	parentTask.AddChild(request.ChildID)
+	childTask.ParentID = parentID
+	childTask.UpdatedAt = time.Now()
+
+	// Update both tasks
+	if err := h.storage.UpdateTask(parentTask); err != nil {
+		http.Error(w, "Failed to update parent task", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.storage.UpdateTask(childTask); err != nil {
+		http.Error(w, "Failed to update child task", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Message string       `json:"message"`
+		Parent  *models.Task `json:"parent"`
+		Child   *models.Task `json:"child"`
+	}{
+		Message: "Child relationship created successfully",
+		Parent:  parentTask,
+		Child:   childTask,
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) removeTaskChild(w http.ResponseWriter, r *http.Request, parentID, childID string) {
+	// Verify parent task exists
+	parentTask, err := h.storage.GetTask(parentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Parent task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get parent task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Verify child task exists
+	childTask, err := h.storage.GetTask(childID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Child task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get child task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Check if the relationship actually exists
+	childExists := false
+	for _, child := range parentTask.Children {
+		if child == childID {
+			childExists = true
+			break
+		}
+	}
+
+	if !childExists {
+		http.Error(w, "Child relationship does not exist", http.StatusBadRequest)
+		return
+	}
+
+	// Remove the relationship
+	parentTask.RemoveChild(childID)
+	childTask.ParentID = ""
+	childTask.UpdatedAt = time.Now()
+
+	// Update both tasks
+	if err := h.storage.UpdateTask(parentTask); err != nil {
+		http.Error(w, "Failed to update parent task", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.storage.UpdateTask(childTask); err != nil {
+		http.Error(w, "Failed to update child task", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Message string       `json:"message"`
+		Parent  *models.Task `json:"parent"`
+		Child   *models.Task `json:"child"`
+	}{
+		Message: "Child relationship removed successfully",
+		Parent:  parentTask,
+		Child:   childTask,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string) {
+	var request struct {
+		NewParentID string `json:"new_parent_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Get the task to move
+	task, err := h.storage.GetTask(taskID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Task not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// If new parent ID is provided, verify it exists
+	var newParent *models.Task
+	if request.NewParentID != "" {
+		newParent, err = h.storage.GetTask(request.NewParentID)
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				http.Error(w, "New parent task not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "Failed to get new parent task", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Check for circular references
+		if h.wouldCreateCircularReference(request.NewParentID, taskID) {
+			http.Error(w, "Operation would create circular reference", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Remove task from current parent if it has one
+	if task.ParentID != "" {
+		currentParent, err := h.storage.GetTask(task.ParentID)
+		if err == nil {
+			currentParent.RemoveChild(taskID)
+			h.storage.UpdateTask(currentParent)
+		}
+	}
+
+	// Add task to new parent if specified
+	if newParent != nil {
+		newParent.AddChild(taskID)
+		if err := h.storage.UpdateTask(newParent); err != nil {
+			http.Error(w, "Failed to update new parent task", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Update the task's parent ID
+	task.ParentID = request.NewParentID
+	task.UpdatedAt = time.Now()
+
+	if err := h.storage.UpdateTask(task); err != nil {
+		http.Error(w, "Failed to update task", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Message   string       `json:"message"`
+		Task      *models.Task `json:"task"`
+		NewParent *models.Task `json:"new_parent,omitempty"`
+	}{
+		Message:   "Task moved successfully",
+		Task:      task,
+		NewParent: newParent,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// wouldCreateCircularReference checks if making childID a child of parentID would create a circular reference
+func (h *Handler) wouldCreateCircularReference(parentID, childID string) bool {
+	// If parent and child are the same, it's circular
+	if parentID == childID {
+		return true
+	}
+
+	// Check if parentID is already a descendant of childID
+	return h.isDescendant(childID, parentID)
+}
+
+// isDescendant checks if ancestorID is a descendant of taskID
+func (h *Handler) isDescendant(taskID, ancestorID string) bool {
+	task, err := h.storage.GetTask(taskID)
+	if err != nil {
+		return false
+	}
+
+	// Check all children recursively
+	for _, childID := range task.Children {
+		if childID == ancestorID {
+			return true
+		}
+		if h.isDescendant(childID, ancestorID) {
+			return true
+		}
+	}
+
+	return false
+}

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aykay76/projectflow/internal/handlers"
 	"github.com/aykay76/projectflow/internal/storage"
@@ -26,7 +27,30 @@ func main() {
 
 	// API routes
 	mux.HandleFunc("/api/tasks", handler.HandleTasks)
-	mux.HandleFunc("/api/tasks/", handler.HandleTask)
+	mux.HandleFunc("/api/tasks/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+		parts := strings.Split(path, "/")
+
+		if len(parts) >= 2 && parts[1] == "children" {
+			if len(parts) == 2 {
+				// /api/tasks/{id}/children
+				handler.HandleTaskChildren(w, r)
+			} else if len(parts) == 3 {
+				// /api/tasks/{id}/children/{child_id}
+				handler.HandleTaskChildRelation(w, r)
+			} else {
+				http.Error(w, "Invalid URL path", http.StatusBadRequest)
+			}
+		} else if len(parts) >= 2 && parts[1] == "move" {
+			// /api/tasks/{id}/move
+			handler.HandleTaskMove(w, r)
+		} else if len(parts) == 1 {
+			// /api/tasks/{id}
+			handler.HandleTask(w, r)
+		} else {
+			http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		}
+	})
 	mux.HandleFunc("/api/hierarchy", handler.HandleHierarchy)
 
 	// Static files
