@@ -44,7 +44,7 @@ type Task struct {
 	Type        TaskType     `json:"type"`
 	ParentID    string       `json:"parent_id,omitempty"`
 	Children    []string     `json:"children"`
-	StartedAt   *time.Time   `json:"start_date,omitempty"`
+	StartedAt   *time.Time   `json:"started_at,omitempty"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
 	CompletedAt *time.Time   `json:"completed_at,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`

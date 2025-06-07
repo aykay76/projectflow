@@ -123,7 +123,7 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
-	// Use a temporary struct to handle due_date and start_date as strings
+	// Use a temporary struct to handle due_date and started_at as strings
 	var taskCreate struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
@@ -132,7 +132,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 		Type        string `json:"type"`
 		ParentID    string `json:"parent_id"`
 		DueDate     string `json:"due_date"`
-		StartDate   string `json:"start_date"`
+		StartedAt   string `json:"started_at"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&taskCreate); err != nil {
@@ -154,9 +154,9 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Handle start_date
-	if taskCreate.StartDate != "" {
-		if err := task.SetStartedAt(taskCreate.StartDate); err != nil {
+	// Handle started_at
+	if taskCreate.StartedAt != "" {
+		if err := task.SetStartedAt(taskCreate.StartedAt); err != nil {
 			http.Error(w, "Invalid start date format. Use RFC3339", http.StatusBadRequest)
 			return
 		}
@@ -174,7 +174,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	} else {
 		task.Status = models.TaskStatus(taskCreate.Status)
 		// Auto-set start date if status is in_progress and no start date provided
-		if task.Status == models.StatusInProgress && taskCreate.StartDate == "" {
+		if task.Status == models.StatusInProgress && taskCreate.StartedAt == "" {
 			task.StartTask()
 		}
 	}
@@ -237,7 +237,7 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string)
 }
 
 func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	// Use a temporary struct to handle due_date and start_date as strings
+	// Use a temporary struct to handle due_date and started_at as strings
 	var taskUpdate struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
@@ -246,7 +246,7 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		Type        string `json:"type"`
 		ParentID    string `json:"parent_id"`
 		DueDate     string `json:"due_date"`
-		StartDate   string `json:"start_date"`
+		StartedAt   string `json:"started_at"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&taskUpdate); err != nil {
@@ -272,16 +272,16 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		}
 	}
 
-	// Handle start_date
-	if taskUpdate.StartDate != "" {
-		if err := task.SetStartedAt(taskUpdate.StartDate); err != nil {
+	// Handle started_at
+	if taskUpdate.StartedAt != "" {
+		if err := task.SetStartedAt(taskUpdate.StartedAt); err != nil {
 			http.Error(w, "Invalid start date format. Use RFC3339", http.StatusBadRequest)
 			return
 		}
 	}
 
 	// Auto-set start date if status changes to in_progress and no start date provided
-	if task.Status == models.StatusInProgress && taskUpdate.StartDate == "" {
+	if task.Status == models.StatusInProgress && taskUpdate.StartedAt == "" {
 		// Need to check current task to see if it already has a start date
 		currentTask, err := h.storage.GetTask(taskID)
 		if err == nil && currentTask.StartedAt == nil {
