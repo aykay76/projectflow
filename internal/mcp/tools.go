@@ -11,21 +11,21 @@ import (
 // handleToolsCall handles tool call requests
 func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 	var toolCallReq ToolCallRequest
-	
+
 	// Parse the params
 	paramsBytes, err := json.Marshal(request.Params)
 	if err != nil {
 		return s.createErrorResponse(request.ID, -32602, "Invalid params", nil)
 	}
-	
+
 	if err := json.Unmarshal(paramsBytes, &toolCallReq); err != nil {
 		return s.createErrorResponse(request.ID, -32602, "Invalid params", nil)
 	}
-	
+
 	// Handle the specific tool
 	var result ToolCallResult
 	var callErr error
-	
+
 	switch toolCallReq.Name {
 	case "list_tasks":
 		result, callErr = s.handleListTasks(toolCallReq.Arguments)
@@ -42,7 +42,7 @@ func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 	default:
 		return s.createErrorResponse(request.ID, -32601, "Unknown tool", nil)
 	}
-	
+
 	if callErr != nil {
 		result = ToolCallResult{
 			Content: []Content{{
@@ -52,7 +52,7 @@ func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 			IsError: true,
 		}
 	}
-	
+
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -66,12 +66,12 @@ func (s *MCPServer) handleListTasks(args map[string]interface{}) (ToolCallResult
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to list tasks: %w", err)
 	}
-	
+
 	tasksJSON, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to marshal tasks: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
@@ -86,12 +86,12 @@ func (s *MCPServer) handleCreateTask(args map[string]interface{}) (ToolCallResul
 	if !ok || title == "" {
 		return ToolCallResult{}, fmt.Errorf("title is required and must be a string")
 	}
-	
+
 	description, _ := args["description"].(string)
-	
+
 	// Create new task
 	task := models.NewTask(title, description)
-	
+
 	// Set optional fields
 	if status, ok := args["status"].(string); ok && status != "" {
 		if !models.IsValidStatus(status) {
@@ -99,40 +99,40 @@ func (s *MCPServer) handleCreateTask(args map[string]interface{}) (ToolCallResul
 		}
 		task.Status = models.TaskStatus(status)
 	}
-	
+
 	if priority, ok := args["priority"].(string); ok && priority != "" {
 		if !models.IsValidPriority(priority) {
 			return ToolCallResult{}, fmt.Errorf("invalid priority: %s", priority)
 		}
 		task.Priority = models.TaskPriority(priority)
 	}
-	
+
 	if taskType, ok := args["type"].(string); ok && taskType != "" {
 		if !models.IsValidType(taskType) {
 			return ToolCallResult{}, fmt.Errorf("invalid type: %s", taskType)
 		}
 		task.Type = models.TaskType(taskType)
 	}
-	
+
 	if parentID, ok := args["parent_id"].(string); ok && parentID != "" {
 		task.ParentID = parentID
 	}
-	
+
 	if dueDate, ok := args["due_date"].(string); ok && dueDate != "" {
 		if err := task.SetDueDate(dueDate); err != nil {
 			return ToolCallResult{}, fmt.Errorf("invalid due date format: %w", err)
 		}
 	}
-	
+
 	if err := s.storage.CreateTask(task); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to create task: %w", err)
 	}
-	
+
 	taskJSON, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to marshal task: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
@@ -147,17 +147,17 @@ func (s *MCPServer) handleGetTask(args map[string]interface{}) (ToolCallResult, 
 	if !ok || id == "" {
 		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
 	}
-	
+
 	task, err := s.storage.GetTask(id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task: %w", err)
 	}
-	
+
 	taskJSON, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to marshal task: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
@@ -172,55 +172,55 @@ func (s *MCPServer) handleUpdateTask(args map[string]interface{}) (ToolCallResul
 	if !ok || id == "" {
 		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
 	}
-	
+
 	// Get existing task
 	existingTask, err := s.storage.GetTask(id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get existing task: %w", err)
 	}
-	
+
 	// Update fields
 	task := *existingTask
-	
+
 	if title, ok := args["title"].(string); ok && title != "" {
 		task.Title = title
 	}
-	
+
 	if description, ok := args["description"].(string); ok {
 		task.Description = description
 	}
-	
+
 	if status, ok := args["status"].(string); ok && status != "" {
 		if !models.IsValidStatus(status) {
 			return ToolCallResult{}, fmt.Errorf("invalid status: %s", status)
 		}
 		task.Status = models.TaskStatus(status)
-		
+
 		// Auto-set start date if status changes to in_progress
 		if task.Status == models.StatusInProgress && task.StartedAt == nil {
 			now := time.Now()
 			task.StartedAt = &now
 		}
 	}
-	
+
 	if priority, ok := args["priority"].(string); ok && priority != "" {
 		if !models.IsValidPriority(priority) {
 			return ToolCallResult{}, fmt.Errorf("invalid priority: %s", priority)
 		}
 		task.Priority = models.TaskPriority(priority)
 	}
-	
+
 	if taskType, ok := args["type"].(string); ok && taskType != "" {
 		if !models.IsValidType(taskType) {
 			return ToolCallResult{}, fmt.Errorf("invalid type: %s", taskType)
 		}
 		task.Type = models.TaskType(taskType)
 	}
-	
+
 	if parentID, ok := args["parent_id"].(string); ok {
 		task.ParentID = parentID
 	}
-	
+
 	if dueDate, ok := args["due_date"].(string); ok {
 		if dueDate == "" {
 			task.DueDate = nil
@@ -230,18 +230,18 @@ func (s *MCPServer) handleUpdateTask(args map[string]interface{}) (ToolCallResul
 			}
 		}
 	}
-	
+
 	task.UpdatedAt = time.Now()
-	
+
 	if err := s.storage.UpdateTask(&task); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to update task: %w", err)
 	}
-	
+
 	taskJSON, err := json.MarshalIndent(&task, "", "  ")
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to marshal task: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
@@ -256,17 +256,17 @@ func (s *MCPServer) handleDeleteTask(args map[string]interface{}) (ToolCallResul
 	if !ok || id == "" {
 		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
 	}
-	
+
 	// Get task info before deletion for confirmation
 	task, err := s.storage.GetTask(id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task: %w", err)
 	}
-	
+
 	if err := s.storage.DeleteTask(id); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to delete task: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
@@ -281,12 +281,12 @@ func (s *MCPServer) handleGetTaskHierarchy(args map[string]interface{}) (ToolCal
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task hierarchy: %w", err)
 	}
-	
+
 	hierarchyJSON, err := json.MarshalIndent(hierarchy, "", "  ")
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to marshal hierarchy: %w", err)
 	}
-	
+
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
