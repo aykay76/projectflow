@@ -226,6 +226,22 @@ header p {
     color: #868e96;
 }
 
+.task-start-date {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-right: 5px;
+}
+
+.task-due-date {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-right: 5px;
+}
+
 .task-children {
     background-color: #e9ecef;
     padding: 2px 6px;
