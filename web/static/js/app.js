@@ -236,6 +236,13 @@ function showMessage(text, type) {
     }, 5000);
 }
 
+function initializeDraggableCards() {
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach(card => {
+        card.draggable = true;
+    });
+}
+
 // Drag and drop functionality (basic implementation)
 function handleDragStart(event) {
     const taskId = event.target.getAttribute('data-id');
@@ -295,8 +302,19 @@ async function updateTaskStatus(taskId, newStatus) {
         const task = await getResponse.json();
         console.log('Current task data:', task);
         
-        task.status = newStatus;
-        console.log('Updated task data:', task);
+        // Create a copy of the task with only the fields needed for update
+        const taskUpdate = {
+            title: task.title,
+            description: task.description,
+            status: newStatus,
+            priority: task.priority,
+            type: task.type,
+            parent_id: task.parent_id || "",
+            due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "", // Convert to YYYY-MM-DD
+            started_at: task.started_at || ""
+        };
+        
+        console.log('Updated task data:', taskUpdate);
         
         // Update the task
         const updateResponse = await fetch(`/api/tasks/${taskId}`, {
@@ -304,7 +322,7 @@ async function updateTaskStatus(taskId, newStatus) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(task)
+            body: JSON.stringify(taskUpdate)
         });
 
         if (updateResponse.ok) {
@@ -754,11 +772,4 @@ function initializeTimelineControls() {
             }
         });
     }
-}
-
-function initializeDraggableCards() {
-    const taskCards = document.querySelectorAll('.task-card');
-    taskCards.forEach(card => {
-        card.draggable = true;
-    });
 }
