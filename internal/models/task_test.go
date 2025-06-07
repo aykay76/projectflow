@@ -286,7 +286,7 @@ func TestIsValidType(t *testing.T) {
 	}
 }
 
-func TestTask_SetStartDate(t *testing.T) {
+func TestTask_SetStartedAt(t *testing.T) {
 	tests := []struct {
 		name    string
 		dateStr string
@@ -322,43 +322,43 @@ func TestTask_SetStartDate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &Task{}
-			err := task.SetStartDate(tt.dateStr)
+			err := task.SetStartedAt(tt.dateStr)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Task.SetStartDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Task.SetStartedAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr && tt.dateStr != "" {
 				expected, _ := time.Parse(time.RFC3339, tt.dateStr)
-				if task.StartDate == nil || !task.StartDate.Equal(expected) {
-					t.Errorf("Task.SetStartDate() = %v, want %v", task.StartDate, expected)
+				if task.StartedAt == nil || !task.StartedAt.Equal(expected) {
+					t.Errorf("Task.SetStartedAt() = %v, want %v", task.StartedAt, expected)
 				}
 			}
 
 			if !tt.wantErr && tt.dateStr == "" {
-				if task.StartDate != nil {
-					t.Errorf("Task.SetStartDate() with empty string should set StartDate to nil")
+				if task.StartedAt != nil {
+					t.Errorf("Task.SetStartedAt() with empty string should set StartedAt to nil")
 				}
 			}
 		})
 	}
 }
 
-func TestTask_GetStartDateString(t *testing.T) {
+func TestTask_GetStartedAtString(t *testing.T) {
 	task := &Task{}
 
 	// Test with nil start date
-	if got := task.GetStartDateString(); got != "" {
-		t.Errorf("Task.GetStartDateString() with nil start date = %v, want empty string", got)
+	if got := task.GetStartedAtString(); got != "" {
+		t.Errorf("Task.GetStartedAtString() with nil start date = %v, want empty string", got)
 	}
 
 	// Test with actual start date
 	startDate := time.Date(2025, 6, 7, 15, 4, 5, 0, time.UTC)
-	task.StartDate = &startDate
+	task.StartedAt = &startDate
 	expected := startDate.Format(time.RFC3339)
-	if got := task.GetStartDateString(); got != expected {
-		t.Errorf("Task.GetStartDateString() = %v, want %v", got, expected)
+	if got := task.GetStartedAtString(); got != expected {
+		t.Errorf("Task.GetStartedAtString() = %v, want %v", got, expected)
 	}
 }
 
@@ -374,17 +374,17 @@ func TestTask_StartTask(t *testing.T) {
 		t.Errorf("Task.StartTask() status = %v, want %v", task.Status, StatusInProgress)
 	}
 
-	if task.StartDate == nil {
-		t.Errorf("Task.StartTask() should set StartDate when not already set")
+	if task.StartedAt == nil {
+		t.Errorf("Task.StartTask() should set StartedAt when not already set")
 	}
 
 	// Test starting a task that already has a start date
-	originalStartDate := *task.StartDate
+	originalStartDate := *task.StartedAt
 	time.Sleep(time.Millisecond) // Ensure time difference
 	task.StartTask()
 
-	if !task.StartDate.Equal(originalStartDate) {
-		t.Errorf("Task.StartTask() should not change existing StartDate")
+	if !task.StartedAt.Equal(originalStartDate) {
+		t.Errorf("Task.StartTask() should not change existing StartedAt")
 	}
 }
 
@@ -397,7 +397,7 @@ func TestTask_GetActualDuration(t *testing.T) {
 
 	// Test with start date but not completed
 	startTime := time.Now().Add(-2 * time.Hour)
-	task.StartDate = &startTime
+	task.StartedAt = &startTime
 	task.Status = StatusInProgress
 
 	duration := task.GetActualDuration()
@@ -426,7 +426,7 @@ func TestTask_GetActualDurationDays(t *testing.T) {
 
 	// Test with 2-day duration
 	startTime := time.Now().Add(-48 * time.Hour)
-	task.StartDate = &startTime
+	task.StartedAt = &startTime
 	task.Status = StatusDone
 	task.UpdatedAt = startTime.Add(48 * time.Hour)
 
@@ -446,8 +446,210 @@ func TestTask_IsStarted(t *testing.T) {
 
 	// Test with start date
 	now := time.Now()
-	task.StartDate = &now
+	task.StartedAt = &now
 	if !task.IsStarted() {
 		t.Errorf("Task.IsStarted() with start date should return true")
+	}
+}
+
+func TestTask_CompleteTask(t *testing.T) {
+	task := NewTask("Test Task", "Test Description")
+
+	// Task should not be completed initially
+	if task.IsCompleted() {
+		t.Errorf("Task.IsCompleted() should return false for new task")
+	}
+
+	if task.Status == StatusDone {
+		t.Errorf("Task.Status should not be StatusDone for new task")
+	}
+
+	// Complete the task
+	beforeComplete := time.Now()
+	task.CompleteTask()
+	afterComplete := time.Now()
+
+	// Check task is marked as completed
+	if !task.IsCompleted() {
+		t.Errorf("Task.IsCompleted() should return true after CompleteTask()")
+	}
+
+	if task.Status != StatusDone {
+		t.Errorf("Task.Status should be StatusDone after CompleteTask(), got %v", task.Status)
+	}
+
+	// Check completion date is set correctly
+	if task.CompletedAt == nil {
+		t.Errorf("Task.CompletedAt should not be nil after CompleteTask()")
+	} else {
+		if task.CompletedAt.Before(beforeComplete) || task.CompletedAt.After(afterComplete) {
+			t.Errorf("Task.CompletedAt should be between %v and %v, got %v", beforeComplete, afterComplete, task.CompletedAt)
+		}
+	}
+}
+
+func TestTask_SetCompletedDate(t *testing.T) {
+	tests := []struct {
+		name    string
+		dateStr string
+		wantErr bool
+	}{
+		{
+			name:    "valid RFC3339 date",
+			dateStr: "2025-06-07T15:04:05Z",
+			wantErr: false,
+		},
+		{
+			name:    "valid RFC3339 date with timezone",
+			dateStr: "2025-06-07T15:04:05+02:00",
+			wantErr: false,
+		},
+		{
+			name:    "empty date",
+			dateStr: "",
+			wantErr: false,
+		},
+		{
+			name:    "invalid date format",
+			dateStr: "2025-06-07",
+			wantErr: true,
+		},
+		{
+			name:    "invalid date",
+			dateStr: "invalid-date",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := NewTask("Test Task", "Test Description")
+			err := task.SetCompletedDate(tt.dateStr)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Task.SetCompletedDate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				if tt.dateStr == "" {
+					if task.CompletedAt != nil {
+						t.Errorf("Task.CompletedAt should be nil for empty date string")
+					}
+				} else {
+					expected, _ := time.Parse(time.RFC3339, tt.dateStr)
+					if task.CompletedAt == nil || !task.CompletedAt.Equal(expected) {
+						t.Errorf("Task.CompletedAt = %v, want %v", task.CompletedAt, expected)
+					}
+					if task.Status != StatusDone {
+						t.Errorf("Task.Status should be StatusDone after setting completion date, got %v", task.Status)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestTask_GetCompletedDateString(t *testing.T) {
+	task := NewTask("Test Task", "Test Description")
+
+	// Test with no completion date
+	if got := task.GetCompletedDateString(); got != "" {
+		t.Errorf("Task.GetCompletedDateString() with no completion date = %v, want empty string", got)
+	}
+
+	// Test with completion date
+	testDate := time.Date(2025, 6, 7, 15, 4, 5, 0, time.UTC)
+	task.CompletedAt = &testDate
+	expected := "2025-06-07T15:04:05Z"
+	if got := task.GetCompletedDateString(); got != expected {
+		t.Errorf("Task.GetCompletedDateString() = %v, want %v", got, expected)
+	}
+}
+
+func TestTask_GetActualDurationWithCompletion(t *testing.T) {
+	task := NewTask("Test Task", "Test Description")
+
+	// Test with no start date
+	if duration := task.GetActualDuration(); duration != 0 {
+		t.Errorf("Task.GetActualDuration() with no start date should return 0, got %v", duration)
+	}
+
+	// Set start date
+	startDate := time.Date(2025, 6, 1, 10, 0, 0, 0, time.UTC)
+	task.StartedAt = &startDate
+
+	// Test with start date but no completion (should use current time)
+	duration := task.GetActualDuration()
+	if duration <= 0 {
+		t.Errorf("Task.GetActualDuration() with start date should be positive, got %v", duration)
+	}
+
+	// Set completion date
+	completionDate := time.Date(2025, 6, 5, 16, 30, 0, 0, time.UTC)
+	task.CompletedAt = &completionDate
+
+	// Test with both start and completion dates
+	expectedDuration := completionDate.Sub(startDate)
+	actualDuration := task.GetActualDuration()
+	if actualDuration != expectedDuration {
+		t.Errorf("Task.GetActualDuration() = %v, want %v", actualDuration, expectedDuration)
+	}
+}
+
+func TestTask_DeliveryPerformance(t *testing.T) {
+	// Create a task with due date
+	task := NewTask("Test Task", "Test Description")
+	dueDate := time.Date(2025, 6, 10, 17, 0, 0, 0, time.UTC)
+	task.DueDate = &dueDate
+
+	// Test without completion date
+	if task.IsDeliveredEarly() || task.IsDeliveredLate() || task.IsDeliveredOnTime() {
+		t.Errorf("Delivery methods should return false when task is not completed")
+	}
+
+	// Test early delivery
+	earlyCompletion := time.Date(2025, 6, 8, 15, 0, 0, 0, time.UTC)
+	task.CompletedAt = &earlyCompletion
+
+	if !task.IsDeliveredEarly() {
+		t.Errorf("Task.IsDeliveredEarly() should return true for early completion")
+	}
+	if task.IsDeliveredLate() || task.IsDeliveredOnTime() {
+		t.Errorf("Only IsDeliveredEarly() should be true for early completion")
+	}
+
+	expectedVariance := earlyCompletion.Sub(dueDate)
+	if variance := task.GetDeliveryVariance(); variance != expectedVariance {
+		t.Errorf("Task.GetDeliveryVariance() = %v, want %v", variance, expectedVariance)
+	}
+
+	// Test late delivery
+	lateCompletion := time.Date(2025, 6, 12, 10, 0, 0, 0, time.UTC)
+	task.CompletedAt = &lateCompletion
+
+	if !task.IsDeliveredLate() {
+		t.Errorf("Task.IsDeliveredLate() should return true for late completion")
+	}
+	if task.IsDeliveredEarly() || task.IsDeliveredOnTime() {
+		t.Errorf("Only IsDeliveredLate() should be true for late completion")
+	}
+
+	// Test on-time delivery (same day)
+	onTimeCompletion := time.Date(2025, 6, 10, 14, 0, 0, 0, time.UTC)
+	task.CompletedAt = &onTimeCompletion
+
+	if !task.IsDeliveredOnTime() {
+		t.Errorf("Task.IsDeliveredOnTime() should return true for same-day completion")
+	}
+	if task.IsDeliveredEarly() || task.IsDeliveredLate() {
+		t.Errorf("Only IsDeliveredOnTime() should be true for same-day completion")
+	}
+
+	// Test delivery variance in days
+	task.CompletedAt = &lateCompletion
+	expectedDays := 2 // 2 days late
+	if days := task.GetDeliveryVarianceDays(); days != expectedDays {
+		t.Errorf("Task.GetDeliveryVarianceDays() = %v, want %v", days, expectedDays)
 	}
 }
