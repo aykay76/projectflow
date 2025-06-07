@@ -15,23 +15,23 @@ func (s *MCPServer) handleResourcesList(request JSONRPCRequest) JSONRPCResponse 
 			MimeType:    "application/json",
 		},
 		{
-			URI:         "projectflow://hierarchy", 
+			URI:         "projectflow://hierarchy",
 			Name:        "Task Hierarchy",
 			Description: "Hierarchical view of all tasks organized by parent-child relationships",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "projectflow://summary",
-			Name:        "Project Summary", 
+			Name:        "Project Summary",
 			Description: "Summary statistics and overview of the project status",
 			MimeType:    "text/plain",
 		},
 	}
-	
+
 	result := ResourcesListResult{
 		Resources: resources,
 	}
-	
+
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -42,20 +42,20 @@ func (s *MCPServer) handleResourcesList(request JSONRPCRequest) JSONRPCResponse 
 // handleResourcesRead handles the resources/read request
 func (s *MCPServer) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse {
 	var readReq ResourceReadRequest
-	
+
 	// Parse the params
 	paramsBytes, err := json.Marshal(request.Params)
 	if err != nil {
 		return s.createErrorResponse(request.ID, -32602, "Invalid params", nil)
 	}
-	
+
 	if err := json.Unmarshal(paramsBytes, &readReq); err != nil {
 		return s.createErrorResponse(request.ID, -32602, "Invalid params", nil)
 	}
-	
+
 	var contents []Content
 	var readErr error
-	
+
 	switch readReq.URI {
 	case "projectflow://tasks":
 		contents, readErr = s.readTasksResource()
@@ -66,15 +66,15 @@ func (s *MCPServer) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse 
 	default:
 		return s.createErrorResponse(request.ID, -32602, "Unknown resource URI", nil)
 	}
-	
+
 	if readErr != nil {
 		return s.createErrorResponse(request.ID, -32603, readErr.Error(), nil)
 	}
-	
+
 	result := ResourceReadResult{
 		Contents: contents,
 	}
-	
+
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -88,12 +88,12 @@ func (s *MCPServer) readTasksResource() ([]Content, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
 	}
-	
+
 	tasksJSON, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal tasks: %w", err)
 	}
-	
+
 	return []Content{{
 		Type: "text",
 		Text: string(tasksJSON),
@@ -106,12 +106,12 @@ func (s *MCPServer) readHierarchyResource() ([]Content, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hierarchy: %w", err)
 	}
-	
+
 	hierarchyJSON, err := json.MarshalIndent(hierarchy, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal hierarchy: %w", err)
 	}
-	
+
 	return []Content{{
 		Type: "text",
 		Text: string(hierarchyJSON),
@@ -124,7 +124,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
 	}
-	
+
 	// Calculate statistics
 	stats := map[string]int{
 		"total":       len(tasks),
@@ -142,7 +142,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 		"critical":    0,
 		"overdue":     0,
 	}
-	
+
 	for _, task := range tasks {
 		// Count by status
 		switch task.Status {
@@ -155,7 +155,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 		case "blocked":
 			stats["blocked"]++
 		}
-		
+
 		// Count by type
 		switch task.Type {
 		case "epic":
@@ -167,7 +167,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 		case "subtask":
 			stats["subtask"]++
 		}
-		
+
 		// Count by priority
 		switch task.Priority {
 		case "low":
@@ -179,13 +179,13 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 		case "critical":
 			stats["critical"]++
 		}
-		
+
 		// Count overdue
 		if task.IsOverdue() {
 			stats["overdue"]++
 		}
 	}
-	
+
 	summary := fmt.Sprintf(`ProjectFlow Summary
 ==================
 
@@ -230,7 +230,7 @@ Progress: %.1f%% complete
 		stats["overdue"],
 		float64(stats["done"])/float64(stats["total"])*100,
 	)
-	
+
 	return []Content{{
 		Type: "text",
 		Text: summary,
