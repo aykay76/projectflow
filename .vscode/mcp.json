@@ -1,0 +1,11 @@
+{
+    "servers": {
+        "projectflow": {
+            "command": "/Users/vanilla/git/aykay76/projectflow/bin/mcp-server",
+            "args": [],
+            "env": {
+                "STORAGE_DIR": "/Users/vanilla/git/aykay76/projectflow/data"
+            }
+        }
+    }
+}            

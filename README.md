@@ -212,6 +212,113 @@ AI agents can use the MCP interface to:
 
 For detailed MCP documentation, see [docs/mcp.md](docs/mcp.md).
 
+## Project Integration with VS Code
+
+ProjectFlow can be seamlessly integrated into your VS Code projects, allowing you to store and manage tasks alongside your code in Git. This enables powerful AI-assisted development workflows where coding agents can create, update, and track development tasks directly within your project context.
+
+### Setup `.vscode/mcp.json`
+
+Add a `.vscode/mcp.json` file to your project root to configure ProjectFlow as an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "projectflow": {
+      "command": "go",
+      "args": ["run", "cmd/mcp-server/main.go"],
+      "cwd": "/path/to/projectflow",
+      "env": {
+        "STORAGE_DIR": "./.projectflow/data"
+      }
+    }
+  }
+}
+```
+
+### Project-Specific Task Storage
+
+When integrated with your project, ProjectFlow will store tasks in a `.projectflow/data/` directory within your project:
+
+```
+your-project/
+├── .vscode/
+│   └── mcp.json              # MCP configuration
+├── .projectflow/
+│   └── data/
+│       └── tasks/            # Project-specific tasks
+│           ├── epic-1.json   # Your development epics
+│           ├── story-1.json  # User stories
+│           └── task-1.json   # Development tasks
+├── src/                      # Your application code
+├── README.md
+└── .gitignore
+```
+
+### Benefits of Project Integration
+
+1. **Unified Version Control**: Tasks are versioned alongside your code
+2. **Context-Aware AI**: Coding agents understand both code and task context
+3. **Team Collaboration**: Shared task management through Git
+4. **Branch-Specific Tasks**: Different branches can have different task states
+5. **Automated Workflows**: AI agents can create tasks from code analysis
+
+### Example Workflow
+
+1. **Initialize ProjectFlow in your project:**
+   ```bash
+   mkdir -p .projectflow/data/tasks
+   echo ".projectflow/data/tasks/*.json" >> .gitignore  # Optional: exclude task files
+   ```
+
+2. **Configure VS Code MCP:**
+   ```json
+   {
+     "mcpServers": {
+       "projectflow": {
+         "command": "go",
+         "args": ["run", "/path/to/projectflow/cmd/mcp-server/main.go"],
+         "env": {
+           "STORAGE_DIR": "./.projectflow/data"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Use with AI Coding Agents:**
+   - AI agents can create tasks based on code analysis
+   - Track development progress alongside code changes
+   - Generate tasks from TODO comments in code
+   - Link tasks to specific commits or pull requests
+
+### Integration with Development Workflow
+
+The ProjectFlow MCP integration enables powerful development workflows:
+
+- **Automated Task Creation**: AI agents analyze code and create relevant tasks
+- **Progress Tracking**: Link tasks to commits and pull requests
+- **Code Review Tasks**: Generate review tasks for specific code changes
+- **Bug Tracking**: Create and track bugs directly from code analysis
+- **Feature Planning**: Plan features as hierarchical tasks (Epic → Story → Task)
+
+### Frontend Access
+
+While the primary interface is through MCP and AI agents, you can still access the web frontend:
+
+1. Start the ProjectFlow server pointing to your project's data:
+   ```bash
+   STORAGE_DIR=./.projectflow/data go run /path/to/projectflow/cmd/server/main.go
+   ```
+
+2. Open `http://localhost:8080` to view and manage tasks in the web interface
+
+### Git Integration Best Practices
+
+- **Commit task changes**: Include task updates in your commits
+- **Branch-specific tasks**: Use different task states per branch
+- **Team synchronization**: Pull task updates when syncing with team
+- **Task cleanup**: Archive completed tasks periodically
+
 ## Contributing
 
 1. Fork the repository
