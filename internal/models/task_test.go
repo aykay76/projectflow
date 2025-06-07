@@ -286,7 +286,7 @@ func TestIsValidType(t *testing.T) {
 	}
 }
 
-func TestTask_SetStartDate(t *testing.T) {
+func TestTask_SetStartedAt(t *testing.T) {
 	tests := []struct {
 		name    string
 		dateStr string
@@ -322,43 +322,43 @@ func TestTask_SetStartDate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &Task{}
-			err := task.SetStartDate(tt.dateStr)
+			err := task.SetStartedAt(tt.dateStr)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Task.SetStartDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Task.SetStartedAt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if !tt.wantErr && tt.dateStr != "" {
 				expected, _ := time.Parse(time.RFC3339, tt.dateStr)
-				if task.StartDate == nil || !task.StartDate.Equal(expected) {
-					t.Errorf("Task.SetStartDate() = %v, want %v", task.StartDate, expected)
+				if task.StartedAt == nil || !task.StartedAt.Equal(expected) {
+					t.Errorf("Task.SetStartedAt() = %v, want %v", task.StartedAt, expected)
 				}
 			}
 
 			if !tt.wantErr && tt.dateStr == "" {
-				if task.StartDate != nil {
-					t.Errorf("Task.SetStartDate() with empty string should set StartDate to nil")
+				if task.StartedAt != nil {
+					t.Errorf("Task.SetStartedAt() with empty string should set StartedAt to nil")
 				}
 			}
 		})
 	}
 }
 
-func TestTask_GetStartDateString(t *testing.T) {
+func TestTask_GetStartedAtString(t *testing.T) {
 	task := &Task{}
 
 	// Test with nil start date
-	if got := task.GetStartDateString(); got != "" {
-		t.Errorf("Task.GetStartDateString() with nil start date = %v, want empty string", got)
+	if got := task.GetStartedAtString(); got != "" {
+		t.Errorf("Task.GetStartedAtString() with nil start date = %v, want empty string", got)
 	}
 
 	// Test with actual start date
 	startDate := time.Date(2025, 6, 7, 15, 4, 5, 0, time.UTC)
-	task.StartDate = &startDate
+	task.StartedAt = &startDate
 	expected := startDate.Format(time.RFC3339)
-	if got := task.GetStartDateString(); got != expected {
-		t.Errorf("Task.GetStartDateString() = %v, want %v", got, expected)
+	if got := task.GetStartedAtString(); got != expected {
+		t.Errorf("Task.GetStartedAtString() = %v, want %v", got, expected)
 	}
 }
 
@@ -374,17 +374,17 @@ func TestTask_StartTask(t *testing.T) {
 		t.Errorf("Task.StartTask() status = %v, want %v", task.Status, StatusInProgress)
 	}
 
-	if task.StartDate == nil {
-		t.Errorf("Task.StartTask() should set StartDate when not already set")
+	if task.StartedAt == nil {
+		t.Errorf("Task.StartTask() should set StartedAt when not already set")
 	}
 
 	// Test starting a task that already has a start date
-	originalStartDate := *task.StartDate
+	originalStartDate := *task.StartedAt
 	time.Sleep(time.Millisecond) // Ensure time difference
 	task.StartTask()
 
-	if !task.StartDate.Equal(originalStartDate) {
-		t.Errorf("Task.StartTask() should not change existing StartDate")
+	if !task.StartedAt.Equal(originalStartDate) {
+		t.Errorf("Task.StartTask() should not change existing StartedAt")
 	}
 }
 
@@ -397,7 +397,7 @@ func TestTask_GetActualDuration(t *testing.T) {
 
 	// Test with start date but not completed
 	startTime := time.Now().Add(-2 * time.Hour)
-	task.StartDate = &startTime
+	task.StartedAt = &startTime
 	task.Status = StatusInProgress
 
 	duration := task.GetActualDuration()
@@ -426,7 +426,7 @@ func TestTask_GetActualDurationDays(t *testing.T) {
 
 	// Test with 2-day duration
 	startTime := time.Now().Add(-48 * time.Hour)
-	task.StartDate = &startTime
+	task.StartedAt = &startTime
 	task.Status = StatusDone
 	task.UpdatedAt = startTime.Add(48 * time.Hour)
 
@@ -446,7 +446,7 @@ func TestTask_IsStarted(t *testing.T) {
 
 	// Test with start date
 	now := time.Now()
-	task.StartDate = &now
+	task.StartedAt = &now
 	if !task.IsStarted() {
 		t.Errorf("Task.IsStarted() with start date should return true")
 	}
@@ -577,7 +577,7 @@ func TestTask_GetActualDurationWithCompletion(t *testing.T) {
 
 	// Set start date
 	startDate := time.Date(2025, 6, 1, 10, 0, 0, 0, time.UTC)
-	task.StartDate = &startDate
+	task.StartedAt = &startDate
 
 	// Test with start date but no completion (should use current time)
 	duration := task.GetActualDuration()

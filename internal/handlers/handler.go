@@ -156,7 +156,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 
 	// Handle start_date
 	if taskCreate.StartDate != "" {
-		if err := task.SetStartDate(taskCreate.StartDate); err != nil {
+		if err := task.SetStartedAt(taskCreate.StartDate); err != nil {
 			http.Error(w, "Invalid start date format. Use RFC3339", http.StatusBadRequest)
 			return
 		}
@@ -274,7 +274,7 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 
 	// Handle start_date
 	if taskUpdate.StartDate != "" {
-		if err := task.SetStartDate(taskUpdate.StartDate); err != nil {
+		if err := task.SetStartedAt(taskUpdate.StartDate); err != nil {
 			http.Error(w, "Invalid start date format. Use RFC3339", http.StatusBadRequest)
 			return
 		}
@@ -284,9 +284,9 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 	if task.Status == models.StatusInProgress && taskUpdate.StartDate == "" {
 		// Need to check current task to see if it already has a start date
 		currentTask, err := h.storage.GetTask(taskID)
-		if err == nil && currentTask.StartDate == nil {
+		if err == nil && currentTask.StartedAt == nil {
 			now := time.Now()
-			task.StartDate = &now
+			task.StartedAt = &now
 		}
 	}
 

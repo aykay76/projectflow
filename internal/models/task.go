@@ -44,7 +44,7 @@ type Task struct {
 	Type        TaskType     `json:"type"`
 	ParentID    string       `json:"parent_id,omitempty"`
 	Children    []string     `json:"children"`
-	StartDate   *time.Time   `json:"start_date,omitempty"`
+	StartedAt   *time.Time   `json:"start_date,omitempty"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
 	CompletedAt *time.Time   `json:"completed_at,omitempty"`
 	CreatedAt   time.Time    `json:"created_at"`
@@ -161,10 +161,10 @@ func (t *Task) GetDueDateString() string {
 	return t.DueDate.Format("2006-01-02")
 }
 
-// SetStartDate sets the start date from a string in RFC3339 format
-func (t *Task) SetStartDate(dateStr string) error {
+// SetStartedAt sets the start date from a string in RFC3339 format
+func (t *Task) SetStartedAt(dateStr string) error {
 	if dateStr == "" {
-		t.StartDate = nil
+		t.StartedAt = nil
 		return nil
 	}
 
@@ -173,24 +173,24 @@ func (t *Task) SetStartDate(dateStr string) error {
 		return err
 	}
 
-	t.StartDate = &parsedDate
+	t.StartedAt = &parsedDate
 	t.UpdatedAt = time.Now()
 	return nil
 }
 
-// GetStartDateString returns the start date as a string in RFC3339 format
-func (t *Task) GetStartDateString() string {
-	if t.StartDate == nil {
+// GetStartedAtString returns the start date as a string in RFC3339 format
+func (t *Task) GetStartedAtString() string {
+	if t.StartedAt == nil {
 		return ""
 	}
-	return t.StartDate.Format(time.RFC3339)
+	return t.StartedAt.Format(time.RFC3339)
 }
 
 // StartTask sets the task status to in_progress and sets the start date to now if not already set
 func (t *Task) StartTask() {
-	if t.StartDate == nil {
+	if t.StartedAt == nil {
 		now := time.Now()
-		t.StartDate = &now
+		t.StartedAt = &now
 	}
 	t.Status = StatusInProgress
 	t.UpdatedAt = time.Now()
@@ -237,19 +237,19 @@ func (t *Task) SetCompletedDate(dateStr string) error {
 
 // GetActualDuration returns the duration from start date to completion (or now if not completed)
 func (t *Task) GetActualDuration() time.Duration {
-	if t.StartDate == nil {
+	if t.StartedAt == nil {
 		return 0
 	}
 
 	endTime := time.Now()
 	if t.CompletedAt != nil {
 		endTime = *t.CompletedAt
-	} else if t.Status == StatusDone && t.UpdatedAt.After(*t.StartDate) {
+	} else if t.Status == StatusDone && t.UpdatedAt.After(*t.StartedAt) {
 		// Backward compatibility: use UpdatedAt for completed tasks without CompletedAt
 		endTime = t.UpdatedAt
 	}
 
-	return endTime.Sub(*t.StartDate)
+	return endTime.Sub(*t.StartedAt)
 }
 
 // GetActualDurationDays returns the actual duration in days
@@ -260,7 +260,7 @@ func (t *Task) GetActualDurationDays() int {
 
 // IsStarted returns true if the task has been started (has a start date)
 func (t *Task) IsStarted() bool {
-	return t.StartDate != nil
+	return t.StartedAt != nil
 }
 
 // IsDeliveredEarly returns true if the task was completed before the due date (different day)
