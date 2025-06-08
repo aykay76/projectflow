@@ -35,21 +35,21 @@ func MetricsMiddleware(m *metrics.Metrics) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			
+
 			// Add metrics to context for handlers to use
 			ctx := metrics.WithMetrics(r.Context(), m)
 			r = r.WithContext(ctx)
-			
+
 			// Wrap response writer to capture metrics
 			rw := &responseWriter{
 				ResponseWriter: w,
 				statusCode:     200, // Default status code
 				size:           0,
 			}
-			
+
 			// Get endpoint path for metrics (normalize dynamic paths)
 			endpoint := normalizeEndpoint(r.URL.Path)
-			
+
 			// Log request start with metrics context
 			requestID := GetRequestID(ctx)
 			logger.InfoContext(ctx, "HTTP request started",
@@ -57,16 +57,16 @@ func MetricsMiddleware(m *metrics.Metrics) func(http.Handler) http.Handler {
 				"endpoint", endpoint,
 				"request_id", requestID,
 			)
-			
+
 			// Process request
 			next.ServeHTTP(rw, r)
-			
+
 			// Calculate duration
 			duration := time.Since(start)
-			
+
 			// Record metrics
 			m.RecordHTTPRequest(r.Method, endpoint, rw.statusCode, duration, rw.size)
-			
+
 			// Log request completion with metrics
 			logger.InfoContext(ctx, "HTTP request completed",
 				"method", r.Method,
@@ -88,7 +88,7 @@ func normalizeEndpoint(path string) string {
 	if path == "" {
 		path = "/"
 	}
-	
+
 	// Normalize common patterns
 	switch {
 	case path == "/health", path == "/ready", path == "/metrics":
@@ -97,7 +97,7 @@ func normalizeEndpoint(path string) string {
 		// Normalize /tasks/{id} to /tasks/:id
 		return "/tasks/:id"
 	case strings.HasPrefix(path, "/projects/") && len(path) > 10:
-		// Normalize /projects/{id} to /projects/:id  
+		// Normalize /projects/{id} to /projects/:id
 		return "/projects/:id"
 	case path == "/tasks":
 		return path

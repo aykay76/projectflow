@@ -151,5 +151,3 @@ func main() {
 
 	slog.Info("Server shutdown completed successfully")
 }
-
-

@@ -128,9 +128,9 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	requestID := middleware.GetRequestID(ctx)
-	
+
 	logger.InfoContext(ctx, "Creating new task", "request_id", requestID)
-	
+
 	// Use a temporary struct to handle due_date and started_at as strings
 	var taskCreate struct {
 		Title       string `json:"title"`
@@ -250,9 +250,9 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string) {
 	ctx := r.Context()
 	requestID := middleware.GetRequestID(ctx)
-	
+
 	logger.DebugContext(ctx, "Getting task", "request_id", requestID, "task_id", taskID)
-	
+
 	task, err := h.storage.GetTask(taskID)
 	if err != nil {
 		// Record failed task retrieval
@@ -395,7 +395,7 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 
 func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID string) {
 	ctx := r.Context()
-	
+
 	if err := h.storage.DeleteTask(taskID); err != nil {
 		// Record failed task deletion
 		if m, ok := metrics.FromContext(ctx); ok {

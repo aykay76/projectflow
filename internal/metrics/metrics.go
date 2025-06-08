@@ -17,7 +17,7 @@ type Metrics struct {
 	httpRequestsTotal   *prometheus.CounterVec
 	httpRequestDuration *prometheus.HistogramVec
 	httpResponseSize    *prometheus.HistogramVec
-	
+
 	// Business metrics
 	tasksTotal        *prometheus.CounterVec
 	tasksActive       prometheus.Gauge
@@ -87,13 +87,13 @@ func NewMetrics() *Metrics {
 // RecordHTTPRequest records metrics for an HTTP request
 func (m *Metrics) RecordHTTPRequest(method, endpoint string, statusCode int, duration time.Duration, responseSize int64) {
 	statusStr := strconv.Itoa(statusCode)
-	
+
 	// Increment request counter
 	m.httpRequestsTotal.WithLabelValues(method, endpoint, statusStr).Inc()
-	
+
 	// Record request duration
 	m.httpRequestDuration.WithLabelValues(method, endpoint).Observe(duration.Seconds())
-	
+
 	// Record response size
 	m.httpResponseSize.WithLabelValues(method, endpoint).Observe(float64(responseSize))
 }
