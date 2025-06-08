@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aykay76/projectflow/internal/logger"
+	"github.com/aykay76/projectflow/internal/metrics"
+	"github.com/aykay76/projectflow/internal/middleware"
 	"github.com/aykay76/projectflow/internal/models"
 	"github.com/aykay76/projectflow/internal/storage"
 )
@@ -123,6 +126,11 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	requestID := middleware.GetRequestID(ctx)
+	
+	logger.InfoContext(ctx, "Creating new task", "request_id", requestID)
+	
 	// Use a temporary struct to handle due_date and started_at as strings
 	var taskCreate struct {
 		Title       string `json:"title"`
@@ -136,6 +144,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&taskCreate); err != nil {
+		logger.WarnContext(ctx, "Invalid JSON in request body", "error", err, "request_id", requestID)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -149,6 +158,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	// Handle due_date
 	if taskCreate.DueDate != "" {
 		if err := task.SetDueDate(taskCreate.DueDate); err != nil {
+			logger.WarnContext(ctx, "Invalid due date format", "error", err, "due_date", taskCreate.DueDate, "request_id", requestID)
 			http.Error(w, "Invalid due date format. Use YYYY-MM-DD", http.StatusBadRequest)
 			return
 		}
@@ -157,6 +167,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	// Handle started_at
 	if taskCreate.StartedAt != "" {
 		if err := task.SetStartedAt(taskCreate.StartedAt); err != nil {
+			logger.WarnContext(ctx, "Invalid start date format", "error", err, "started_at", taskCreate.StartedAt, "request_id", requestID)
 			http.Error(w, "Invalid start date format. Use RFC3339", http.StatusBadRequest)
 			return
 		}
@@ -164,6 +175,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required fields
 	if task.Title == "" {
+		logger.WarnContext(ctx, "Task title is required", "request_id", requestID)
 		http.Error(w, "Title is required", http.StatusBadRequest)
 		return
 	}
@@ -214,25 +226,57 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.storage.CreateTask(&task); err != nil {
+		// Record failed task creation
+		if m, ok := metrics.FromContext(ctx); ok {
+			m.RecordTaskOperation("create", "failed")
+			m.RecordStorageOperation("create", "failed")
+		}
+		logger.ErrorContext(ctx, "Failed to create task in storage", "error", err, "request_id", requestID, "task_title", task.Title)
 		http.Error(w, "Failed to create task", http.StatusInternalServerError)
 		return
 	}
 
+	// Record successful task creation metrics
+	if m, ok := metrics.FromContext(ctx); ok {
+		m.RecordTaskOperation("create", "success")
+		m.RecordStorageOperation("create", "success")
+	}
+
+	logger.InfoContext(ctx, "Task created successfully", "request_id", requestID, "task_id", task.ID, "task_title", task.Title)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(task)
 }
 
 func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string) {
+	ctx := r.Context()
+	requestID := middleware.GetRequestID(ctx)
+	
+	logger.DebugContext(ctx, "Getting task", "request_id", requestID, "task_id", taskID)
+	
 	task, err := h.storage.GetTask(taskID)
 	if err != nil {
+		// Record failed task retrieval
+		if m, ok := metrics.FromContext(ctx); ok {
+			m.RecordTaskOperation("get", "failed")
+			m.RecordStorageOperation("get", "failed")
+		}
 		if strings.Contains(err.Error(), "not found") {
+			logger.WarnContext(ctx, "Task not found", "request_id", requestID, "task_id", taskID)
 			http.Error(w, "Task not found", http.StatusNotFound)
 		} else {
+			logger.ErrorContext(ctx, "Failed to get task from storage", "error", err, "request_id", requestID, "task_id", taskID)
 			http.Error(w, "Failed to get task", http.StatusInternalServerError)
 		}
 		return
 	}
 
+	// Record successful task retrieval
+	if m, ok := metrics.FromContext(ctx); ok {
+		m.RecordTaskOperation("get", "success")
+		m.RecordStorageOperation("get", "success")
+	}
+
+	logger.DebugContext(ctx, "Task retrieved successfully", "request_id", requestID, "task_id", taskID, "task_title", task.Title)
 	json.NewEncoder(w).Encode(task)
 }
 
@@ -327,6 +371,11 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 	}
 
 	if err := h.storage.UpdateTask(&task); err != nil {
+		// Record failed task update
+		if m, ok := metrics.FromContext(r.Context()); ok {
+			m.RecordTaskOperation("update", "failed")
+			m.RecordStorageOperation("update", "failed")
+		}
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Task not found", http.StatusNotFound)
 		} else {
@@ -335,17 +384,36 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		return
 	}
 
+	// Record successful task update
+	if m, ok := metrics.FromContext(r.Context()); ok {
+		m.RecordTaskOperation("update", "success")
+		m.RecordStorageOperation("update", "success")
+	}
+
 	json.NewEncoder(w).Encode(task)
 }
 
 func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID string) {
+	ctx := r.Context()
+	
 	if err := h.storage.DeleteTask(taskID); err != nil {
+		// Record failed task deletion
+		if m, ok := metrics.FromContext(ctx); ok {
+			m.RecordTaskOperation("delete", "failed")
+			m.RecordStorageOperation("delete", "failed")
+		}
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Task not found", http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to delete task", http.StatusInternalServerError)
 		}
 		return
+	}
+
+	// Record successful task deletion
+	if m, ok := metrics.FromContext(ctx); ok {
+		m.RecordTaskOperation("delete", "success")
+		m.RecordStorageOperation("delete", "success")
 	}
 
 	w.WriteHeader(http.StatusNoContent)

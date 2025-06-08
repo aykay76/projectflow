@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"strings"
@@ -9,16 +10,16 @@ import (
 // Setup configures the global slog logger based on environment variables
 func Setup() {
 	logLevel := getLogLevelFromEnv()
+	logFormat := getLogFormat()
 
 	// Create JSON handler for structured logging
 	opts := &slog.HandlerOptions{
 		Level: logLevel,
 	}
 
-	// Use JSON handler for production, text handler for development
+	// Use text handler for development, JSON handler for production
 	var handler slog.Handler
-	logFormat := os.Getenv("LOG_FORMAT")
-	if strings.ToLower(logFormat) == "text" {
+	if logFormat == "text" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	} else {
 		// Default to JSON for production
@@ -31,7 +32,33 @@ func Setup() {
 	// Log the configuration
 	slog.Info("Logger configured",
 		"level", logLevel.String(),
-		"format", getLogFormat(),
+		"format", logFormat,
+	)
+}
+
+// SetupWithConfig configures the global slog logger using provided configuration
+func SetupWithConfig(level slog.Level, format string) {
+	// Create handler options
+	opts := &slog.HandlerOptions{
+		Level: level,
+	}
+
+	// Use text handler for development, JSON handler for production
+	var handler slog.Handler
+	if strings.ToLower(format) == "text" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		// Default to JSON for production
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	}
+
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	// Log the configuration
+	slog.Info("Logger configured",
+		"level", level.String(),
+		"format", strings.ToLower(format),
 	)
 }
 
@@ -95,4 +122,26 @@ func WithGroup(name string) *slog.Logger {
 // With returns a Logger that includes the given attributes
 func With(args ...any) *slog.Logger {
 	return slog.Default().With(args...)
+}
+
+// Context-aware logging functions for request correlation
+
+// DebugContext logs a debug message with context and optional attributes
+func DebugContext(ctx context.Context, msg string, args ...any) {
+	slog.DebugContext(ctx, msg, args...)
+}
+
+// InfoContext logs an info message with context and optional attributes
+func InfoContext(ctx context.Context, msg string, args ...any) {
+	slog.InfoContext(ctx, msg, args...)
+}
+
+// WarnContext logs a warning message with context and optional attributes
+func WarnContext(ctx context.Context, msg string, args ...any) {
+	slog.WarnContext(ctx, msg, args...)
+}
+
+// ErrorContext logs an error message with context and optional attributes
+func ErrorContext(ctx context.Context, msg string, args ...any) {
+	slog.ErrorContext(ctx, msg, args...)
 }

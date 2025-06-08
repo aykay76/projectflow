@@ -6,30 +6,47 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/aykay76/projectflow/internal/config"
 	"github.com/aykay76/projectflow/internal/handlers"
 	"github.com/aykay76/projectflow/internal/health"
 	"github.com/aykay76/projectflow/internal/logger"
+	"github.com/aykay76/projectflow/internal/metrics"
+	"github.com/aykay76/projectflow/internal/middleware"
 	"github.com/aykay76/projectflow/internal/storage"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	// Initialize logging first
-	logger.Setup()
-
-	// Initialize storage
-	storageDir := getEnv("STORAGE_DIR", "./data")
-	store, err := storage.NewFileStorage(storageDir)
+	// Load configuration first
+	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("Failed to initialize storage", "error", err, "storage_dir", storageDir)
+		// Use basic logging before logger is configured
+		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("Storage initialized", "storage_dir", storageDir)
+	// Initialize logging with configuration
+	logger.SetupWithConfig(cfg.GetLogLevel(), cfg.GetLogFormat())
+
+	// Log configuration on startup
+	cfg.LogConfiguration()
+
+	// Initialize storage
+	store, err := storage.NewFileStorage(cfg.DataDir)
+	if err != nil {
+		slog.Error("Failed to initialize storage", "error", err, "data_dir", cfg.DataDir)
+		os.Exit(1)
+	}
+
+	slog.Info("Storage initialized", "data_dir", cfg.DataDir)
+
+	// Initialize metrics
+	appMetrics := metrics.NewMetrics()
+	slog.Info("Metrics initialized")
 
 	// Initialize handlers
 	handler := handlers.NewHandler(store)
@@ -44,12 +61,14 @@ func main() {
 	mux.HandleFunc("/health", healthChecker.HandleHealth)
 	mux.HandleFunc("/ready", healthChecker.HandleReady)
 
+	// Metrics endpoint for Prometheus scraping
+	mux.Handle("/metrics", promhttp.Handler())
+
 	// API routes
 	mux.HandleFunc("/api/tasks", handler.HandleTasks)
 	mux.HandleFunc("/api/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
 		parts := strings.Split(path, "/")
-
 		if len(parts) >= 2 && parts[1] == "children" {
 			if len(parts) == 2 {
 				// /api/tasks/{id}/children
@@ -78,18 +97,14 @@ func main() {
 	// Web interface
 	mux.HandleFunc("/", handler.HandleIndex)
 
-	// Configure server
-	port := getEnv("PORT", "8080")
-	shutdownTimeoutStr := getEnv("SHUTDOWN_TIMEOUT", "30")
-	shutdownTimeout, err := strconv.Atoi(shutdownTimeoutStr)
-	if err != nil {
-		slog.Warn("Invalid SHUTDOWN_TIMEOUT value, using default", "value", shutdownTimeoutStr, "default", 30)
-		shutdownTimeout = 30
-	}
+	// Apply middleware: Request ID and Metrics collection
+	handlerWithMiddleware := middleware.RequestIDMiddleware(
+		middleware.MetricsMiddleware(appMetrics)(mux),
+	)
 
 	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
+		Addr:    ":" + cfg.Port,
+		Handler: handlerWithMiddleware,
 	}
 
 	// Setup graceful shutdown
@@ -100,10 +115,10 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		slog.Info("Server starting", "port", port, "shutdown_timeout_seconds", shutdownTimeout)
+		slog.Info("Server starting", "port", cfg.Port, "shutdown_timeout_seconds", cfg.ShutdownTimeout)
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server failed to start", "error", err, "port", port)
+			slog.Error("Server failed to start", "error", err, "port", cfg.Port)
 			os.Exit(1)
 		}
 	}()
@@ -113,12 +128,12 @@ func main() {
 	slog.Info("Shutdown signal received, starting graceful shutdown")
 
 	// Create context with timeout for shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeout)*time.Second)
 	defer cancel()
 
 	// Attempt graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("Graceful shutdown failed, forcing shutdown", "error", err, "timeout_seconds", shutdownTimeout)
+		slog.Error("Graceful shutdown failed, forcing shutdown", "error", err, "timeout_seconds", cfg.ShutdownTimeout)
 
 		// Close storage before exit
 		if closeErr := store.Close(); closeErr != nil {
@@ -137,9 +152,4 @@ func main() {
 	slog.Info("Server shutdown completed successfully")
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+
