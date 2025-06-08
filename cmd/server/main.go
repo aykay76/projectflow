@@ -1,23 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/aykay76/projectflow/internal/handlers"
+	"github.com/aykay76/projectflow/internal/logger"
 	"github.com/aykay76/projectflow/internal/storage"
 )
 
 func main() {
+	// Initialize logging first
+	logger.Setup()
+	
 	// Initialize storage
 	storageDir := getEnv("STORAGE_DIR", "./data")
 	store, err := storage.NewFileStorage(storageDir)
 	if err != nil {
-		log.Fatalf("Failed to initialize storage: %v", err)
+		slog.Error("Failed to initialize storage", "error", err, "storage_dir", storageDir)
+		os.Exit(1)
 	}
+	
+	slog.Info("Storage initialized", "storage_dir", storageDir)
 
 	// Initialize handlers
 	handler := handlers.NewHandler(store)
@@ -60,8 +66,12 @@ func main() {
 	mux.HandleFunc("/", handler.HandleIndex)
 
 	port := getEnv("PORT", "8080")
-	fmt.Printf("Server starting on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	slog.Info("Server starting", "port", port)
+	
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		slog.Error("Server failed to start", "error", err, "port", port)
+		os.Exit(1)
+	}
 }
 
 func getEnv(key, defaultValue string) string {
