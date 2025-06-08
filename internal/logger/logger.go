@@ -9,12 +9,12 @@ import (
 // Setup configures the global slog logger based on environment variables
 func Setup() {
 	logLevel := getLogLevelFromEnv()
-	
+
 	// Create JSON handler for structured logging
 	opts := &slog.HandlerOptions{
 		Level: logLevel,
 	}
-	
+
 	// Use JSON handler for production, text handler for development
 	var handler slog.Handler
 	logFormat := os.Getenv("LOG_FORMAT")
@@ -24,12 +24,12 @@ func Setup() {
 		// Default to JSON for production
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
-	
+
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
-	
+
 	// Log the configuration
-	slog.Info("Logger configured", 
+	slog.Info("Logger configured",
 		"level", logLevel.String(),
 		"format", getLogFormat(),
 	)
@@ -41,7 +41,7 @@ func getLogLevelFromEnv() slog.Level {
 	if logLevel == "" {
 		logLevel = "INFO"
 	}
-	
+
 	switch strings.ToUpper(logLevel) {
 	case "DEBUG":
 		return slog.LevelDebug

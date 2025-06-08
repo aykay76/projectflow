@@ -20,7 +20,7 @@ import (
 func main() {
 	// Initialize logging first
 	logger.Setup()
-	
+
 	// Initialize storage
 	storageDir := getEnv("STORAGE_DIR", "./data")
 	store, err := storage.NewFileStorage(storageDir)
@@ -28,12 +28,12 @@ func main() {
 		slog.Error("Failed to initialize storage", "error", err, "storage_dir", storageDir)
 		os.Exit(1)
 	}
-	
+
 	slog.Info("Storage initialized", "storage_dir", storageDir)
 
 	// Initialize handlers
 	handler := handlers.NewHandler(store)
-	
+
 	// Initialize health checker
 	healthChecker := health.NewHealthChecker(store, "1.0.0")
 
@@ -94,14 +94,14 @@ func main() {
 
 	// Setup graceful shutdown
 	quit := make(chan os.Signal, 1)
-	
+
 	// Register for shutdown signals
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	// Start server in goroutine
 	go func() {
 		slog.Info("Server starting", "port", port, "shutdown_timeout_seconds", shutdownTimeout)
-		
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("Server failed to start", "error", err, "port", port)
 			os.Exit(1)
@@ -119,12 +119,12 @@ func main() {
 	// Attempt graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
 		slog.Error("Graceful shutdown failed, forcing shutdown", "error", err, "timeout_seconds", shutdownTimeout)
-		
+
 		// Close storage before exit
 		if closeErr := store.Close(); closeErr != nil {
 			slog.Error("Failed to close storage during forced shutdown", "error", closeErr)
 		}
-		
+
 		os.Exit(1)
 	}
 
