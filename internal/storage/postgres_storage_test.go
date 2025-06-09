@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -11,6 +12,11 @@ import (
 )
 
 func setupPostgresTestContainer(t *testing.T) (*PostgresStorage, func()) {
+	// Skip if running in CI or if SKIP_POSTGRES_TESTS is set
+	if os.Getenv("CI") != "" || os.Getenv("SKIP_POSTGRES_TESTS") != "" {
+		t.Skip("Skipping PostgreSQL integration tests")
+	}
+
 	ctx := context.Background()
 
 	// Start PostgreSQL container

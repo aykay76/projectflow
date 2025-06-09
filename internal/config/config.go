@@ -34,18 +34,18 @@ type Config struct {
 // Load loads configuration from environment variables with validation
 func Load() (*Config, error) {
 	config := &Config{
-		Port:            getEnv("PORT", "8080"),
-		ShutdownTimeout: getEnvInt("SHUTDOWN_TIMEOUT", 30),
-		StorageType:     getEnv("STORAGE_TYPE", "file"),
-		DataDir:         getEnv("DATA_DIR", "./data"),
-		DatabaseHost:    getEnv("DB_HOST", "localhost"),
-		DatabasePort:    getEnv("DB_PORT", "5432"),
-		DatabaseName:    getEnv("DB_NAME", "projectflow"),
-		DatabaseUser:    getEnv("DB_USER", "projectflow"),
+		Port:             getEnv("PORT", "8080"),
+		ShutdownTimeout:  getEnvInt("SHUTDOWN_TIMEOUT", 30),
+		StorageType:      getEnv("STORAGE_TYPE", "file"),
+		DataDir:          getEnv("DATA_DIR", "./data"),
+		DatabaseHost:     getEnv("DB_HOST", "localhost"),
+		DatabasePort:     getEnv("DB_PORT", "5432"),
+		DatabaseName:     getEnv("DB_NAME", "projectflow"),
+		DatabaseUser:     getEnv("DB_USER", "projectflow"),
 		DatabasePassword: getEnv("DB_PASSWORD", ""),
-		DatabaseSSLMode: getEnv("DB_SSL_MODE", "prefer"),
-		LogLevel:        getEnv("LOG_LEVEL", "INFO"),
-		LogFormat:       getEnv("LOG_FORMAT", "text"),
+		DatabaseSSLMode:  getEnv("DB_SSL_MODE", "prefer"),
+		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
+		LogFormat:        getEnv("LOG_FORMAT", "text"),
 	}
 
 	if err := config.Validate(); err != nil {
@@ -216,18 +216,18 @@ func (c *Config) GetDatabasePort() int {
 // GetDatabaseConnectionString builds a PostgreSQL connection string
 func (c *Config) GetDatabaseConnectionString() string {
 	var parts []string
-	
+
 	parts = append(parts, fmt.Sprintf("host=%s", c.DatabaseHost))
 	parts = append(parts, fmt.Sprintf("port=%s", c.DatabasePort))
 	parts = append(parts, fmt.Sprintf("dbname=%s", c.DatabaseName))
 	parts = append(parts, fmt.Sprintf("user=%s", c.DatabaseUser))
-	
+
 	if c.DatabasePassword != "" {
 		parts = append(parts, fmt.Sprintf("password=%s", c.DatabasePassword))
 	}
-	
+
 	parts = append(parts, fmt.Sprintf("sslmode=%s", c.DatabaseSSLMode))
-	
+
 	return strings.Join(parts, " ")
 }
 

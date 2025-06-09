@@ -456,7 +456,7 @@ func (ps *PostgresStorage) getTaskUnsafe(id string) (*models.Task, error) {
 		FROM tasks WHERE id = $1`
 
 	row := ps.db.QueryRow(querySQL, id)
-	
+
 	task, err := ps.scanTask(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -474,7 +474,7 @@ func (ps *PostgresStorage) getTaskUnsafeTx(tx *sql.Tx, id string) (*models.Task,
 		FROM tasks WHERE id = $1`
 
 	row := tx.QueryRow(querySQL, id)
-	
+
 	task, err := ps.scanTask(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
