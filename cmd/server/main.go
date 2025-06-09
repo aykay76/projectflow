@@ -36,13 +36,13 @@ func main() {
 	cfg.LogConfiguration()
 
 	// Initialize storage
-	store, err := storage.NewFileStorage(cfg.DataDir)
+	store, err := storage.NewStorage(cfg)
 	if err != nil {
-		slog.Error("Failed to initialize storage", "error", err, "data_dir", cfg.DataDir)
+		slog.Error("Failed to initialize storage", "error", err, "storage_type", cfg.GetStorageType())
 		os.Exit(1)
 	}
 
-	slog.Info("Storage initialized", "data_dir", cfg.DataDir)
+	slog.Info("Storage initialized", "type", cfg.GetStorageType())
 
 	// Initialize metrics
 	appMetrics := metrics.NewMetrics()
