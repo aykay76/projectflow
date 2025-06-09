@@ -7,14 +7,20 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/aykay76/projectflow/internal/config"
 	"github.com/aykay76/projectflow/internal/mcp"
 	"github.com/aykay76/projectflow/internal/storage"
 )
 
 func main() {
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	// Initialize storage
-	storageDir := getEnv("STORAGE_DIR", "./data")
-	store, err := storage.NewFileStorage(storageDir)
+	store, err := storage.NewStorage(cfg)
 	if err != nil {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
@@ -44,11 +50,4 @@ func main() {
 	}
 
 	log.Println("ProjectFlow MCP server stopped")
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

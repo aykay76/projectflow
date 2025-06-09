@@ -8,14 +8,14 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
 - REST API for programmatic access
 - Model Context Protocol (MCP) support for AI agents
 - Web interface for human users
-- File system-based storage (adaptable architecture)
+- Flexible storage: File system (JSON) or PostgreSQL database
 - Clean, modern UI
 - Containerized deployment
 
 ## Tech Stack
 
 - **Backend**: Go 1.24
-- **Storage**: File system (JSON) with adaptable interface
+- **Storage**: File system (JSON) or PostgreSQL database
 - **Frontend**: HTML templates, CSS, JavaScript
 - **Containerization**: Docker/Podman
 - **Protocols**: HTTP REST API + Model Context Protocol
@@ -44,8 +44,27 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
 
 ### Environment Variables
 
+**Server Configuration:**
 - `PORT`: Server port (default: 8080)
-- `STORAGE_DIR`: Directory for data storage (default: ./data)
+- `SHUTDOWN_TIMEOUT`: Graceful shutdown timeout in seconds (default: 30)
+- `LOG_LEVEL`: Logging level - DEBUG, INFO, WARN, ERROR (default: INFO)
+- `LOG_FORMAT`: Log format - json or text (default: text)
+
+**Storage Configuration:**
+- `STORAGE_TYPE`: Storage backend - file or postgres (default: file)
+
+**File Storage:**
+- `DATA_DIR`: Directory for data storage (default: ./data)
+
+**PostgreSQL Storage:**
+- `DB_HOST`: Database host (default: localhost)
+- `DB_PORT`: Database port (default: 5432)
+- `DB_NAME`: Database name (default: projectflow)
+- `DB_USER`: Database user (default: projectflow)
+- `DB_PASSWORD`: Database password (required for postgres)
+- `DB_SSL_MODE`: SSL mode - disable, require, verify-ca, verify-full, prefer, allow (default: prefer)
+
+For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postgresql-storage.md).
 
 ### Using Docker
 
