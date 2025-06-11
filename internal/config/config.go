@@ -11,7 +11,7 @@ import (
 // Config holds all application configuration
 type Config struct {
 	// Server configuration
-	Port            string `env:"PORT" default:"8080"`
+	Port            string `env:"PORT" default:"8081"`
 	ShutdownTimeout int    `env:"SHUTDOWN_TIMEOUT" default:"30"`
 
 	// Storage configuration
@@ -34,7 +34,7 @@ type Config struct {
 // Load loads configuration from environment variables with validation
 func Load() (*Config, error) {
 	config := &Config{
-		Port:             getEnv("PORT", "8080"),
+		Port:             getEnv("PORT", "8081"),
 		ShutdownTimeout:  getEnvInt("SHUTDOWN_TIMEOUT", 30),
 		StorageType:      getEnv("STORAGE_TYPE", "file"),
 		DataDir:          getEnv("DATA_DIR", "./data"),

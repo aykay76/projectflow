@@ -40,12 +40,12 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
    go run cmd/server/main.go
    ```
 
-3. Open your browser and navigate to `http://localhost:8080`
+3. Open your browser and navigate to `http://localhost:8081`
 
 ### Environment Variables
 
 **Server Configuration:**
-- `PORT`: Server port (default: 8080)
+- `PORT`: Server port (default: 8081)
 - `SHUTDOWN_TIMEOUT`: Graceful shutdown timeout in seconds (default: 30)
 - `LOG_LEVEL`: Logging level - DEBUG, INFO, WARN, ERROR (default: INFO)
 - `LOG_FORMAT`: Log format - json or text (default: text)
@@ -75,7 +75,7 @@ For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postg
 
 2. Run the container:
    ```bash
-   docker run -p 8080:8080 -v $(pwd)/data:/app/data projectflow
+   docker run -p 8081:8081 -v $(pwd)/data:/app/data projectflow
    ```
 
 ## API Documentation
@@ -213,7 +213,7 @@ The MCP server exposes these resources:
 
 ```bash
 # Start both servers
-go run cmd/server/main.go &          # HTTP server on :8080
+go run cmd/server/main.go &          # HTTP server on :8081
 go run cmd/mcp-server/main.go &      # MCP server on :3001
 
 # Use with MCP-compatible AI clients
@@ -329,7 +329,7 @@ While the primary interface is through MCP and AI agents, you can still access t
    STORAGE_DIR=./.projectflow/data go run /path/to/projectflow/cmd/server/main.go
    ```
 
-2. Open `http://localhost:8080` to view and manage tasks in the web interface
+2. Open `http://localhost:8081` to view and manage tasks in the web interface
 
 ### Git Integration Best Practices
 

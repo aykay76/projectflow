@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFiltering();
     initializeContextMenu();
     initializeAutoSave();
+    initializeMobileEnhancements();
+    enhanceSearch();
+    initializePerformanceMonitoring();
+    loadFilterState();
     updateOverdueIndicators();
     updateTaskCounts();
 });
@@ -687,4 +691,456 @@ function restoreFormDraft() {
 
 function clearFormDraft() {
     localStorage.removeItem('taskFormDraft');
+}
+
+// Filter persistence
+function saveFilterState() {
+    const filterState = {
+        search: document.getElementById('filter-search')?.value || '',
+        status: document.getElementById('filter-status')?.value || '',
+        priority: document.getElementById('filter-priority')?.value || '',
+        type: document.getElementById('filter-type')?.value || '',
+        overdue: document.getElementById('filter-overdue')?.checked || false
+    };
+    localStorage.setItem('projectflow_filters', JSON.stringify(filterState));
+}
+
+function loadFilterState() {
+    const saved = localStorage.getItem('projectflow_filters');
+    if (saved) {
+        try {
+            const filterState = JSON.parse(saved);
+            Object.keys(filterState).forEach(key => {
+                const element = document.getElementById(`filter-${key}`);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = filterState[key];
+                    } else {
+                        element.value = filterState[key];
+                    }
+                }
+            });
+            // Apply the loaded filters
+            setTimeout(() => applyFilters(), 100);
+        } catch (error) {
+            console.error('Error loading filter state:', error);
+        }
+    }
+}
+
+// Performance monitoring
+function initializePerformanceMonitoring() {
+    let animationFrames = 0;
+    let lastTime = performance.now();
+    
+    function measureFPS() {
+        animationFrames++;
+        const currentTime = performance.now();
+        
+        if (currentTime >= lastTime + 1000) {
+            const fps = Math.round((animationFrames * 1000) / (currentTime - lastTime));
+            
+            // Only log if FPS is concerning
+            if (fps < 45) {
+                console.warn(`Low FPS detected: ${fps}fps`);
+            }
+            
+            animationFrames = 0;
+            lastTime = currentTime;
+        }
+        
+        requestAnimationFrame(measureFPS);
+    }
+    
+    requestAnimationFrame(measureFPS);
+}
+
+// Enhanced mobile interactions
+function initializeMobileEnhancements() {
+    // Add touch feedback for mobile
+    document.addEventListener('touchstart', (e) => {
+        if (e.target.classList.contains('task-card') || e.target.closest('.task-card')) {
+            e.target.closest('.task-card')?.classList.add('touch-active');
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        document.querySelectorAll('.touch-active').forEach(card => {
+            card.classList.remove('touch-active');
+        });
+    });
+
+    // Enhanced swipe gestures for task cards
+    let startX, startY;
+    document.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.task-card')) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!startX || !startY) return;
+        
+        const card = e.target.closest('.task-card');
+        if (!card) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = currentX - startX;
+        const diffY = currentY - startY;
+
+        // If horizontal swipe is significant and vertical is minimal
+        if (Math.abs(diffX) > 50 && Math.abs(diffY) < 30) {
+            e.preventDefault();
+            
+            if (diffX > 0) {
+                // Swipe right - show green background (mark as done)
+                card.style.background = 'linear-gradient(90deg, var(--success-color) 0%, var(--bg-primary) 100%)';
+                card.style.transform = `translateX(${Math.min(diffX / 4, 20)}px)`;
+            } else {
+                // Swipe left - show red background (delete)
+                card.style.background = 'linear-gradient(90deg, var(--bg-primary) 0%, var(--danger-color) 100%)';
+                card.style.transform = `translateX(${Math.max(diffX / 4, -20)}px)`;
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        const card = e.target.closest('.task-card');
+        if (card && startX) {
+            const currentX = e.changedTouches[0].clientX;
+            const diffX = currentX - startX;
+
+            // Reset visual state
+            card.style.background = '';
+            card.style.transform = '';
+
+            // Execute action if swipe was significant enough
+            if (Math.abs(diffX) > 100) {
+                const taskId = card.dataset.id;
+                if (diffX > 0) {
+                    // Right swipe - mark as done
+                    moveTask(taskId, 'done');
+                } else {
+                    // Left swipe - delete (with confirmation)
+                    if (confirm('Delete this task?')) {
+                        deleteTask(taskId);
+                    }
+                }
+            }
+        }
+        startX = null;
+        startY = null;
+    });
+}
+
+// Enhanced search with better performance
+function enhanceSearch() {
+    const searchInput = document.getElementById('filter-search');
+    if (!searchInput) return;
+
+    // Add search suggestions
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.className = 'search-suggestions';
+    searchInput.parentNode.appendChild(suggestionsContainer);
+
+    let searchCache = new Map();
+    
+    searchInput.addEventListener('input', debounce((e) => {
+        const query = e.target.value.toLowerCase().trim();
+        
+        if (query.length === 0) {
+            suggestionsContainer.style.display = 'none';
+            applyFilters();
+            return;
+        }
+
+        // Check cache first
+        if (searchCache.has(query)) {
+            showSearchSuggestions(searchCache.get(query), suggestionsContainer);
+        } else {
+            // Search through task titles and descriptions
+            const tasks = document.querySelectorAll('.task-card');
+            const matches = [];
+            
+            tasks.forEach(task => {
+                const title = task.querySelector('.task-title')?.textContent.toLowerCase() || '';
+                const desc = task.querySelector('.task-description')?.textContent.toLowerCase() || '';
+                
+                if (title.includes(query) || desc.includes(query)) {
+                    matches.push({
+                        id: task.dataset.id,
+                        title: task.querySelector('.task-title')?.textContent || '',
+                        type: 'task'
+                    });
+                }
+            });
+
+            searchCache.set(query, matches);
+            showSearchSuggestions(matches, suggestionsContainer);
+        }
+        
+        applyFilters();
+    }, 300));
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.filter-group')) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+}
+
+function showSearchSuggestions(matches, container) {
+    if (matches.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = matches.slice(0, 5).map(match => `
+        <div class="search-suggestion" data-task-id="${match.id}">
+            <span class="suggestion-icon">📋</span>
+            <span class="suggestion-text">${match.title}</span>
+        </div>
+    `).join('');
+
+    container.style.display = 'block';
+
+    // Add click handlers for suggestions
+    container.querySelectorAll('.search-suggestion').forEach(item => {
+        item.addEventListener('click', () => {
+            const taskId = item.dataset.taskId;
+            const taskCard = document.querySelector(`[data-id="${taskId}"]`);
+            if (taskCard) {
+                taskCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                taskCard.classList.add('highlight');
+                setTimeout(() => taskCard.classList.remove('highlight'), 2000);
+            }
+            container.style.display = 'none';
+        });
+    });
+}
+
+// Filtering functionality
+function initializeFiltering() {
+    const filterToggleBtn = document.getElementById('filter-toggle-btn');
+    const filterPanel = document.getElementById('filter-panel');
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
+    const saveFilterBtn = document.getElementById('save-filter-btn');
+    
+    // Toggle filter panel
+    if (filterToggleBtn) {
+        filterToggleBtn.addEventListener('click', toggleFilterPanel);
+    }
+    
+    // Clear all filters
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearAllFilters);
+    }
+    
+    // Save current filter state
+    if (saveFilterBtn) {
+        saveFilterBtn.addEventListener('click', () => {
+            saveFilterState();
+            showMessage('Filter settings saved! 💾', 'success', 2000);
+        });
+    }
+    
+    // Add event listeners to filter inputs
+    const filterInputs = [
+        'filter-search',
+        'filter-status', 
+        'filter-priority',
+        'filter-type',
+        'filter-overdue'
+    ];
+    
+    filterInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', debounce(() => {
+                applyFilters();
+                saveFilterState();
+            }, 300));
+            input.addEventListener('change', () => {
+                applyFilters();
+                saveFilterState();
+            });
+        }
+    });
+}
+
+function toggleFilterPanel() {
+    const filterPanel = document.getElementById('filter-panel');
+    const filterToggleBtn = document.getElementById('filter-toggle-btn');
+    
+    if (filterPanel.style.display === 'none' || filterPanel.style.display === '') {
+        filterPanel.style.display = 'block';
+        filterPanel.classList.add('show');
+        filterToggleBtn.textContent = '🔍 Hide Filters';
+        filterToggleBtn.classList.add('active');
+    } else {
+        filterPanel.style.display = 'none';
+        filterPanel.classList.remove('show');
+        filterToggleBtn.textContent = '🔍 Filters';
+        filterToggleBtn.classList.remove('active');
+    }
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('filter-search')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filter-status')?.value || '';
+    const priorityFilter = document.getElementById('filter-priority')?.value || '';
+    const typeFilter = document.getElementById('filter-type')?.value || '';
+    const overdueFilter = document.getElementById('filter-overdue')?.value || '';
+    
+    const taskCards = document.querySelectorAll('.task-card');
+    let visibleCount = 0;
+    
+    taskCards.forEach(card => {
+        let visible = true;
+        
+        // Search filter
+        if (searchTerm) {
+            const title = card.querySelector('.task-title')?.textContent.toLowerCase() || '';
+            const description = card.querySelector('.task-description')?.textContent.toLowerCase() || '';
+            if (!title.includes(searchTerm) && !description.includes(searchTerm)) {
+                visible = false;
+            }
+        }
+        
+        // Status filter
+        if (statusFilter) {
+            const column = card.closest('.column');
+            const columnStatus = column?.dataset.status || '';
+            if (columnStatus !== statusFilter) {
+                visible = false;
+            }
+        }
+        
+        // Priority filter
+        if (priorityFilter) {
+            const priorityElement = card.querySelector('.task-priority');
+            const priority = priorityElement?.textContent.toLowerCase() || '';
+            if (priority !== priorityFilter) {
+                visible = false;
+            }
+        }
+        
+        // Type filter
+        if (typeFilter) {
+            const typeElement = card.querySelector('.task-type');
+            const type = typeElement?.textContent.toLowerCase() || '';
+            if (type !== typeFilter) {
+                visible = false;
+            }
+        }
+        
+        // Overdue filter
+        if (overdueFilter === 'overdue') {
+            const dueDateElement = card.querySelector('.task-due-date');
+            if (dueDateElement) {
+                const dueDate = new Date(dueDateElement.textContent);
+                const now = new Date();
+                if (dueDate >= now) {
+                    visible = false;
+                }
+            } else {
+                visible = false;
+            }
+        } else if (overdueFilter === 'due-soon') {
+            const dueDateElement = card.querySelector('.task-due-date');
+            if (dueDateElement) {
+                const dueDate = new Date(dueDateElement.textContent);
+                const now = new Date();
+                const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+                if (dueDate < now || dueDate > threeDaysFromNow) {
+                    visible = false;
+                }
+            } else {
+                visible = false;
+            }
+        }
+        
+        // Show/hide card
+        if (visible) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update filter results count
+    updateFilterResultsCount(visibleCount, taskCards.length);
+}
+
+function clearAllFilters() {
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-priority').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-overdue').value = '';
+    
+    // Clear saved filters
+    localStorage.removeItem('projectflow_filters');
+    
+    // Show all tasks
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach(card => {
+        card.style.display = 'block';
+    });
+    
+    updateFilterResultsCount(taskCards.length, taskCards.length);
+    showMessage('All filters cleared! 🧹', 'info', 2000);
+}
+
+function updateFilterResultsCount(visible, total) {
+    const filterContent = document.querySelector('.filter-content h3');
+    if (filterContent) {
+        filterContent.textContent = `🔍 Advanced Filters (${visible}/${total} tasks)`;
+    }
+}
+
+// Task count and overdue indicators
+function updateTaskCounts() {
+    const columns = document.querySelectorAll('.column');
+    columns.forEach(column => {
+        const tasks = column.querySelectorAll('.task-card:not([style*="display: none"])');
+        const header = column.querySelector('h3');
+        const status = column.dataset.status;
+        
+        let emoji = '';
+        switch(status) {
+            case 'todo': emoji = '📝'; break;
+            case 'in_progress': emoji = '🔄'; break;
+            case 'review': emoji = '👀'; break;
+            case 'done': emoji = '✅'; break;
+            default: emoji = '📋';
+        }
+        
+        header.textContent = `${emoji} ${header.textContent.replace(/^[📝🔄👀✅📋]\s*/, '').replace(/\s*\(\d+\)$/, '')} (${tasks.length})`;
+    });
+}
+
+function updateOverdueIndicators() {
+    const taskCards = document.querySelectorAll('.task-card');
+    const now = new Date();
+    
+    taskCards.forEach(card => {
+        const dueDateElement = card.querySelector('.task-due-date');
+        if (dueDateElement) {
+            const dueDate = new Date(dueDateElement.textContent);
+            
+            // Remove existing indicators
+            card.classList.remove('overdue', 'due-soon');
+            
+            if (dueDate < now) {
+                card.classList.add('overdue');
+            } else if (dueDate <= new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000))) {
+                card.classList.add('due-soon');
+            }
+        }
+    });
 }
