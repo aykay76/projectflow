@@ -650,6 +650,97 @@ async function moveTask(taskId, newStatus) {
     }
 }
 
+// Drag and Drop functionality
+let draggedTask = null;
+
+function initializeDraggableCards() {
+    // Set draggable attribute for all task cards
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach(card => {
+        card.setAttribute('draggable', 'true');
+        card.style.cursor = 'grab';
+    });
+}
+
+function handleDragStart(event) {
+    draggedTask = event.target;
+    event.target.style.opacity = '0.5';
+    event.target.style.cursor = 'grabbing';
+    
+    // Store task data for the drag operation
+    event.dataTransfer.setData('text/plain', event.target.dataset.id);
+    event.dataTransfer.effectAllowed = 'move';
+    
+    // Add visual feedback
+    event.target.classList.add('dragging');
+    
+    // Add drag-over styles to all columns
+    document.querySelectorAll('.column').forEach(column => {
+        column.classList.add('drag-active');
+    });
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    const column = event.target.closest('.column');
+    if (column && !column.classList.contains('drag-over')) {
+        // Remove drag-over from other columns
+        document.querySelectorAll('.column').forEach(col => {
+            col.classList.remove('drag-over');
+        });
+        // Add to current column
+        column.classList.add('drag-over');
+    }
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    
+    const taskId = event.dataTransfer.getData('text/plain');
+    const targetColumn = event.target.closest('.column');
+    
+    if (targetColumn && draggedTask) {
+        const newStatus = targetColumn.dataset.status;
+        const currentStatus = draggedTask.closest('.column').dataset.status;
+        
+        // Only move if dropping in a different column
+        if (newStatus !== currentStatus) {
+            // Move the task visually first for immediate feedback
+            const targetTaskList = targetColumn.querySelector('.task-list');
+            targetTaskList.appendChild(draggedTask);
+            
+            // Update the task status via API
+            moveTask(taskId, newStatus);
+        }
+    }
+    
+    // Clean up drag state
+    cleanupDragState();
+}
+
+function cleanupDragState() {
+    if (draggedTask) {
+        draggedTask.style.opacity = '';
+        draggedTask.style.cursor = 'grab';
+        draggedTask.classList.remove('dragging');
+        draggedTask = null;
+    }
+    
+    // Remove visual feedback from all columns
+    document.querySelectorAll('.column').forEach(column => {
+        column.classList.remove('drag-active', 'drag-over');
+    });
+}
+
+// Handle drag end event to clean up if drop doesn't occur
+document.addEventListener('dragend', (event) => {
+    if (event.target.classList.contains('task-card')) {
+        cleanupDragState();
+    }
+});
+
 // Utility functions
 function debounce(func, wait) {
     let timeout;
