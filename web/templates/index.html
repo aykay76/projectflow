@@ -9,8 +9,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>ProjectFlow</h1>
-            <p>Workflow Management for AI-Assisted Development</p>
+            <div class="header-content">
+                <h1>ProjectFlow</h1>
+                <p>Workflow Management for AI-Assisted Development</p>
+            </div>
+            <div class="header-controls">
+                <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </div>
         </header>
 
         <div class="actions">
@@ -19,7 +26,69 @@
                 <button id="hierarchy-view-btn" class="btn btn-secondary view-btn">Hierarchy View</button>
                 <button id="timeline-view-btn" class="btn btn-secondary view-btn">Timeline View</button>
             </div>
-            <button id="new-task-btn" class="btn btn-primary">New Task</button>
+            <div class="action-buttons">
+                <button id="filter-toggle-btn" class="btn btn-secondary" title="Toggle Filters (F)">
+                    🔍 Filters
+                </button>
+                <button id="new-task-btn" class="btn btn-primary" title="New Task (⌘+K)">
+                    ➕ New Task
+                </button>
+            </div>
+        </div>
+
+        <!-- Advanced Filtering Panel -->
+        <div id="filter-panel" class="filter-panel" style="display: none;">
+            <div class="filter-content">
+                <h3>🔍 Advanced Filters</h3>
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label for="filter-search">Search</label>
+                        <input type="text" id="filter-search" placeholder="Search tasks..." />
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-status">Status</label>
+                        <select id="filter-status">
+                            <option value="">All Statuses</option>
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-priority">Priority</label>
+                        <select id="filter-priority">
+                            <option value="">All Priorities</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-type">Type</label>
+                        <select id="filter-type">
+                            <option value="">All Types</option>
+                            <option value="epic">Epic</option>
+                            <option value="story">Story</option>
+                            <option value="task">Task</option>
+                            <option value="subtask">Subtask</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-overdue">Overdue</label>
+                        <select id="filter-overdue">
+                            <option value="">All Tasks</option>
+                            <option value="overdue">Overdue Only</option>
+                            <option value="due-soon">Due Soon</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="clear-filters-btn" class="btn btn-secondary btn-sm">Clear All</button>
+                        <button id="save-filter-btn" class="btn btn-primary btn-sm">Save Filter</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="task-board">
@@ -217,6 +286,11 @@
             </form>
         </div>
     </div>
+
+    <!-- Floating Action Button for Mobile -->
+    <button id="fab-new-task" class="fab" title="New Task">
+        ➕
+    </button>
 
     <script src="/static/js/app.js"></script>
 </body>

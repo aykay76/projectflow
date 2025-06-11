@@ -35,10 +35,10 @@ COPY --from=builder /app/web ./web
 RUN mkdir -p data
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8081
 
 # Set environment variables
-ENV PORT=8080
+ENV PORT=8081
 ENV STORAGE_DIR=/app/data
 
 # Run the application
