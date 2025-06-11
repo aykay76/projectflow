@@ -33,7 +33,229 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFilterState();
     updateOverdueIndicators();
     updateTaskCounts();
+    
+    // Load saved view preference
+    const savedView = localStorage.getItem('projectflow_current_view');
+    if (savedView && ['kanban', 'hierarchy', 'timeline'].includes(savedView)) {
+        switchToView(savedView);
+    }
 });
+
+// View Management
+function switchToView(viewName) {
+    if (!['kanban', 'hierarchy', 'timeline'].includes(viewName)) {
+        console.error('Invalid view name:', viewName);
+        return;
+    }
+    
+    // Update current view state
+    currentView = viewName;
+    
+    // Hide all views
+    if (taskBoard) taskBoard.style.display = 'none';
+    if (hierarchyView) hierarchyView.style.display = 'none';
+    if (timelineView) timelineView.style.display = 'none';
+    
+    // Show selected view
+    switch (viewName) {
+        case 'kanban':
+            if (taskBoard) taskBoard.style.display = 'block';
+            break;
+        case 'hierarchy':
+            if (hierarchyView) {
+                hierarchyView.style.display = 'block';
+                loadHierarchyView();
+            }
+            break;
+        case 'timeline':
+            if (timelineView) {
+                timelineView.style.display = 'block';
+                loadTimelineView();
+            }
+            break;
+    }
+    
+    // Update button states
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to current view button
+    const activeBtn = document.getElementById(`${viewName}-view-btn`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+    
+    // Save view preference
+    localStorage.setItem('projectflow_current_view', viewName);
+    
+    showMessage(`Switched to ${viewName.charAt(0).toUpperCase() + viewName.slice(1)} view! 👁️`, 'info', 2000);
+}
+
+function loadHierarchyView() {
+    const hierarchyContainer = document.querySelector('.hierarchy-container');
+    if (!hierarchyContainer) return;
+    
+    // Show loading message
+    hierarchyContainer.innerHTML = '<div class="loading-message">Loading hierarchy view...</div>';
+    
+    // Fetch tasks and build hierarchy
+    fetch('/api/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            buildHierarchyTree(tasks, hierarchyContainer);
+        })
+        .catch(error => {
+            console.error('Error loading hierarchy:', error);
+            hierarchyContainer.innerHTML = '<div class="error-message">Failed to load hierarchy view</div>';
+        });
+}
+
+function buildHierarchyTree(tasks, container) {
+    // Create a map of tasks by ID for quick lookup
+    const taskMap = new Map();
+    tasks.forEach(task => taskMap.set(task.id, { ...task, children: [] }));
+    
+    // Build parent-child relationships
+    const rootTasks = [];
+    tasks.forEach(task => {
+        if (task.parent_id && taskMap.has(task.parent_id)) {
+            taskMap.get(task.parent_id).children.push(taskMap.get(task.id));
+        } else {
+            rootTasks.push(taskMap.get(task.id));
+        }
+    });
+    
+    // Render the hierarchy
+    container.innerHTML = renderHierarchyNode(rootTasks, 0);
+}
+
+function renderHierarchyNode(tasks, level) {
+    if (!tasks || tasks.length === 0) return '';
+    
+    return tasks.map(task => {
+        const indent = '  '.repeat(level);
+        const hasChildren = task.children && task.children.length > 0;
+        const typeIcon = getTaskTypeIcon(task.type);
+        const priorityClass = `priority-${task.priority}`;
+        
+        return `
+            <div class="hierarchy-item" data-id="${task.id}" style="margin-left: ${level * 20}px;">
+                <div class="hierarchy-task">
+                    ${hasChildren ? '<span class="hierarchy-toggle">▶</span>' : '<span class="hierarchy-spacer"></span>'}
+                    <span class="task-type ${priorityClass}">${typeIcon} ${task.type}</span>
+                    <span class="task-title">${task.title}</span>
+                    <span class="task-status status-${task.status}">${task.status}</span>
+                </div>
+                ${hasChildren ? `<div class="hierarchy-children">${renderHierarchyNode(task.children, level + 1)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function getTaskTypeIcon(type) {
+    const icons = {
+        'epic': '🎯',
+        'story': '📖',
+        'task': '📋',
+        'subtask': '📌'
+    };
+    return icons[type] || '📋';
+}
+
+function loadTimelineView() {
+    const timelineContainer = document.querySelector('.timeline-container');
+    if (!timelineContainer) return;
+    
+    // Show loading message
+    timelineContainer.innerHTML = '<div class="loading-message">Loading timeline view...</div>';
+    
+    // Fetch tasks for timeline
+    fetch('/api/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            buildTimelineView(tasks, timelineContainer);
+        })
+        .catch(error => {
+            console.error('Error loading timeline:', error);
+            timelineContainer.innerHTML = '<div class="error-message">Failed to load timeline view</div>';
+        });
+}
+
+function buildTimelineView(tasks, container) {
+    // Filter tasks with dates
+    const tasksWithDates = tasks.filter(task => task.due_date || task.started_at);
+    
+    if (tasksWithDates.length === 0) {
+        container.innerHTML = '<div class="no-data-message">No tasks with dates found for timeline view</div>';
+        return;
+    }
+    
+    // Sort tasks by date
+    tasksWithDates.sort((a, b) => {
+        const dateA = new Date(a.due_date || a.started_at || a.created_at);
+        const dateB = new Date(b.due_date || b.started_at || b.created_at);
+        return dateA - dateB;
+    });
+    
+    // Render timeline
+    const timelineHTML = tasksWithDates.map(task => {
+        const date = new Date(task.due_date || task.started_at || task.created_at);
+        const dateStr = date.toLocaleDateString();
+        const typeIcon = getTaskTypeIcon(task.type);
+        const statusClass = `status-${task.status}`;
+        const priorityClass = `priority-${task.priority}`;
+        
+        return `
+            <div class="timeline-item ${statusClass}" data-id="${task.id}">
+                <div class="timeline-date">${dateStr}</div>
+                <div class="timeline-content">
+                    <div class="timeline-task">
+                        <span class="task-type ${priorityClass}">${typeIcon} ${task.type}</span>
+                        <span class="task-title">${task.title}</span>
+                        <span class="task-status">${task.status}</span>
+                    </div>
+                    ${task.description ? `<div class="timeline-description">${task.description}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = `<div class="timeline-items">${timelineHTML}</div>`;
+}
+
+function initializeTimelineControls() {
+    const timelineModeSelect = document.getElementById('timeline-mode');
+    const timelineTodayBtn = document.getElementById('timeline-today-btn');
+    const timelineRangeSelect = document.getElementById('timeline-range');
+    
+    if (timelineModeSelect) {
+        timelineModeSelect.addEventListener('change', () => {
+            if (currentView === 'timeline') {
+                loadTimelineView();
+            }
+        });
+    }
+    
+    if (timelineTodayBtn) {
+        timelineTodayBtn.addEventListener('click', () => {
+            // Scroll to today's date in timeline
+            const today = new Date().toLocaleDateString();
+            const todayElement = document.querySelector(`.timeline-date:contains("${today}")`);
+            if (todayElement) {
+                todayElement.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
+    
+    if (timelineRangeSelect) {
+        timelineRangeSelect.addEventListener('change', () => {
+            if (currentView === 'timeline') {
+                loadTimelineView();
+            }
+        });
+    }
+}
 
 // Theme Management
 function initializeTheme() {
@@ -168,6 +390,24 @@ function initializeEventListeners() {
 
     // Initialize draggable attribute for existing task cards
     initializeDraggableCards();
+    
+    // Add event listeners for hierarchy toggle functionality
+    document.addEventListener('click', (event) => {
+        if (event.target.classList.contains('hierarchy-toggle')) {
+            const hierarchyItem = event.target.closest('.hierarchy-item');
+            const children = hierarchyItem.querySelector('.hierarchy-children');
+            
+            if (children) {
+                if (children.style.display === 'none') {
+                    children.style.display = 'block';
+                    event.target.textContent = '▼';
+                } else {
+                    children.style.display = 'none';
+                    event.target.textContent = '▶';
+                }
+            }
+        }
+    });
 }
 
 function openTaskModal(task = null) {
