@@ -664,17 +664,17 @@ func TestIsValidDisplayID(t *testing.T) {
 		{"API-123", true},
 		{"A-1", true},
 		{"Z9-999", true},
-		{"", true}, // Empty is valid for backward compatibility
-		{"pf-1", false},      // lowercase not allowed
-		{"PF1", false},       // missing dash
-		{"PF-", false},       // missing number
-		{"-1", false},        // missing prefix
-		{"PF-0", true},       // zero is valid
-		{"123-PF", false},    // prefix must be letters
-		{"PF-ABC", false},    // suffix must be numbers
-		{"PF-1-2", false},    // only one dash allowed
-		{"P F-1", false},     // no spaces allowed
-		{"PF--1", false},     // double dash not allowed
+		{"", true},        // Empty is valid for backward compatibility
+		{"pf-1", false},   // lowercase not allowed
+		{"PF1", false},    // missing dash
+		{"PF-", false},    // missing number
+		{"-1", false},     // missing prefix
+		{"PF-0", true},    // zero is valid
+		{"123-PF", false}, // prefix must be letters
+		{"PF-ABC", false}, // suffix must be numbers
+		{"PF-1-2", false}, // only one dash allowed
+		{"P F-1", false},  // no spaces allowed
+		{"PF--1", false},  // double dash not allowed
 	}
 
 	for _, tt := range tests {

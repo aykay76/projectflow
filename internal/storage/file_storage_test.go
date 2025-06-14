@@ -130,9 +130,9 @@ func TestFileStorage_GetTaskByDisplayID_CaseInsensitive(t *testing.T) {
 
 	// Test retrieving task by display ID with different cases
 	testCases := []string{
-		task.DisplayID,                      // exact case
-		strings.ToLower(task.DisplayID),     // all lowercase
-		strings.ToUpper(task.DisplayID),     // all uppercase
+		task.DisplayID,                                 // exact case
+		strings.ToLower(task.DisplayID),                // all lowercase
+		strings.ToUpper(task.DisplayID),                // all uppercase
 		strings.Title(strings.ToLower(task.DisplayID)), // mixed case
 	}
 
