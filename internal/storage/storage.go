@@ -9,6 +9,7 @@ type Storage interface {
 	// Task operations
 	CreateTask(task *models.Task) error
 	GetTask(id string) (*models.Task, error)
+	GetTaskByDisplayID(displayID string) (*models.Task, error)
 	UpdateTask(task *models.Task) error
 	DeleteTask(id string) error
 	ListTasks() ([]*models.Task, error)
@@ -42,6 +43,10 @@ type Storage interface {
 	// GetProjectByName retrieves a project by its name
 	// Returns error if project not found
 	GetProjectByName(name string) (*models.Project, error)
+
+	// GetNextDisplayID generates and returns the next sequential display ID for a project
+	// Returns formatted display ID (e.g., "PF-1", "PF-2") or error if project not found
+	GetNextDisplayID(projectID string) (string, error)
 
 	// Utility operations
 	TaskExists(id string) bool

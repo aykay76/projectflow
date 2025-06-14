@@ -50,6 +50,8 @@ func (ps *PostgresStorage) initializeSchema() error {
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS tasks (
 		id VARCHAR(36) PRIMARY KEY,
+		display_id VARCHAR(50),
+		project_id VARCHAR(36),
 		title VARCHAR(255) NOT NULL,
 		description TEXT,
 		status VARCHAR(20) NOT NULL DEFAULT 'todo',
@@ -62,7 +64,9 @@ func (ps *PostgresStorage) initializeSchema() error {
 		completed_at TIMESTAMPTZ,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL
+		FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL,
+		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+		UNIQUE(display_id)
 	);`
 
 	if _, err := ps.db.Exec(createTableSQL); err != nil {
@@ -76,6 +80,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 		name VARCHAR(255) NOT NULL UNIQUE,
 		description TEXT,
 		display_prefix VARCHAR(10) NOT NULL,
+		task_counter INTEGER NOT NULL DEFAULT 0,
 		settings JSONB DEFAULT '{}'::jsonb,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -83,6 +88,50 @@ func (ps *PostgresStorage) initializeSchema() error {
 
 	if _, err := ps.db.Exec(createProjectsTableSQL); err != nil {
 		return fmt.Errorf("failed to create projects table: %w", err)
+	}
+
+	// Add task_counter column to existing projects table if it doesn't exist
+	alterTableSQL := `
+	DO $$ 
+	BEGIN 
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='projects' AND column_name='task_counter'
+		) THEN
+			ALTER TABLE projects ADD COLUMN task_counter INTEGER NOT NULL DEFAULT 0;
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterTableSQL); err != nil {
+		return fmt.Errorf("failed to add task_counter column: %w", err)
+	}
+
+	// Add display_id and project_id columns to existing tasks table if they don't exist
+	alterTasksSQL := `
+	DO $$ 
+	BEGIN 
+		-- Add display_id column
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='tasks' AND column_name='display_id'
+		) THEN
+			ALTER TABLE tasks ADD COLUMN display_id VARCHAR(50) UNIQUE;
+		END IF;
+		
+		-- Add project_id column
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='tasks' AND column_name='project_id'
+		) THEN
+			ALTER TABLE tasks ADD COLUMN project_id VARCHAR(36);
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
+		return fmt.Errorf("failed to add display_id and project_id columns: %w", err)
 	}
 
 	// Create indexes for better performance
@@ -114,12 +163,31 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 	// Generate UUID for new task
 	task.ID = uuid.New().String()
 
-	// Begin transaction
+	// Begin transaction for task creation and display ID generation
 	tx, err := ps.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
+
+	// Handle project association and display ID generation
+	if task.ProjectID == "" {
+		// For backward compatibility, assign to default project
+		defaultProject, err := ps.getOrCreateDefaultProjectTx(tx)
+		if err != nil {
+			return fmt.Errorf("failed to get default project: %w", err)
+		}
+		task.ProjectID = defaultProject.ID
+	}
+
+	// Generate display ID if project exists
+	if task.ProjectID != "" {
+		displayID, err := ps.getNextDisplayIDTx(tx, task.ProjectID)
+		if err != nil {
+			return fmt.Errorf("failed to generate display ID: %w", err)
+		}
+		task.DisplayID = displayID
+	}
 
 	// Serialize children array to JSON
 	childrenJSON, err := json.Marshal(task.Children)
@@ -127,13 +195,15 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 		return fmt.Errorf("failed to marshal children array: %w", err)
 	}
 
-	// Insert the task
+	// Insert the task with new fields
 	insertSQL := `
-		INSERT INTO tasks (id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+		INSERT INTO tasks (id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 
 	_, err = tx.Exec(insertSQL,
 		task.ID,
+		nullString(task.DisplayID),
+		nullString(task.ProjectID),
 		task.Title,
 		task.Description,
 		string(task.Status),
@@ -167,17 +237,39 @@ func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
 	defer ps.mu.RUnlock()
 
 	querySQL := `
-		SELECT id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
+		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
 		FROM tasks WHERE id = $1`
 
 	row := ps.db.QueryRow(querySQL, id)
 
-	task, err := ps.scanTask(row)
+	task, err := ps.scanTaskWithDisplayID(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("task not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to get task: %w", err)
+	}
+
+	return task, nil
+}
+
+// GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
+func (ps *PostgresStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	querySQL := `
+		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
+		FROM tasks WHERE UPPER(display_id) = UPPER($1)`
+
+	row := ps.db.QueryRow(querySQL, displayID)
+
+	task, err := ps.scanTaskWithDisplayID(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("task not found with display ID: %s", displayID)
+		}
+		return nil, fmt.Errorf("failed to get task by display ID: %w", err)
 	}
 
 	return task, nil
@@ -409,14 +501,15 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 
 	// Insert the project
 	insertSQL := `
-		INSERT INTO projects (id, name, description, display_prefix, settings, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		INSERT INTO projects (id, name, description, display_prefix, task_counter, settings, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err = ps.db.Exec(insertSQL,
 		project.ID,
 		project.Name,
 		project.Description,
 		project.DisplayPrefix,
+		0, // Initialize task_counter to 0
 		settingsJSON,
 		project.CreatedAt,
 		project.UpdatedAt,
@@ -691,6 +784,58 @@ func (ps *PostgresStorage) scanTask(scanner interface {
 	return &task, nil
 }
 
+// scanTaskWithDisplayID scans a database row into a Task struct (with display ID)
+func (ps *PostgresStorage) scanTaskWithDisplayID(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Task, error) {
+	var task models.Task
+	var parentID sql.NullString
+	var childrenJSON []byte
+	var startedAt, dueDate, completedAt sql.NullTime
+
+	err := scanner.Scan(
+		&task.ID,
+		&task.DisplayID,
+		&task.ProjectID,
+		&task.Title,
+		&task.Description,
+		&task.Status,
+		&task.Priority,
+		&task.Type,
+		&parentID,
+		&childrenJSON,
+		&startedAt,
+		&dueDate,
+		&completedAt,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle nullable fields
+	if parentID.Valid {
+		task.ParentID = parentID.String
+	}
+	if startedAt.Valid {
+		task.StartedAt = &startedAt.Time
+	}
+	if dueDate.Valid {
+		task.DueDate = &dueDate.Time
+	}
+	if completedAt.Valid {
+		task.CompletedAt = &completedAt.Time
+	}
+
+	// Unmarshal children JSON
+	if err := json.Unmarshal(childrenJSON, &task.Children); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal children: %w", err)
+	}
+
+	return &task, nil
+}
+
 // buildHierarchyTask recursively builds a HierarchyTask with its children
 func (ps *PostgresStorage) buildHierarchyTask(task *models.Task, taskMap map[string]*models.Task) *models.HierarchyTask {
 	hierarchyTask := &models.HierarchyTask{
@@ -892,4 +1037,129 @@ func nullString(s string) sql.NullString {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: s, Valid: true}
+}
+
+// GetNextDisplayID generates and returns the next sequential display ID for a project
+func (ps *PostgresStorage) GetNextDisplayID(projectID string) (string, error) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Begin transaction for atomic counter increment
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return "", fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Get project and increment counter in one atomic operation
+	var displayPrefix string
+	var counter int
+
+	updateSQL := `
+		UPDATE projects 
+		SET task_counter = task_counter + 1, updated_at = NOW()
+		WHERE id = $1
+		RETURNING display_prefix, task_counter`
+
+	err = tx.QueryRow(updateSQL, projectID).Scan(&displayPrefix, &counter)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("project not found: %s", projectID)
+		}
+		return "", fmt.Errorf("failed to increment counter: %w", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", displayPrefix, counter), nil
+}
+
+// getOrCreateDefaultProjectTx gets or creates a default project within a transaction
+func (ps *PostgresStorage) getOrCreateDefaultProjectTx(tx *sql.Tx) (*models.Project, error) {
+	// Check if default project already exists
+	selectSQL := `SELECT id, name, description, display_prefix, settings, created_at, updated_at FROM projects WHERE name = $1`
+	row := tx.QueryRow(selectSQL, "Default Project")
+
+	var project models.Project
+	var settingsJSON []byte
+
+	err := row.Scan(
+		&project.ID,
+		&project.Name,
+		&project.Description,
+		&project.DisplayPrefix,
+		&settingsJSON,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+
+	if err == nil {
+		// Project exists, unmarshal settings and return
+		if err := json.Unmarshal(settingsJSON, &project.Settings); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+		}
+		return &project, nil
+	} else if err != sql.ErrNoRows {
+		return nil, fmt.Errorf("failed to query default project: %w", err)
+	}
+
+	// Default project doesn't exist, create it
+	defaultProject := models.NewProject("Default Project", "Default project for tasks without explicit project assignment", "PF")
+	defaultProject.ID = uuid.New().String()
+
+	// Serialize settings to JSON
+	settingsJSON, err = json.Marshal(defaultProject.Settings)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal settings: %w", err)
+	}
+
+	// Insert the default project
+	insertSQL := `
+		INSERT INTO projects (id, name, description, display_prefix, task_counter, settings, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	_, err = tx.Exec(insertSQL,
+		defaultProject.ID,
+		defaultProject.Name,
+		defaultProject.Description,
+		defaultProject.DisplayPrefix,
+		0, // Initialize task_counter to 0
+		settingsJSON,
+		defaultProject.CreatedAt,
+		defaultProject.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert default project: %w", err)
+	}
+
+	return defaultProject, nil
+}
+
+// getNextDisplayIDTx generates the next display ID within a transaction
+func (ps *PostgresStorage) getNextDisplayIDTx(tx *sql.Tx, projectID string) (string, error) {
+	// Get project and increment counter in one atomic operation
+	var displayPrefix string
+	var counter int
+
+	updateSQL := `
+		UPDATE projects 
+		SET task_counter = task_counter + 1, updated_at = NOW()
+		WHERE id = $1
+		RETURNING display_prefix, task_counter`
+
+	err := tx.QueryRow(updateSQL, projectID).Scan(&displayPrefix, &counter)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("project not found: %s", projectID)
+		}
+		return "", fmt.Errorf("failed to increment counter: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", displayPrefix, counter), nil
 }

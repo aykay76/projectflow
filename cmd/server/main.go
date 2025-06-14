@@ -66,6 +66,7 @@ func main() {
 
 	// API routes
 	mux.HandleFunc("/api/tasks", handler.HandleTasks)
+	mux.HandleFunc("/api/tasks/by-display-id/", handler.HandleTaskByDisplayID)
 	mux.HandleFunc("/api/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
 		parts := strings.Split(path, "/")

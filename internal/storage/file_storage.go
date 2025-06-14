@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/aykay76/projectflow/internal/models"
@@ -49,6 +50,25 @@ func (fs *FileStorage) CreateTask(task *models.Task) error {
 	// Generate UUID for new task
 	task.ID = uuid.New().String()
 
+	// Handle project association and display ID generation
+	if task.ProjectID == "" {
+		// For backward compatibility, assign to default project
+		defaultProject, err := fs.getOrCreateDefaultProjectUnsafe()
+		if err != nil {
+			return fmt.Errorf("failed to get default project: %w", err)
+		}
+		task.ProjectID = defaultProject.ID
+	}
+
+	// Generate display ID if project exists
+	if task.ProjectID != "" {
+		displayID, err := fs.getNextDisplayIDUnsafe(task.ProjectID)
+		if err != nil {
+			return fmt.Errorf("failed to generate display ID: %w", err)
+		}
+		task.DisplayID = displayID
+	}
+
 	// If this task has a parent, add it to parent's children
 	if task.ParentID != "" {
 		parent, err := fs.getTaskUnsafe(task.ParentID)
@@ -69,6 +89,13 @@ func (fs *FileStorage) GetTask(id string) (*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getTaskUnsafe(id)
+}
+
+// GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
+func (fs *FileStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.getTaskByDisplayIDUnsafe(displayID)
 }
 
 // UpdateTask updates an existing task
@@ -334,6 +361,29 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 	return &task, nil
 }
 
+func (fs *FileStorage) getTaskByDisplayIDUnsafe(displayID string) (*models.Task, error) {
+	tasksDir := filepath.Join(fs.dataDir, "tasks")
+	entries, err := os.ReadDir(tasksDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read tasks directory: %w", err)
+	}
+
+	// Normalize input display ID for case-insensitive comparison
+	normalizedDisplayID := strings.ToUpper(displayID)
+
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+			taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
+			task, err := fs.getTaskUnsafe(taskID)
+			if err == nil && strings.ToUpper(task.DisplayID) == normalizedDisplayID {
+				return task, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("task not found with display ID: %s", displayID)
+}
+
 func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {
 	filePath := filepath.Join(fs.dataDir, "tasks", task.ID+".json")
 	data, err := json.MarshalIndent(task, "", "  ")
@@ -429,4 +479,120 @@ func (fs *FileStorage) projectExistsUnsafe(id string) bool {
 	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
 	_, err := os.Stat(filePath)
 	return err == nil
+}
+
+// GetNextDisplayID generates and returns the next sequential display ID for a project
+func (fs *FileStorage) GetNextDisplayID(projectID string) (string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	// Get the project to retrieve the display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("project not found: %w", err)
+	}
+
+	// Get the current counter for this project
+	counter, err := fs.getProjectCounterUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get project counter: %w", err)
+	}
+
+	// Increment the counter
+	counter++
+
+	// Save the updated counter
+	if err := fs.saveProjectCounterUnsafe(projectID, counter); err != nil {
+		return "", fmt.Errorf("failed to save project counter: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", project.DisplayPrefix, counter), nil
+}
+
+// getOrCreateDefaultProjectUnsafe gets or creates a default project for backward compatibility
+func (fs *FileStorage) getOrCreateDefaultProjectUnsafe() (*models.Project, error) {
+	// Check if default project already exists
+	projects, err := fs.listProjectsUnsafe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	// Look for existing default project
+	for _, project := range projects {
+		if project.Name == "Default Project" {
+			return project, nil
+		}
+	}
+
+	// Create default project if none exists
+	defaultProject := models.NewProject("Default Project", "Default project for tasks without explicit project assignment", "PF")
+	defaultProject.ID = uuid.New().String()
+
+	if err := fs.saveProjectUnsafe(defaultProject); err != nil {
+		return nil, fmt.Errorf("failed to save default project: %w", err)
+	}
+
+	return defaultProject, nil
+}
+
+// getNextDisplayIDUnsafe generates the next display ID without locking (internal use)
+func (fs *FileStorage) getNextDisplayIDUnsafe(projectID string) (string, error) {
+	// Get the project to retrieve the display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("project not found: %w", err)
+	}
+
+	// Get the current counter for this project
+	counter, err := fs.getProjectCounterUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get project counter: %w", err)
+	}
+
+	// Increment the counter
+	counter++
+
+	// Save the updated counter
+	if err := fs.saveProjectCounterUnsafe(projectID, counter); err != nil {
+		return "", fmt.Errorf("failed to save project counter: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", project.DisplayPrefix, counter), nil
+}
+
+// getProjectCounterUnsafe reads the current counter value for a project
+func (fs *FileStorage) getProjectCounterUnsafe(projectID string) (int, error) {
+	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Counter file doesn't exist, start from 0
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to read counter file: %w", err)
+	}
+
+	var counter int
+	if err := json.Unmarshal(data, &counter); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal counter: %w", err)
+	}
+
+	return counter, nil
+}
+
+// saveProjectCounterUnsafe saves the counter value for a project
+func (fs *FileStorage) saveProjectCounterUnsafe(projectID string, counter int) error {
+	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	data, err := json.Marshal(counter)
+	if err != nil {
+		return fmt.Errorf("failed to marshal counter: %w", err)
+	}
+
+	if err := os.WriteFile(counterFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write counter file: %w", err)
+	}
+
+	return nil
 }

@@ -1,0 +1,27 @@
+time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Logger configured" level=INFO format=text
+time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Application configuration loaded" port=8083 shutdown_timeout_seconds=30 storage_type=file data_dir=./data db_host=localhost db_port=5432 db_name=projectflow db_user=projectflow db_ssl_mode=prefer log_level=INFO log_format=text
+time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Initializing storage" type=file
+time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Storage initialized" type=file
+time=2025-06-14T19:57:48.663+01:00 level=INFO msg="Metrics initialized"
+time=2025-06-14T19:57:48.663+01:00 level=INFO msg="Server starting" port=8083 shutdown_timeout_seconds=30
+time=2025-06-14T19:58:13.966+01:00 level=INFO msg="Request started" method=PUT path=/api/tasks/PF-3 request_id=51d7abb7a319c35b remote_addr=[::1]:51289 user_agent=curl/8.7.1
+time=2025-06-14T19:58:13.966+01:00 level=INFO msg="HTTP request started" method=PUT endpoint=/api/tasks request_id=51d7abb7a319c35b
+time=2025-06-14T19:58:13.975+01:00 level=INFO msg="HTTP request completed" method=PUT endpoint=/api/tasks status_code=200 duration_ms=8 response_size=353 request_id=51d7abb7a319c35b
+time=2025-06-14T19:58:13.975+01:00 level=INFO msg="Request completed" method=PUT path=/api/tasks/PF-3 request_id=51d7abb7a319c35b
+time=2025-06-14T19:58:21.181+01:00 level=INFO msg="Request started" method=PUT path=/api/tasks/PF-1 request_id=3422acb9ea22405c remote_addr=[::1]:51294 user_agent=curl/8.7.1
+time=2025-06-14T19:58:21.181+01:00 level=INFO msg="HTTP request started" method=PUT endpoint=/api/tasks request_id=3422acb9ea22405c
+time=2025-06-14T19:58:21.187+01:00 level=INFO msg="HTTP request completed" method=PUT endpoint=/api/tasks status_code=200 duration_ms=5 response_size=428 request_id=3422acb9ea22405c
+time=2025-06-14T19:58:21.187+01:00 level=INFO msg="Request completed" method=PUT path=/api/tasks/PF-1 request_id=3422acb9ea22405c
+time=2025-06-14T19:58:27.384+01:00 level=INFO msg="Request started" method=GET path=/api/tasks/by-display-id/PF-1 request_id=f7935c5470b33a0c remote_addr=[::1]:51300 user_agent=curl/8.7.1
+time=2025-06-14T19:58:27.384+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=f7935c5470b33a0c
+time=2025-06-14T19:58:27.387+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=3 response_size=428 request_id=f7935c5470b33a0c
+time=2025-06-14T19:58:27.387+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks/by-display-id/PF-1 request_id=f7935c5470b33a0c
+time=2025-06-14T19:58:33.474+01:00 level=INFO msg="Request started" method=DELETE path=/api/tasks/PF-3 request_id=5c3e530f9396152c remote_addr=[::1]:51305 user_agent=curl/8.7.1
+time=2025-06-14T19:58:33.475+01:00 level=INFO msg="HTTP request started" method=DELETE endpoint=/api/tasks request_id=5c3e530f9396152c
+time=2025-06-14T19:58:33.477+01:00 level=INFO msg="HTTP request completed" method=DELETE endpoint=/api/tasks status_code=204 duration_ms=2 response_size=0 request_id=5c3e530f9396152c
+time=2025-06-14T19:58:33.477+01:00 level=INFO msg="Request completed" method=DELETE path=/api/tasks/PF-3 request_id=5c3e530f9396152c
+time=2025-06-14T19:58:40.758+01:00 level=INFO msg="Request started" method=GET path=/api/tasks/PF-3 request_id=7ed9b5bd6b06b7a3 remote_addr=[::1]:51313 user_agent=curl/8.7.1
+time=2025-06-14T19:58:40.758+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=7ed9b5bd6b06b7a3
+time=2025-06-14T19:58:40.761+01:00 level=WARN msg="Task not found" request_id=7ed9b5bd6b06b7a3 task_id=PF-3
+time=2025-06-14T19:58:40.761+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=404 duration_ms=3 response_size=15 request_id=7ed9b5bd6b06b7a3
+time=2025-06-14T19:58:40.761+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks/PF-3 request_id=7ed9b5bd6b06b7a3

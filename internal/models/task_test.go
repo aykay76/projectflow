@@ -653,3 +653,36 @@ func TestTask_DeliveryPerformance(t *testing.T) {
 		t.Errorf("Task.GetDeliveryVarianceDays() = %v, want %v", days, expectedDays)
 	}
 }
+
+func TestIsValidDisplayID(t *testing.T) {
+	tests := []struct {
+		displayID string
+		valid     bool
+	}{
+		{"PF-1", true},
+		{"WEB-42", true},
+		{"API-123", true},
+		{"A-1", true},
+		{"Z9-999", true},
+		{"", true},        // Empty is valid for backward compatibility
+		{"pf-1", false},   // lowercase not allowed
+		{"PF1", false},    // missing dash
+		{"PF-", false},    // missing number
+		{"-1", false},     // missing prefix
+		{"PF-0", true},    // zero is valid
+		{"123-PF", false}, // prefix must be letters
+		{"PF-ABC", false}, // suffix must be numbers
+		{"PF-1-2", false}, // only one dash allowed
+		{"P F-1", false},  // no spaces allowed
+		{"PF--1", false},  // double dash not allowed
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.displayID, func(t *testing.T) {
+			result := IsValidDisplayID(tt.displayID)
+			if result != tt.valid {
+				t.Errorf("IsValidDisplayID(%v) = %v, want %v", tt.displayID, result, tt.valid)
+			}
+		})
+	}
+}

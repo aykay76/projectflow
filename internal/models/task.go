@@ -1,8 +1,12 @@
 package models
 
 import (
+	"regexp"
 	"time"
 )
+
+// displayIDPattern defines the valid format for display IDs: PREFIX-NUMBER (e.g., PF-1, WEB-42)
+var displayIDPattern = regexp.MustCompile(`^[A-Z][A-Z0-9]*-\d+$`)
 
 // TaskStatus represents the status of a task
 type TaskStatus string
@@ -37,6 +41,8 @@ const (
 // Task represents a work item in the system
 type Task struct {
 	ID          string       `json:"id"`
+	DisplayID   string       `json:"display_id,omitempty"`
+	ProjectID   string       `json:"project_id,omitempty"`
 	Title       string       `json:"title"`
 	Description string       `json:"description"`
 	Status      TaskStatus   `json:"status"`
@@ -116,6 +122,15 @@ func IsValidType(taskType string) bool {
 	default:
 		return false
 	}
+}
+
+// IsValidDisplayID checks if the given display ID is valid
+// Valid format: PROJECT_PREFIX-NUMBER (e.g., PF-1, WEB-42, API-123)
+func IsValidDisplayID(displayID string) bool {
+	if displayID == "" {
+		return true // Empty display ID is valid (for backward compatibility)
+	}
+	return displayIDPattern.MatchString(displayID)
 }
 
 // IsOverdue checks if the task is overdue
