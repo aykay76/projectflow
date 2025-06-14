@@ -49,6 +49,25 @@ func (fs *FileStorage) CreateTask(task *models.Task) error {
 	// Generate UUID for new task
 	task.ID = uuid.New().String()
 
+	// Handle project association and display ID generation
+	if task.ProjectID == "" {
+		// For backward compatibility, assign to default project
+		defaultProject, err := fs.getOrCreateDefaultProjectUnsafe()
+		if err != nil {
+			return fmt.Errorf("failed to get default project: %w", err)
+		}
+		task.ProjectID = defaultProject.ID
+	}
+
+	// Generate display ID if project exists
+	if task.ProjectID != "" {
+		displayID, err := fs.getNextDisplayIDUnsafe(task.ProjectID)
+		if err != nil {
+			return fmt.Errorf("failed to generate display ID: %w", err)
+		}
+		task.DisplayID = displayID
+	}
+
 	// If this task has a parent, add it to parent's children
 	if task.ParentID != "" {
 		parent, err := fs.getTaskUnsafe(task.ParentID)
@@ -436,6 +455,58 @@ func (fs *FileStorage) GetNextDisplayID(projectID string) (string, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
+	// Get the project to retrieve the display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("project not found: %w", err)
+	}
+
+	// Get the current counter for this project
+	counter, err := fs.getProjectCounterUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get project counter: %w", err)
+	}
+
+	// Increment the counter
+	counter++
+
+	// Save the updated counter
+	if err := fs.saveProjectCounterUnsafe(projectID, counter); err != nil {
+		return "", fmt.Errorf("failed to save project counter: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", project.DisplayPrefix, counter), nil
+}
+
+// getOrCreateDefaultProjectUnsafe gets or creates a default project for backward compatibility
+func (fs *FileStorage) getOrCreateDefaultProjectUnsafe() (*models.Project, error) {
+	// Check if default project already exists
+	projects, err := fs.listProjectsUnsafe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	// Look for existing default project
+	for _, project := range projects {
+		if project.Name == "Default Project" {
+			return project, nil
+		}
+	}
+
+	// Create default project if none exists
+	defaultProject := models.NewProject("Default Project", "Default project for tasks without explicit project assignment", "PF")
+	defaultProject.ID = uuid.New().String()
+
+	if err := fs.saveProjectUnsafe(defaultProject); err != nil {
+		return nil, fmt.Errorf("failed to save default project: %w", err)
+	}
+
+	return defaultProject, nil
+}
+
+// getNextDisplayIDUnsafe generates the next display ID without locking (internal use)
+func (fs *FileStorage) getNextDisplayIDUnsafe(projectID string) (string, error) {
 	// Get the project to retrieve the display prefix
 	project, err := fs.getProjectUnsafe(projectID)
 	if err != nil {
