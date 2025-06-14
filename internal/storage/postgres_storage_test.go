@@ -660,3 +660,326 @@ func TestPostgresStorage_ConcurrentAccess(t *testing.T) {
 		t.Errorf("Expected %d tasks, got %d", expectedCount, len(tasks))
 	}
 }
+
+// Project tests
+
+func TestPostgresStorage_CreateProject(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+
+	err := storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("CreateProject() error = %v", err)
+	}
+
+	if project.ID == "" {
+		t.Error("CreateProject() should set project ID")
+	}
+}
+
+func TestPostgresStorage_GetProject(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create a project first
+	originalProject := models.NewProject("Test Project", "Test Description", "TEST")
+	err := storage.CreateProject(originalProject)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test getting the project
+	retrievedProject, err := storage.GetProject(originalProject.ID)
+	if err != nil {
+		t.Fatalf("GetProject() error = %v", err)
+	}
+
+	if retrievedProject.Name != originalProject.Name {
+		t.Errorf("GetProject() name = %v, want %v", retrievedProject.Name, originalProject.Name)
+	}
+
+	if retrievedProject.Description != originalProject.Description {
+		t.Errorf("GetProject() description = %v, want %v", retrievedProject.Description, originalProject.Description)
+	}
+
+	if retrievedProject.DisplayPrefix != originalProject.DisplayPrefix {
+		t.Errorf("GetProject() DisplayPrefix = %v, want %v", retrievedProject.DisplayPrefix, originalProject.DisplayPrefix)
+	}
+}
+
+func TestPostgresStorage_GetProject_NotFound(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	_, err := storage.GetProject("nonexistent-id")
+	if err == nil {
+		t.Error("GetProject() with nonexistent ID should return error")
+	}
+}
+
+func TestPostgresStorage_UpdateProject(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create a project first
+	project := models.NewProject("Original Name", "Original Description", "ORIG")
+	err := storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Update the project
+	project.Name = "Updated Name"
+	project.Description = "Updated Description"
+	project.SetSetting("testKey", "testValue")
+	project.UpdateTimestamp()
+	err = storage.UpdateProject(project)
+	if err != nil {
+		t.Fatalf("UpdateProject() error = %v", err)
+	}
+
+	// Verify the update
+	retrievedProject, err := storage.GetProject(project.ID)
+	if err != nil {
+		t.Fatalf("Failed to retrieve updated project: %v", err)
+	}
+
+	if retrievedProject.Name != "Updated Name" {
+		t.Errorf("UpdateProject() name = %v, want %v", retrievedProject.Name, "Updated Name")
+	}
+
+	if retrievedProject.Description != "Updated Description" {
+		t.Errorf("UpdateProject() description = %v, want %v", retrievedProject.Description, "Updated Description")
+	}
+
+	value, exists := retrievedProject.GetSetting("testKey")
+	if !exists || value != "testValue" {
+		t.Errorf("UpdateProject() setting = %v (exists: %v), want testValue (true)", value, exists)
+	}
+}
+
+func TestPostgresStorage_DeleteProject(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create a project first
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+	err := storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Delete the project
+	err = storage.DeleteProject(project.ID)
+	if err != nil {
+		t.Fatalf("DeleteProject() error = %v", err)
+	}
+
+	// Verify it's gone
+	_, err = storage.GetProject(project.ID)
+	if err == nil {
+		t.Error("DeleteProject() should remove project")
+	}
+}
+
+func TestPostgresStorage_ListProjects(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create multiple projects
+	project1 := models.NewProject("Project 1", "Description 1", "P1")
+	project2 := models.NewProject("Project 2", "Description 2", "P2")
+
+	err := storage.CreateProject(project1)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	err = storage.CreateProject(project2)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// List projects
+	projects, err := storage.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects() error = %v", err)
+	}
+
+	if len(projects) != 2 {
+		t.Errorf("ListProjects() returned %d projects, want 2", len(projects))
+	}
+
+	// Check that both projects are present
+	found1, found2 := false, false
+	for _, project := range projects {
+		if project.ID == project1.ID {
+			found1 = true
+		}
+		if project.ID == project2.ID {
+			found2 = true
+		}
+	}
+
+	if !found1 {
+		t.Error("ListProjects() should include project1")
+	}
+	if !found2 {
+		t.Error("ListProjects() should include project2")
+	}
+}
+
+func TestPostgresStorage_GetProjectByName(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create a project
+	originalProject := models.NewProject("Unique Project Name", "Test Description", "UPN")
+	err := storage.CreateProject(originalProject)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test getting by name
+	retrievedProject, err := storage.GetProjectByName("Unique Project Name")
+	if err != nil {
+		t.Fatalf("GetProjectByName() error = %v", err)
+	}
+
+	if retrievedProject.ID != originalProject.ID {
+		t.Errorf("GetProjectByName() ID = %v, want %v", retrievedProject.ID, originalProject.ID)
+	}
+
+	// Test non-existent name
+	_, err = storage.GetProjectByName("Non-existent Project")
+	if err == nil {
+		t.Error("GetProjectByName() with non-existent name should return error")
+	}
+}
+
+func TestPostgresStorage_ProjectExists(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Test non-existent project
+	if storage.ProjectExists("nonexistent-id") {
+		t.Error("ProjectExists() should return false for non-existent project")
+	}
+
+	// Create a project
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+	err := storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test existing project
+	if !storage.ProjectExists(project.ID) {
+		t.Error("ProjectExists() should return true for existing project")
+	}
+}
+
+func TestPostgresStorage_ProjectSettings(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	// Create a project with settings
+	project := models.NewProject("Settings Project", "Test Description", "SET")
+	project.SetSetting("key1", "value1")
+	project.SetSetting("key2", "value2")
+	project.SetSetting("complex_key", "complex_value_with_special_chars_@#$%")
+
+	err := storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("CreateProject() error = %v", err)
+	}
+
+	// Retrieve and verify settings
+	retrievedProject, err := storage.GetProject(project.ID)
+	if err != nil {
+		t.Fatalf("GetProject() error = %v", err)
+	}
+
+	testCases := []struct {
+		key   string
+		value string
+	}{
+		{"key1", "value1"},
+		{"key2", "value2"},
+		{"complex_key", "complex_value_with_special_chars_@#$%"},
+	}
+
+	for _, tc := range testCases {
+		value, exists := retrievedProject.GetSetting(tc.key)
+		if !exists {
+			t.Errorf("Setting %s should exist", tc.key)
+		}
+		if value != tc.value {
+			t.Errorf("Setting %s = %v, want %v", tc.key, value, tc.value)
+		}
+	}
+}
+
+func TestPostgresStorage_ConcurrentProjectOperations(t *testing.T) {
+	storage, cleanup := setupPostgresTestContainer(t)
+	defer cleanup()
+
+	const numGoroutines = 10
+	const projectsPerGoroutine = 5
+
+	// Channel to collect errors
+	errCh := make(chan error, numGoroutines*projectsPerGoroutine)
+
+	// Run concurrent project creation
+	for i := 0; i < numGoroutines; i++ {
+		go func(goroutineID int) {
+			for j := 0; j < projectsPerGoroutine; j++ {
+				project := models.NewProject(
+					fmt.Sprintf("Project %d-%d", goroutineID, j),
+					fmt.Sprintf("Description %d-%d", goroutineID, j),
+					fmt.Sprintf("P%d%d", goroutineID, j),
+				)
+				
+				if err := storage.CreateProject(project); err != nil {
+					errCh <- fmt.Errorf("goroutine %d, project %d: %w", goroutineID, j, err)
+					return
+				}
+			}
+		}(i)
+	}
+
+	// Check for errors
+	timeout := time.After(30 * time.Second)
+	completed := 0
+	for completed < numGoroutines*projectsPerGoroutine {
+		select {
+		case err := <-errCh:
+			t.Fatalf("Concurrent project creation failed: %v", err)
+		case <-timeout:
+			t.Fatal("Test timed out")
+		default:
+			// Check if we have the expected number of projects
+			projects, err := storage.ListProjects()
+			if err != nil {
+				t.Fatalf("ListProjects() error = %v", err)
+			}
+			if len(projects) >= numGoroutines*projectsPerGoroutine {
+				completed = numGoroutines * projectsPerGoroutine
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	// Verify all projects were created
+	projects, err := storage.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects() error = %v", err)
+	}
+
+	expectedCount := numGoroutines * projectsPerGoroutine
+	if len(projects) != expectedCount {
+		t.Errorf("Expected %d projects, got %d", expectedCount, len(projects))
+	}
+}

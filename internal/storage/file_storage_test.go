@@ -255,3 +255,258 @@ func TestFileStorage_GetTaskHierarchy(t *testing.T) {
 		t.Errorf("GetTaskHierarchy() child task ID = %v, want %v", child.ID, childTask.ID)
 	}
 }
+
+// Project tests
+
+func TestFileStorage_CreateProject(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+
+	err = storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("CreateProject() error = %v", err)
+	}
+
+	if project.ID == "" {
+		t.Error("CreateProject() should set project ID")
+	}
+
+	// Verify file was created
+	filePath := filepath.Join(tempDir, "projects", project.ID+".json")
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		t.Error("CreateProject() should create file on disk")
+	}
+}
+
+func TestFileStorage_GetProject(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Create a project first
+	originalProject := models.NewProject("Test Project", "Test Description", "TEST")
+	err = storage.CreateProject(originalProject)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test getting the project
+	retrievedProject, err := storage.GetProject(originalProject.ID)
+	if err != nil {
+		t.Fatalf("GetProject() error = %v", err)
+	}
+
+	if retrievedProject.Name != originalProject.Name {
+		t.Errorf("GetProject() name = %v, want %v", retrievedProject.Name, originalProject.Name)
+	}
+
+	if retrievedProject.Description != originalProject.Description {
+		t.Errorf("GetProject() description = %v, want %v", retrievedProject.Description, originalProject.Description)
+	}
+
+	if retrievedProject.DisplayPrefix != originalProject.DisplayPrefix {
+		t.Errorf("GetProject() DisplayPrefix = %v, want %v", retrievedProject.DisplayPrefix, originalProject.DisplayPrefix)
+	}
+}
+
+func TestFileStorage_GetProject_NotFound(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	_, err = storage.GetProject("nonexistent-id")
+	if err == nil {
+		t.Error("GetProject() with nonexistent ID should return error")
+	}
+}
+
+func TestFileStorage_UpdateProject(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Create a project first
+	project := models.NewProject("Original Name", "Original Description", "ORIG")
+	err = storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Update the project
+	project.Name = "Updated Name"
+	project.Description = "Updated Description"
+	project.SetSetting("testKey", "testValue")
+	err = storage.UpdateProject(project)
+	if err != nil {
+		t.Fatalf("UpdateProject() error = %v", err)
+	}
+
+	// Verify the update
+	retrievedProject, err := storage.GetProject(project.ID)
+	if err != nil {
+		t.Fatalf("Failed to retrieve updated project: %v", err)
+	}
+
+	if retrievedProject.Name != "Updated Name" {
+		t.Errorf("UpdateProject() name = %v, want %v", retrievedProject.Name, "Updated Name")
+	}
+
+	if retrievedProject.Description != "Updated Description" {
+		t.Errorf("UpdateProject() description = %v, want %v", retrievedProject.Description, "Updated Description")
+	}
+
+	value, exists := retrievedProject.GetSetting("testKey")
+	if !exists || value != "testValue" {
+		t.Errorf("UpdateProject() setting = %v (exists: %v), want testValue (true)", value, exists)
+	}
+}
+
+func TestFileStorage_DeleteProject(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Create a project first
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+	err = storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Delete the project
+	err = storage.DeleteProject(project.ID)
+	if err != nil {
+		t.Fatalf("DeleteProject() error = %v", err)
+	}
+
+	// Verify it's gone
+	_, err = storage.GetProject(project.ID)
+	if err == nil {
+		t.Error("DeleteProject() should remove project")
+	}
+
+	// Verify file was deleted
+	filePath := filepath.Join(tempDir, "projects", project.ID+".json")
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		t.Error("DeleteProject() should remove file from disk")
+	}
+}
+
+func TestFileStorage_ListProjects(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Create multiple projects
+	project1 := models.NewProject("Project 1", "Description 1", "P1")
+	project2 := models.NewProject("Project 2", "Description 2", "P2")
+
+	err = storage.CreateProject(project1)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	err = storage.CreateProject(project2)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// List projects
+	projects, err := storage.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects() error = %v", err)
+	}
+
+	if len(projects) != 2 {
+		t.Errorf("ListProjects() returned %d projects, want 2", len(projects))
+	}
+
+	// Check that both projects are present
+	found1, found2 := false, false
+	for _, project := range projects {
+		if project.ID == project1.ID {
+			found1 = true
+		}
+		if project.ID == project2.ID {
+			found2 = true
+		}
+	}
+
+	if !found1 {
+		t.Error("ListProjects() should include project1")
+	}
+	if !found2 {
+		t.Error("ListProjects() should include project2")
+	}
+}
+
+func TestFileStorage_GetProjectByName(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Create a project
+	originalProject := models.NewProject("Unique Project Name", "Test Description", "UPN")
+	err = storage.CreateProject(originalProject)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test getting by name
+	retrievedProject, err := storage.GetProjectByName("Unique Project Name")
+	if err != nil {
+		t.Fatalf("GetProjectByName() error = %v", err)
+	}
+
+	if retrievedProject.ID != originalProject.ID {
+		t.Errorf("GetProjectByName() ID = %v, want %v", retrievedProject.ID, originalProject.ID)
+	}
+
+	// Test non-existent name
+	_, err = storage.GetProjectByName("Non-existent Project")
+	if err == nil {
+		t.Error("GetProjectByName() with non-existent name should return error")
+	}
+}
+
+func TestFileStorage_ProjectExists(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage: %v", err)
+	}
+
+	// Test non-existent project
+	if storage.ProjectExists("nonexistent-id") {
+		t.Error("ProjectExists() should return false for non-existent project")
+	}
+
+	// Create a project
+	project := models.NewProject("Test Project", "Test Description", "TEST")
+	err = storage.CreateProject(project)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Test existing project
+	if !storage.ProjectExists(project.ID) {
+		t.Error("ProjectExists() should return true for existing project")
+	}
+}
