@@ -69,6 +69,22 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to create tasks table: %w", err)
 	}
 
+	// Create projects table
+	createProjectsTableSQL := `
+	CREATE TABLE IF NOT EXISTS projects (
+		id VARCHAR(36) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL UNIQUE,
+		description TEXT,
+		display_prefix VARCHAR(10) NOT NULL,
+		settings JSONB DEFAULT '{}'::jsonb,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);`
+
+	if _, err := ps.db.Exec(createProjectsTableSQL); err != nil {
+		return fmt.Errorf("failed to create projects table: %w", err)
+	}
+
 	// Create indexes for better performance
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);",
@@ -77,6 +93,8 @@ func (ps *PostgresStorage) initializeSchema() error {
 		"CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);",
+		"CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);",
+		"CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);",
 	}
 
 	for _, indexSQL := range indexes {
@@ -371,6 +389,249 @@ func (ps *PostgresStorage) TaskExists(id string) bool {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 	return ps.taskExistsUnsafe(id)
+}
+
+// Project CRUD methods
+
+// CreateProject creates a new project and assigns it an ID
+func (ps *PostgresStorage) CreateProject(project *models.Project) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Generate UUID for new project
+	project.ID = uuid.New().String()
+
+	// Serialize settings to JSON
+	settingsJSON, err := json.Marshal(project.Settings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal settings: %w", err)
+	}
+
+	// Insert the project
+	insertSQL := `
+		INSERT INTO projects (id, name, description, display_prefix, settings, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err = ps.db.Exec(insertSQL,
+		project.ID,
+		project.Name,
+		project.Description,
+		project.DisplayPrefix,
+		settingsJSON,
+		project.CreatedAt,
+		project.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert project: %w", err)
+	}
+
+	return nil
+}
+
+// GetProject retrieves a project by ID
+func (ps *PostgresStorage) GetProject(id string) (*models.Project, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	selectSQL := `
+		SELECT id, name, description, display_prefix, settings, created_at, updated_at
+		FROM projects WHERE id = $1`
+
+	row := ps.db.QueryRow(selectSQL, id)
+
+	var project models.Project
+	var settingsJSON []byte
+
+	err := row.Scan(
+		&project.ID,
+		&project.Name,
+		&project.Description,
+		&project.DisplayPrefix,
+		&settingsJSON,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("project not found: %s", id)
+		}
+		return nil, fmt.Errorf("failed to query project: %w", err)
+	}
+
+	// Unmarshal settings JSON
+	if err := json.Unmarshal(settingsJSON, &project.Settings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+	}
+
+	return &project, nil
+}
+
+// UpdateProject updates an existing project
+func (ps *PostgresStorage) UpdateProject(project *models.Project) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Serialize settings to JSON
+	settingsJSON, err := json.Marshal(project.Settings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal settings: %w", err)
+	}
+
+	updateSQL := `
+		UPDATE projects 
+		SET name = $2, description = $3, display_prefix = $4, settings = $5, updated_at = $6
+		WHERE id = $1`
+
+	result, err := ps.db.Exec(updateSQL,
+		project.ID,
+		project.Name,
+		project.Description,
+		project.DisplayPrefix,
+		settingsJSON,
+		project.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update project: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("project not found: %s", project.ID)
+	}
+
+	return nil
+}
+
+// DeleteProject deletes a project
+func (ps *PostgresStorage) DeleteProject(id string) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	deleteSQL := "DELETE FROM projects WHERE id = $1"
+	result, err := ps.db.Exec(deleteSQL, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete project: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("project not found: %s", id)
+	}
+
+	return nil
+}
+
+// ListProjects returns all projects
+func (ps *PostgresStorage) ListProjects() ([]*models.Project, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	selectSQL := `
+		SELECT id, name, description, display_prefix, settings, created_at, updated_at
+		FROM projects ORDER BY created_at ASC`
+
+	rows, err := ps.db.Query(selectSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query projects: %w", err)
+	}
+	defer rows.Close()
+
+	var projects []*models.Project
+	for rows.Next() {
+		var project models.Project
+		var settingsJSON []byte
+
+		err := rows.Scan(
+			&project.ID,
+			&project.Name,
+			&project.Description,
+			&project.DisplayPrefix,
+			&settingsJSON,
+			&project.CreatedAt,
+			&project.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan project row: %w", err)
+		}
+
+		// Unmarshal settings JSON
+		if err := json.Unmarshal(settingsJSON, &project.Settings); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+		}
+
+		projects = append(projects, &project)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate project rows: %w", err)
+	}
+
+	return projects, nil
+}
+
+// GetProjectByName retrieves a project by name
+func (ps *PostgresStorage) GetProjectByName(name string) (*models.Project, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	selectSQL := `
+		SELECT id, name, description, display_prefix, settings, created_at, updated_at
+		FROM projects WHERE name = $1`
+
+	row := ps.db.QueryRow(selectSQL, name)
+
+	var project models.Project
+	var settingsJSON []byte
+
+	err := row.Scan(
+		&project.ID,
+		&project.Name,
+		&project.Description,
+		&project.DisplayPrefix,
+		&settingsJSON,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("project not found: %s", name)
+		}
+		return nil, fmt.Errorf("failed to query project: %w", err)
+	}
+
+	// Unmarshal settings JSON
+	if err := json.Unmarshal(settingsJSON, &project.Settings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+	}
+
+	return &project, nil
+}
+
+// ProjectExists checks if a project exists
+func (ps *PostgresStorage) ProjectExists(id string) bool {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	var count int
+	selectSQL := "SELECT COUNT(*) FROM projects WHERE id = $1"
+	err := ps.db.QueryRow(selectSQL, id).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
 }
 
 // Close closes the database connection

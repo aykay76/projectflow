@@ -30,6 +30,12 @@ func NewFileStorage(dataDir string) (*FileStorage, error) {
 		return nil, fmt.Errorf("failed to create tasks directory: %w", err)
 	}
 
+	// Create projects subdirectory
+	projectsDir := filepath.Join(dataDir, "projects")
+	if err := os.MkdirAll(projectsDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create projects directory: %w", err)
+	}
+
 	return &FileStorage{
 		dataDir: dataDir,
 	}, nil
@@ -226,6 +232,83 @@ func (fs *FileStorage) TaskExists(id string) bool {
 	return fs.taskExistsUnsafe(id)
 }
 
+// Project CRUD methods
+
+// CreateProject creates a new project and assigns it an ID
+func (fs *FileStorage) CreateProject(project *models.Project) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	// Generate UUID for new project
+	project.ID = uuid.New().String()
+
+	return fs.saveProjectUnsafe(project)
+}
+
+// GetProject retrieves a project by ID
+func (fs *FileStorage) GetProject(id string) (*models.Project, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.getProjectUnsafe(id)
+}
+
+// UpdateProject updates an existing project
+func (fs *FileStorage) UpdateProject(project *models.Project) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	if !fs.projectExistsUnsafe(project.ID) {
+		return fmt.Errorf("project not found: %s", project.ID)
+	}
+
+	return fs.saveProjectUnsafe(project)
+}
+
+// DeleteProject deletes a project
+func (fs *FileStorage) DeleteProject(id string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	if !fs.projectExistsUnsafe(id) {
+		return fmt.Errorf("project not found: %s", id)
+	}
+
+	return fs.deleteProjectUnsafe(id)
+}
+
+// ListProjects returns all projects
+func (fs *FileStorage) ListProjects() ([]*models.Project, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.listProjectsUnsafe()
+}
+
+// GetProjectByName retrieves a project by name
+func (fs *FileStorage) GetProjectByName(name string) (*models.Project, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+
+	projects, err := fs.listProjectsUnsafe()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, project := range projects {
+		if project.Name == name {
+			return project, nil
+		}
+	}
+
+	return nil, fmt.Errorf("project not found: %s", name)
+}
+
+// ProjectExists checks if a project exists
+func (fs *FileStorage) ProjectExists(id string) bool {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.projectExistsUnsafe(id)
+}
+
 // Close closes the storage (no-op for file storage)
 func (fs *FileStorage) Close() error {
 	return nil
@@ -275,6 +358,75 @@ func (fs *FileStorage) deleteTaskUnsafe(id string) error {
 
 func (fs *FileStorage) taskExistsUnsafe(id string) bool {
 	filePath := filepath.Join(fs.dataDir, "tasks", id+".json")
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+// Internal project methods (must be called with mutex held)
+
+func (fs *FileStorage) getProjectUnsafe(id string) (*models.Project, error) {
+	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("project not found: %s", id)
+		}
+		return nil, fmt.Errorf("failed to read project file: %w", err)
+	}
+
+	var project models.Project
+	if err := json.Unmarshal(data, &project); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal project: %w", err)
+	}
+
+	return &project, nil
+}
+
+func (fs *FileStorage) saveProjectUnsafe(project *models.Project) error {
+	filePath := filepath.Join(fs.dataDir, "projects", project.ID+".json")
+	data, err := json.MarshalIndent(project, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal project: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write project file: %w", err)
+	}
+
+	return nil
+}
+
+func (fs *FileStorage) deleteProjectUnsafe(id string) error {
+	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete project file: %w", err)
+	}
+	return nil
+}
+
+func (fs *FileStorage) listProjectsUnsafe() ([]*models.Project, error) {
+	projectsDir := filepath.Join(fs.dataDir, "projects")
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read projects directory: %w", err)
+	}
+
+	var projects []*models.Project
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+			projectID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
+			project, err := fs.getProjectUnsafe(projectID)
+			if err == nil {
+				projects = append(projects, project)
+			}
+		}
+	}
+
+	return projects, nil
+}
+
+func (fs *FileStorage) projectExistsUnsafe(id string) bool {
+	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
 	_, err := os.Stat(filePath)
 	return err == nil
 }
