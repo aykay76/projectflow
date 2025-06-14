@@ -941,7 +941,7 @@ func TestPostgresStorage_ConcurrentProjectOperations(t *testing.T) {
 					fmt.Sprintf("Description %d-%d", goroutineID, j),
 					fmt.Sprintf("P%d%d", goroutineID, j),
 				)
-				
+
 				if err := storage.CreateProject(project); err != nil {
 					errCh <- fmt.Errorf("goroutine %d, project %d: %w", goroutineID, j, err)
 					return
