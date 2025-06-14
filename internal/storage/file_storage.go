@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/aykay76/projectflow/internal/models"
@@ -88,6 +89,13 @@ func (fs *FileStorage) GetTask(id string) (*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getTaskUnsafe(id)
+}
+
+// GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
+func (fs *FileStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.getTaskByDisplayIDUnsafe(displayID)
 }
 
 // UpdateTask updates an existing task
@@ -351,6 +359,29 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 	}
 
 	return &task, nil
+}
+
+func (fs *FileStorage) getTaskByDisplayIDUnsafe(displayID string) (*models.Task, error) {
+	tasksDir := filepath.Join(fs.dataDir, "tasks")
+	entries, err := os.ReadDir(tasksDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read tasks directory: %w", err)
+	}
+
+	// Normalize input display ID for case-insensitive comparison
+	normalizedDisplayID := strings.ToUpper(displayID)
+
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+			taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
+			task, err := fs.getTaskUnsafe(taskID)
+			if err == nil && strings.ToUpper(task.DisplayID) == normalizedDisplayID {
+				return task, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("task not found with display ID: %s", displayID)
 }
 
 func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {

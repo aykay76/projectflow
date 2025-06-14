@@ -81,6 +81,69 @@ func TestFileStorage_GetTask_NotFound(t *testing.T) {
 	}
 }
 
+func TestFileStorage_GetTaskByDisplayID(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	require.NoError(t, err)
+	defer storage.Close()
+
+	// Create a task (this should auto-generate a display ID)
+	task := models.NewTask("Test Display ID Task", "Testing display ID lookup")
+	err = storage.CreateTask(task)
+	require.NoError(t, err)
+	require.NotEmpty(t, task.DisplayID, "Task should have a display ID")
+
+	// Test retrieving task by display ID
+	retrievedTask, err := storage.GetTaskByDisplayID(task.DisplayID)
+	require.NoError(t, err)
+
+	assert.Equal(t, task.ID, retrievedTask.ID)
+	assert.Equal(t, task.DisplayID, retrievedTask.DisplayID)
+	assert.Equal(t, task.Title, retrievedTask.Title)
+	assert.Equal(t, task.Description, retrievedTask.Description)
+	assert.Equal(t, task.ProjectID, retrievedTask.ProjectID)
+}
+
+func TestFileStorage_GetTaskByDisplayID_NotFound(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	require.NoError(t, err)
+	defer storage.Close()
+
+	// Test with non-existent display ID
+	_, err = storage.GetTaskByDisplayID("NONEXISTENT-999")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "task not found with display ID")
+}
+
+func TestFileStorage_GetTaskByDisplayID_CaseInsensitive(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	require.NoError(t, err)
+	defer storage.Close()
+
+	// Create a task (this should auto-generate a display ID like "PF-1")
+	task := models.NewTask("Test Case Insensitive Task", "Testing case insensitive lookup")
+	err = storage.CreateTask(task)
+	require.NoError(t, err)
+	require.NotEmpty(t, task.DisplayID, "Task should have a display ID")
+
+	// Test retrieving task by display ID with different cases
+	testCases := []string{
+		task.DisplayID,                      // exact case
+		strings.ToLower(task.DisplayID),     // all lowercase
+		strings.ToUpper(task.DisplayID),     // all uppercase
+		strings.Title(strings.ToLower(task.DisplayID)), // mixed case
+	}
+
+	for _, displayID := range testCases {
+		retrievedTask, err := storage.GetTaskByDisplayID(displayID)
+		require.NoError(t, err, "Should find task with display ID: %s", displayID)
+		assert.Equal(t, task.ID, retrievedTask.ID, "Should return same task for display ID: %s", displayID)
+		assert.Equal(t, task.DisplayID, retrievedTask.DisplayID, "Original display ID should be preserved")
+	}
+}
+
 func TestFileStorage_UpdateTask(t *testing.T) {
 	tempDir := t.TempDir()
 	storage, err := NewFileStorage(tempDir)

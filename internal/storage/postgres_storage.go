@@ -237,17 +237,39 @@ func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
 	defer ps.mu.RUnlock()
 
 	querySQL := `
-		SELECT id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
+		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
 		FROM tasks WHERE id = $1`
 
 	row := ps.db.QueryRow(querySQL, id)
 
-	task, err := ps.scanTask(row)
+	task, err := ps.scanTaskWithDisplayID(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("task not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to get task: %w", err)
+	}
+
+	return task, nil
+}
+
+// GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
+func (ps *PostgresStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	querySQL := `
+		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
+		FROM tasks WHERE UPPER(display_id) = UPPER($1)`
+
+	row := ps.db.QueryRow(querySQL, displayID)
+
+	task, err := ps.scanTaskWithDisplayID(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("task not found with display ID: %s", displayID)
+		}
+		return nil, fmt.Errorf("failed to get task by display ID: %w", err)
 	}
 
 	return task, nil
@@ -723,6 +745,58 @@ func (ps *PostgresStorage) scanTask(scanner interface {
 
 	err := scanner.Scan(
 		&task.ID,
+		&task.Title,
+		&task.Description,
+		&task.Status,
+		&task.Priority,
+		&task.Type,
+		&parentID,
+		&childrenJSON,
+		&startedAt,
+		&dueDate,
+		&completedAt,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle nullable fields
+	if parentID.Valid {
+		task.ParentID = parentID.String
+	}
+	if startedAt.Valid {
+		task.StartedAt = &startedAt.Time
+	}
+	if dueDate.Valid {
+		task.DueDate = &dueDate.Time
+	}
+	if completedAt.Valid {
+		task.CompletedAt = &completedAt.Time
+	}
+
+	// Unmarshal children JSON
+	if err := json.Unmarshal(childrenJSON, &task.Children); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal children: %w", err)
+	}
+
+	return &task, nil
+}
+
+// scanTaskWithDisplayID scans a database row into a Task struct (with display ID)
+func (ps *PostgresStorage) scanTaskWithDisplayID(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Task, error) {
+	var task models.Task
+	var parentID sql.NullString
+	var childrenJSON []byte
+	var startedAt, dueDate, completedAt sql.NullTime
+
+	err := scanner.Scan(
+		&task.ID,
+		&task.DisplayID,
+		&task.ProjectID,
 		&task.Title,
 		&task.Description,
 		&task.Status,

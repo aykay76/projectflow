@@ -9,6 +9,7 @@ type Storage interface {
 	// Task operations
 	CreateTask(task *models.Task) error
 	GetTask(id string) (*models.Task, error)
+	GetTaskByDisplayID(displayID string) (*models.Task, error)
 	UpdateTask(task *models.Task) error
 	DeleteTask(id string) error
 	ListTasks() ([]*models.Task, error)

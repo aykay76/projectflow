@@ -31,6 +31,26 @@ func NewHandler(storage storage.Storage) *Handler {
 	}
 }
 
+// getTaskByIdentifier resolves a task by either UUID or display ID
+func (h *Handler) getTaskByIdentifier(identifier string) (*models.Task, error) {
+	// Check if identifier looks like a UUID (36 characters with dashes)
+	if len(identifier) == 36 && strings.Count(identifier, "-") == 4 {
+		// Try UUID lookup first for performance
+		task, err := h.storage.GetTask(identifier)
+		if err == nil {
+			return task, nil
+		}
+	}
+
+	// If not a UUID or UUID lookup failed, and identifier looks like a display ID, try display ID lookup
+	if models.IsValidDisplayID(identifier) {
+		return h.storage.GetTaskByDisplayID(identifier)
+	}
+
+	// If it doesn't look like a display ID, try UUID lookup anyway (in case the UUID check above failed)
+	return h.storage.GetTask(identifier)
+}
+
 // HandleIndex serves the main web interface
 func (h *Handler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -253,7 +273,7 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string)
 
 	logger.DebugContext(ctx, "Getting task", "request_id", requestID, "task_id", taskID)
 
-	task, err := h.storage.GetTask(taskID)
+	task, err := h.getTaskByIdentifier(taskID)
 	if err != nil {
 		// Record failed task retrieval
 		if m, ok := metrics.FromContext(ctx); ok {
@@ -280,9 +300,59 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request, taskID string)
 	json.NewEncoder(w).Encode(task)
 }
 
+// HandleTaskByDisplayID handles /api/tasks/by-display-id/{display_id} endpoint
+func (h *Handler) HandleTaskByDisplayID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx := r.Context()
+	requestID := middleware.GetRequestID(ctx)
+
+	// Extract display ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/by-display-id/")
+	displayID := strings.Split(path, "/")[0]
+
+	if displayID == "" {
+		http.Error(w, "Display ID required", http.StatusBadRequest)
+		return
+	}
+
+	logger.DebugContext(ctx, "Getting task by display ID", "request_id", requestID, "display_id", displayID)
+
+	task, err := h.storage.GetTaskByDisplayID(displayID)
+	if err != nil {
+		// Record failed task retrieval
+		if m, ok := metrics.FromContext(ctx); ok {
+			m.RecordTaskOperation("get", "failed")
+			m.RecordStorageOperation("get", "failed")
+		}
+		if strings.Contains(err.Error(), "not found") {
+			logger.WarnContext(ctx, "Task not found by display ID", "request_id", requestID, "display_id", displayID)
+			http.Error(w, "Task not found", http.StatusNotFound)
+		} else {
+			logger.ErrorContext(ctx, "Failed to get task by display ID from storage", "error", err, "request_id", requestID, "display_id", displayID)
+			http.Error(w, "Failed to get task", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Record successful task retrieval
+	if m, ok := metrics.FromContext(ctx); ok {
+		m.RecordTaskOperation("get", "success")
+		m.RecordStorageOperation("get", "success")
+	}
+
+	logger.DebugContext(ctx, "Task retrieved successfully by display ID", "request_id", requestID, "display_id", displayID, "task_id", task.ID, "task_title", task.Title)
+	json.NewEncoder(w).Encode(task)
+}
+
 func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID string) {
 	// First get the existing task
-	existingTask, err := h.storage.GetTask(taskID)
+	existingTask, err := h.getTaskByIdentifier(taskID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Task not found", http.StatusNotFound)
@@ -352,8 +422,7 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		task.StartedAt = &now
 	}
 
-	// Ensure the ID matches the URL and update timestamp
-	task.ID = taskID
+	// Update timestamp but keep the original UUID (don't overwrite with display ID)
 	task.UpdatedAt = time.Now()
 
 	// Validate enum values if provided
@@ -396,7 +465,9 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID string) {
 	ctx := r.Context()
 
-	if err := h.storage.DeleteTask(taskID); err != nil {
+	// First resolve the task to get the UUID (needed for deletion)
+	task, err := h.getTaskByIdentifier(taskID)
+	if err != nil {
 		// Record failed task deletion
 		if m, ok := metrics.FromContext(ctx); ok {
 			m.RecordTaskOperation("delete", "failed")
@@ -405,8 +476,18 @@ func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID stri
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Task not found", http.StatusNotFound)
 		} else {
-			http.Error(w, "Failed to delete task", http.StatusInternalServerError)
+			http.Error(w, "Failed to find task", http.StatusInternalServerError)
 		}
+		return
+	}
+
+	if err := h.storage.DeleteTask(task.ID); err != nil {
+		// Record failed task deletion
+		if m, ok := metrics.FromContext(ctx); ok {
+			m.RecordTaskOperation("delete", "failed")
+			m.RecordStorageOperation("delete", "failed")
+		}
+		http.Error(w, "Failed to delete task", http.StatusInternalServerError)
 		return
 	}
 
