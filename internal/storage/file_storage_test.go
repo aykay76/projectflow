@@ -3,9 +3,13 @@ package storage
 import (
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aykay76/projectflow/internal/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFileStorage_CreateTask(t *testing.T) {
@@ -489,24 +493,90 @@ func TestFileStorage_GetProjectByName(t *testing.T) {
 func TestFileStorage_ProjectExists(t *testing.T) {
 	tempDir := t.TempDir()
 	storage, err := NewFileStorage(tempDir)
-	if err != nil {
-		t.Fatalf("Failed to create storage: %v", err)
-	}
+	require.NoError(t, err)
+
+	// Create a test project
+	project := models.NewProject("Test Project", "A test project", "TEST")
+	err = storage.CreateProject(project)
+	require.NoError(t, err)
+
+	// Test exists
+	exists := storage.ProjectExists(project.ID)
+	assert.True(t, exists)
 
 	// Test non-existent project
-	if storage.ProjectExists("nonexistent-id") {
-		t.Error("ProjectExists() should return false for non-existent project")
-	}
+	exists = storage.ProjectExists("non-existent")
+	assert.False(t, exists)
+}
 
-	// Create a project
-	project := models.NewProject("Test Project", "Test Description", "TEST")
+func TestFileStorage_GetNextDisplayID(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	require.NoError(t, err)
+
+	// Create a test project
+	project := models.NewProject("Test Project", "A test project", "TEST")
 	err = storage.CreateProject(project)
-	if err != nil {
-		t.Fatalf("Setup failed: %v", err)
+	require.NoError(t, err)
+
+	// Test getting sequential display IDs
+	displayID1, err := storage.GetNextDisplayID(project.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "TEST-1", displayID1)
+
+	displayID2, err := storage.GetNextDisplayID(project.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "TEST-2", displayID2)
+
+	displayID3, err := storage.GetNextDisplayID(project.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "TEST-3", displayID3)
+
+	// Test with non-existent project
+	_, err = storage.GetNextDisplayID("non-existent")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "project not found")
+}
+
+func TestFileStorage_GetNextDisplayID_ConcurrentAccess(t *testing.T) {
+	tempDir := t.TempDir()
+	storage, err := NewFileStorage(tempDir)
+	require.NoError(t, err)
+
+	// Create a test project
+	project := models.NewProject("Test Project", "A test project", "CONC")
+	err = storage.CreateProject(project)
+	require.NoError(t, err)
+
+	// Test concurrent access to display ID generation
+	const numGoroutines = 10
+	displayIDs := make([]string, numGoroutines)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			displayID, err := storage.GetNextDisplayID(project.ID)
+			require.NoError(t, err)
+
+			mu.Lock()
+			displayIDs[index] = displayID
+			mu.Unlock()
+		}(i)
 	}
 
-	// Test existing project
-	if !storage.ProjectExists(project.ID) {
-		t.Error("ProjectExists() should return true for existing project")
+	wg.Wait()
+
+	// Verify all display IDs are unique and in expected format
+	seen := make(map[string]bool)
+	for _, displayID := range displayIDs {
+		assert.False(t, seen[displayID], "Duplicate display ID: %s", displayID)
+		seen[displayID] = true
+		assert.True(t, strings.HasPrefix(displayID, "CONC-"), "Invalid display ID format: %s", displayID)
 	}
+
+	// Should have generated exactly numGoroutines unique IDs
+	assert.Len(t, seen, numGoroutines)
 }

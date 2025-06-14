@@ -430,3 +430,67 @@ func (fs *FileStorage) projectExistsUnsafe(id string) bool {
 	_, err := os.Stat(filePath)
 	return err == nil
 }
+
+// GetNextDisplayID generates and returns the next sequential display ID for a project
+func (fs *FileStorage) GetNextDisplayID(projectID string) (string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	// Get the project to retrieve the display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("project not found: %w", err)
+	}
+
+	// Get the current counter for this project
+	counter, err := fs.getProjectCounterUnsafe(projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get project counter: %w", err)
+	}
+
+	// Increment the counter
+	counter++
+
+	// Save the updated counter
+	if err := fs.saveProjectCounterUnsafe(projectID, counter); err != nil {
+		return "", fmt.Errorf("failed to save project counter: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", project.DisplayPrefix, counter), nil
+}
+
+// getProjectCounterUnsafe reads the current counter value for a project
+func (fs *FileStorage) getProjectCounterUnsafe(projectID string) (int, error) {
+	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	data, err := os.ReadFile(counterFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Counter file doesn't exist, start from 0
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to read counter file: %w", err)
+	}
+
+	var counter int
+	if err := json.Unmarshal(data, &counter); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal counter: %w", err)
+	}
+
+	return counter, nil
+}
+
+// saveProjectCounterUnsafe saves the counter value for a project
+func (fs *FileStorage) saveProjectCounterUnsafe(projectID string, counter int) error {
+	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	data, err := json.Marshal(counter)
+	if err != nil {
+		return fmt.Errorf("failed to marshal counter: %w", err)
+	}
+
+	if err := os.WriteFile(counterFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write counter file: %w", err)
+	}
+
+	return nil
+}

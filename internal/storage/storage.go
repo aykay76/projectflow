@@ -43,6 +43,10 @@ type Storage interface {
 	// Returns error if project not found
 	GetProjectByName(name string) (*models.Project, error)
 
+	// GetNextDisplayID generates and returns the next sequential display ID for a project
+	// Returns formatted display ID (e.g., "PF-1", "PF-2") or error if project not found
+	GetNextDisplayID(projectID string) (string, error)
+
 	// Utility operations
 	TaskExists(id string) bool
 	ProjectExists(id string) bool

@@ -76,6 +76,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 		name VARCHAR(255) NOT NULL UNIQUE,
 		description TEXT,
 		display_prefix VARCHAR(10) NOT NULL,
+		task_counter INTEGER NOT NULL DEFAULT 0,
 		settings JSONB DEFAULT '{}'::jsonb,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -83,6 +84,23 @@ func (ps *PostgresStorage) initializeSchema() error {
 
 	if _, err := ps.db.Exec(createProjectsTableSQL); err != nil {
 		return fmt.Errorf("failed to create projects table: %w", err)
+	}
+
+	// Add task_counter column to existing projects table if it doesn't exist
+	alterTableSQL := `
+	DO $$ 
+	BEGIN 
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='projects' AND column_name='task_counter'
+		) THEN
+			ALTER TABLE projects ADD COLUMN task_counter INTEGER NOT NULL DEFAULT 0;
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterTableSQL); err != nil {
+		return fmt.Errorf("failed to add task_counter column: %w", err)
 	}
 
 	// Create indexes for better performance
@@ -409,14 +427,15 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 
 	// Insert the project
 	insertSQL := `
-		INSERT INTO projects (id, name, description, display_prefix, settings, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		INSERT INTO projects (id, name, description, display_prefix, task_counter, settings, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err = ps.db.Exec(insertSQL,
 		project.ID,
 		project.Name,
 		project.Description,
 		project.DisplayPrefix,
+		0, // Initialize task_counter to 0
 		settingsJSON,
 		project.CreatedAt,
 		project.UpdatedAt,
@@ -892,4 +911,43 @@ func nullString(s string) sql.NullString {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: s, Valid: true}
+}
+
+// GetNextDisplayID generates and returns the next sequential display ID for a project
+func (ps *PostgresStorage) GetNextDisplayID(projectID string) (string, error) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Begin transaction for atomic counter increment
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return "", fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Get project and increment counter in one atomic operation
+	var displayPrefix string
+	var counter int
+
+	updateSQL := `
+		UPDATE projects 
+		SET task_counter = task_counter + 1, updated_at = NOW()
+		WHERE id = $1
+		RETURNING display_prefix, task_counter`
+
+	err = tx.QueryRow(updateSQL, projectID).Scan(&displayPrefix, &counter)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("project not found: %s", projectID)
+		}
+		return "", fmt.Errorf("failed to increment counter: %w", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Format and return the display ID
+	return fmt.Sprintf("%s-%d", displayPrefix, counter), nil
 }
