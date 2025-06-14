@@ -8,6 +8,10 @@
 </head>
 <body>
     <div class="container">
+                                </div>    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
         <header>
             <div class="header-content">
                 <h1>ProjectFlow</h1>
@@ -97,7 +101,7 @@
                 <div class="task-list" id="todo-tasks">
                     {{range .Tasks}}
                         {{if eq .Status "todo"}}
-                            <div class="task-card" data-id="{{.ID}}">
+                            <div class="task-card" data-id="{{.ID}}" draggable="true">
                                 <div class="task-header">
                                     <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
                                     <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
@@ -131,7 +135,7 @@
                 <div class="task-list" id="in-progress-tasks">
                     {{range .Tasks}}
                         {{if eq .Status "in_progress"}}
-                            <div class="task-card" data-id="{{.ID}}">
+                            <div class="task-card" data-id="{{.ID}}" draggable="true">
                                 <div class="task-header">
                                     <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
                                     <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
@@ -165,7 +169,7 @@
                 <div class="task-list" id="done-tasks">
                     {{range .Tasks}}
                         {{if eq .Status "done"}}
-                            <div class="task-card" data-id="{{.ID}}">
+                            <div class="task-card" data-id="{{.ID}}" draggable="true">
                                 <div class="task-header">
                                     <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
                                     <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
