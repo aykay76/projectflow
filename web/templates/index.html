@@ -8,10 +8,6 @@
 </head>
 <body>
     <div class="container">
-                                </div>    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <div class="container">
         <header>
             <div class="header-content">
                 <h1>ProjectFlow</h1>
@@ -197,6 +193,40 @@
                     {{end}}
                 </div>
             </div>
+
+            <div class="column" data-status="blocked">
+                <h3>Blocked</h3>
+                <div class="task-list" id="blocked-tasks">
+                    {{range .Tasks}}
+                        {{if eq .Status "blocked"}}
+                            <div class="task-card" data-id="{{.ID}}" draggable="true">
+                                <div class="task-header">
+                                    <span class="task-type task-type-{{.Type}}">{{.Type}}</span>
+                                    <span class="task-priority priority-{{.Priority}}">{{.Priority}}</span>
+                                </div>
+                                <h4 class="task-title">{{.Title}}</h4>
+                                <p class="task-description">{{.Description}}</p>
+                                <div class="task-meta">
+                                    <span class="task-date">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                                    {{if .StartedAt}}
+                                        <span class="task-started-at">Started: {{.StartedAt.Format "Jan 2, 15:04"}}</span>
+                                    {{end}}
+                                    {{if .DueDate}}
+                                        <span class="task-due-date">Due: {{.DueDate.Format "Jan 2, 2006"}}</span>
+                                    {{end}}
+                                    {{if .Children}}
+                                        <span class="task-children">{{len .Children}} subtasks</span>
+                                    {{end}}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="btn btn-sm btn-secondary edit-task" data-id="{{.ID}}">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-task" data-id="{{.ID}}">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
         </div>
 
         <!-- Hierarchy View (initially hidden) -->
@@ -230,7 +260,7 @@
     </div>
 
     <!-- Task Modal -->
-    <div id="task-modal" class="modal">
+    <div id="task-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modal-title">New Task</h2>
