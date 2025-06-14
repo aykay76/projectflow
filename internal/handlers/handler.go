@@ -934,10 +934,10 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 	}
 
 	var updateData struct {
-		Name          *string            `json:"name,omitempty"`
-		Description   *string            `json:"description,omitempty"`
-		DisplayPrefix *string            `json:"display_prefix,omitempty"`
-		Settings      map[string]string  `json:"settings,omitempty"`
+		Name          *string           `json:"name,omitempty"`
+		Description   *string           `json:"description,omitempty"`
+		DisplayPrefix *string           `json:"display_prefix,omitempty"`
+		Settings      map[string]string `json:"settings,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
@@ -952,7 +952,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 			http.Error(w, "Project name cannot be empty", http.StatusBadRequest)
 			return
 		}
-		
+
 		// Check for name conflicts (excluding current project)
 		if *updateData.Name != existingProject.Name {
 			conflictProject, err := h.storage.GetProjectByName(*updateData.Name)
@@ -961,7 +961,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 				return
 			}
 		}
-		
+
 		existingProject.Name = *updateData.Name
 	}
 
@@ -1019,7 +1019,7 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, projectI
 
 	// TODO: In future versions, check if project has associated tasks
 	// For now, we'll allow deletion regardless
-	
+
 	if err := h.storage.DeleteProject(projectID); err != nil {
 		logger.Error("Failed to delete project", "error", err, "project_id", projectID)
 		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
