@@ -91,6 +91,10 @@ func main() {
 	})
 	mux.HandleFunc("/api/hierarchy", handler.HandleHierarchy)
 
+	// Project API routes
+	mux.HandleFunc("/api/projects", handler.HandleProjects)
+	mux.HandleFunc("/api/projects/", handler.HandleProject)
+
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static/"))))
 

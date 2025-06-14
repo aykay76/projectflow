@@ -772,3 +772,261 @@ func (h *Handler) isDescendant(taskID, ancestorID string) bool {
 
 	return false
 }
+
+// Project API Handlers
+
+// HandleProjects handles requests to /api/projects
+func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case http.MethodGet:
+		h.listProjects(w, r)
+	case http.MethodPost:
+		h.createProject(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleProject handles requests to /api/projects/{id}
+func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract project ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/api/projects/")
+	if path == "" {
+		http.Error(w, "Project ID required", http.StatusBadRequest)
+		return
+	}
+
+	// Remove any trailing path elements (e.g., /api/projects/123/something)
+	projectID := strings.Split(path, "/")[0]
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getProject(w, r, projectID)
+	case http.MethodPut:
+		h.updateProject(w, r, projectID)
+	case http.MethodDelete:
+		h.deleteProject(w, r, projectID)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// listProjects returns all projects as JSON
+func (h *Handler) listProjects(w http.ResponseWriter, r *http.Request) {
+	projects, err := h.storage.ListProjects()
+	if err != nil {
+		logger.Error("Failed to list projects", "error", err)
+		http.Error(w, "Failed to retrieve projects", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(projects); err != nil {
+		logger.Error("Failed to encode projects JSON", "error", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// createProject creates a new project from JSON request
+func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		return
+	}
+
+	var projectData struct {
+		Name          string            `json:"name"`
+		Description   string            `json:"description"`
+		DisplayPrefix string            `json:"display_prefix"`
+		Settings      map[string]string `json:"settings,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&projectData); err != nil {
+		logger.Error("Failed to decode project JSON", "error", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if strings.TrimSpace(projectData.Name) == "" {
+		http.Error(w, "Project name is required", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(projectData.DisplayPrefix) == "" {
+		http.Error(w, "Project display prefix is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if project with same name already exists
+	existingProject, err := h.storage.GetProjectByName(projectData.Name)
+	if err == nil && existingProject != nil {
+		http.Error(w, "Project with this name already exists", http.StatusConflict)
+		return
+	}
+
+	// Create new project
+	project := models.NewProject(projectData.Name, projectData.Description, projectData.DisplayPrefix)
+
+	// Add any provided settings
+	if projectData.Settings != nil {
+		for key, value := range projectData.Settings {
+			project.SetSetting(key, value)
+		}
+	}
+
+	// Validate the project
+	if err := project.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Save to storage
+	if err := h.storage.CreateProject(project); err != nil {
+		logger.Error("Failed to create project", "error", err)
+		http.Error(w, "Failed to create project", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Info("Project created", "project_id", project.ID, "name", project.Name)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		logger.Error("Failed to encode project JSON", "error", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// getProject returns a specific project by ID
+func (h *Handler) getProject(w http.ResponseWriter, r *http.Request, projectID string) {
+	project, err := h.storage.GetProject(projectID)
+	if err != nil {
+		logger.Error("Failed to get project", "error", err, "project_id", projectID)
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		logger.Error("Failed to encode project JSON", "error", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// updateProject updates an existing project
+func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectID string) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		return
+	}
+
+	// First check if project exists
+	existingProject, err := h.storage.GetProject(projectID)
+	if err != nil {
+		logger.Error("Failed to get project for update", "error", err, "project_id", projectID)
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	var updateData struct {
+		Name          *string            `json:"name,omitempty"`
+		Description   *string            `json:"description,omitempty"`
+		DisplayPrefix *string            `json:"display_prefix,omitempty"`
+		Settings      map[string]string  `json:"settings,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+		logger.Error("Failed to decode project update JSON", "error", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Update fields if provided
+	if updateData.Name != nil {
+		if strings.TrimSpace(*updateData.Name) == "" {
+			http.Error(w, "Project name cannot be empty", http.StatusBadRequest)
+			return
+		}
+		
+		// Check for name conflicts (excluding current project)
+		if *updateData.Name != existingProject.Name {
+			conflictProject, err := h.storage.GetProjectByName(*updateData.Name)
+			if err == nil && conflictProject != nil && conflictProject.ID != projectID {
+				http.Error(w, "Project with this name already exists", http.StatusConflict)
+				return
+			}
+		}
+		
+		existingProject.Name = *updateData.Name
+	}
+
+	if updateData.Description != nil {
+		existingProject.Description = *updateData.Description
+	}
+
+	if updateData.DisplayPrefix != nil {
+		if strings.TrimSpace(*updateData.DisplayPrefix) == "" {
+			http.Error(w, "Project display prefix cannot be empty", http.StatusBadRequest)
+			return
+		}
+		existingProject.DisplayPrefix = strings.ToUpper(*updateData.DisplayPrefix)
+	}
+
+	// Update settings if provided
+	if updateData.Settings != nil {
+		for key, value := range updateData.Settings {
+			existingProject.SetSetting(key, value)
+		}
+	}
+
+	// Validate the updated project
+	if err := existingProject.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Update timestamp and save
+	existingProject.UpdateTimestamp()
+	if err := h.storage.UpdateProject(existingProject); err != nil {
+		logger.Error("Failed to update project", "error", err, "project_id", projectID)
+		http.Error(w, "Failed to update project", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Info("Project updated", "project_id", projectID, "name", existingProject.Name)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(existingProject); err != nil {
+		logger.Error("Failed to encode project JSON", "error", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// deleteProject deletes a project by ID
+func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, projectID string) {
+	// First check if project exists
+	project, err := h.storage.GetProject(projectID)
+	if err != nil {
+		logger.Error("Failed to get project for deletion", "error", err, "project_id", projectID)
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// TODO: In future versions, check if project has associated tasks
+	// For now, we'll allow deletion regardless
+	
+	if err := h.storage.DeleteProject(projectID); err != nil {
+		logger.Error("Failed to delete project", "error", err, "project_id", projectID)
+		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Info("Project deleted", "project_id", projectID, "name", project.Name)
+
+	w.WriteHeader(http.StatusNoContent)
+}
