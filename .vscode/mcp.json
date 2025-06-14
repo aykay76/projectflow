@@ -1,7 +1,7 @@
 {
     "servers": {
         "projectflow": {
-            "command": "${workspaceFolder}/bin/mcp-server",
+            "command": "${workspaceFolder}/build/mcp-server",
             "args": [],
             "env": {
                 "STORAGE_DIR": "${workspaceFolder}/data"

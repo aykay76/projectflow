@@ -190,6 +190,98 @@ func (m *mockStorage) TaskExists(id string) bool {
 	return exists
 }
 
+// Project methods for mockStorage
+func (m *mockStorage) CreateProject(project *models.Project) error {
+	if m.failNext {
+		m.failNext = false
+		return fmt.Errorf("storage error")
+	}
+
+	// For mock, we don't store projects but return success
+	return nil
+}
+
+func (m *mockStorage) GetProject(id string) (*models.Project, error) {
+	if m.failNext {
+		m.failNext = false
+		return nil, fmt.Errorf("storage error")
+	}
+
+	if m.notFoundFor[id] {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	// Return a mock project for testing
+	return &models.Project{
+		ID:            id,
+		Name:          "Test Project",
+		Description:   "A test project",
+		DisplayPrefix: "TP",
+		Settings:      make(map[string]string),
+	}, nil
+}
+
+func (m *mockStorage) UpdateProject(project *models.Project) error {
+	if m.failNext {
+		m.failNext = false
+		return fmt.Errorf("storage error")
+	}
+
+	if m.notFoundFor[project.ID] {
+		return fmt.Errorf("project not found")
+	}
+
+	return nil
+}
+
+func (m *mockStorage) DeleteProject(id string) error {
+	if m.failNext {
+		m.failNext = false
+		return fmt.Errorf("storage error")
+	}
+
+	if m.notFoundFor[id] {
+		return fmt.Errorf("project not found")
+	}
+
+	return nil
+}
+
+func (m *mockStorage) ListProjects() ([]*models.Project, error) {
+	if m.failNext {
+		m.failNext = false
+		return nil, fmt.Errorf("storage error")
+	}
+
+	// Return empty list for tests
+	return []*models.Project{}, nil
+}
+
+func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
+	if m.failNext {
+		m.failNext = false
+		return nil, fmt.Errorf("storage error")
+	}
+
+	if name == "notfound" || name == "Test Project" {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	// Return a mock project for testing
+	return &models.Project{
+		ID:            "test-project-1",
+		Name:          name,
+		Description:   "A test project",
+		DisplayPrefix: "TP",
+		Settings:      make(map[string]string),
+	}, nil
+}
+
+func (m *mockStorage) ProjectExists(id string) bool {
+	// For mock purposes, return true unless explicitly set to not exist
+	return !m.notFoundFor[id]
+}
+
 func (m *mockStorage) Close() error {
 	return nil
 }
@@ -1043,5 +1135,262 @@ func BenchmarkHandler_CreateTask(b *testing.B) {
 		if w.Code != http.StatusCreated {
 			b.Errorf("Expected status 201, got %d", w.Code)
 		}
+	}
+}
+
+// Project API endpoint tests
+
+func TestHandleProjects_GET(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("GET", "/api/projects", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProjects(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	var projects []*models.Project
+	if err := json.Unmarshal(w.Body.Bytes(), &projects); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+}
+
+func TestHandleProjects_POST(t *testing.T) {
+	handler, _ := setupHandler()
+
+	projectData := map[string]interface{}{
+		"name":           "Test Project",
+		"description":    "A test project",
+		"display_prefix": "TP",
+	}
+
+	body, _ := json.Marshal(projectData)
+	req, err := http.NewRequest("POST", "/api/projects", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	handler.HandleProjects(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", w.Code)
+	}
+
+	var project models.Project
+	if err := json.Unmarshal(w.Body.Bytes(), &project); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if project.Name != "Test Project" {
+		t.Errorf("Expected name 'Test Project', got '%s'", project.Name)
+	}
+}
+
+func TestHandleProjects_POST_InvalidJSON(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("POST", "/api/projects", strings.NewReader("invalid json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	handler.HandleProjects(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestHandleProjects_POST_ValidationError(t *testing.T) {
+	handler, _ := setupHandler()
+
+	projectData := map[string]interface{}{
+		"name": "", // Invalid: empty name
+	}
+
+	body, _ := json.Marshal(projectData)
+	req, err := http.NewRequest("POST", "/api/projects", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	handler.HandleProjects(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestHandleProjects_UnsupportedMethod(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("DELETE", "/api/projects", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProjects(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status 405, got %d", w.Code)
+	}
+}
+
+func TestHandleProject_GET(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("GET", "/api/projects/test-project-1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	var project models.Project
+	if err := json.Unmarshal(w.Body.Bytes(), &project); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if project.ID != "test-project-1" {
+		t.Errorf("Expected ID 'test-project-1', got '%s'", project.ID)
+	}
+}
+
+func TestHandleProject_GET_NotFound(t *testing.T) {
+	handler, storage := setupHandler()
+	storage.notFoundFor["nonexistent"] = true
+
+	req, err := http.NewRequest("GET", "/api/projects/nonexistent", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+func TestHandleProject_PUT(t *testing.T) {
+	handler, _ := setupHandler()
+
+	projectData := map[string]interface{}{
+		"name":        "Updated Project",
+		"description": "Updated description",
+	}
+
+	body, _ := json.Marshal(projectData)
+	req, err := http.NewRequest("PUT", "/api/projects/test-project-1", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	var project models.Project
+	if err := json.Unmarshal(w.Body.Bytes(), &project); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if project.Name != "Updated Project" {
+		t.Errorf("Expected name 'Updated Project', got '%s'", project.Name)
+	}
+}
+
+func TestHandleProject_PUT_NotFound(t *testing.T) {
+	handler, storage := setupHandler()
+	storage.notFoundFor["nonexistent"] = true
+
+	projectData := map[string]interface{}{
+		"name": "Updated Project",
+	}
+
+	body, _ := json.Marshal(projectData)
+	req, err := http.NewRequest("PUT", "/api/projects/nonexistent", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+func TestHandleProject_DELETE(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("DELETE", "/api/projects/test-project-1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected status 204, got %d", w.Code)
+	}
+}
+
+func TestHandleProject_DELETE_NotFound(t *testing.T) {
+	handler, storage := setupHandler()
+	storage.notFoundFor["nonexistent"] = true
+
+	req, err := http.NewRequest("DELETE", "/api/projects/nonexistent", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+func TestHandleProject_UnsupportedMethod(t *testing.T) {
+	handler, _ := setupHandler()
+
+	req, err := http.NewRequest("PATCH", "/api/projects/test-project-1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.HandleProject(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status 405, got %d", w.Code)
 	}
 }
