@@ -55,18 +55,18 @@
 
     .header-controls {
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-end;
     }    .filter-grid {
         grid-template-columns: 1fr;
     }
 
     .actions {
-        flex-direction: column;
+        flex-direction: row; /* Keep row layout */
         gap: 16px;
+        align-items: center;
     }
 
     .action-buttons {
-        width: 100%;
-        justify-content: space-between;
+        margin-left: auto; /* Keep buttons on right */
     }
 }

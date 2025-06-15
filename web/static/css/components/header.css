@@ -78,3 +78,53 @@ header p {
 .theme-toggle:active {
     transform: translateY(0);
 }
+
+/* Actions Section */
+.actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 12px;
+}
+
+.view-controls {
+    display: flex;
+    gap: 12px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-left: auto; /* Push buttons to the right */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .actions {
+        flex-direction: row; /* Keep row layout on mobile */
+        gap: 16px;
+        align-items: center;
+    }
+
+    .view-controls {
+        flex: 1; /* Allow view controls to take available space */
+        justify-content: flex-start;
+    }
+
+    .action-buttons {
+        margin-left: auto; /* Keep buttons on the right */
+        gap: 8px; /* Slightly reduce gap on mobile */
+    }
+}
