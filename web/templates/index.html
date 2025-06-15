@@ -12,8 +12,34 @@
             <div class="header-content">
                 <h1>ProjectFlow</h1>
                 <p>Workflow Management for AI-Assisted Development</p>
+                <div class="current-project-info">
+                    <span id="current-project-display">No Project Selected</span>
+                </div>
             </div>
             <div class="header-controls">
+                <div class="project-selector-wrapper">
+                    <button id="project-selector-btn" class="project-selector-btn" title="Switch Project">
+                        <span id="project-selector-icon">📂</span>
+                        <span id="project-selector-text">Select Project</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="project-dropdown" class="project-dropdown" style="display: none;">
+                        <div class="project-dropdown-header">
+                            <h4>Switch Project</h4>
+                        </div>
+                        <div id="project-list" class="project-list">
+                            <!-- Projects will be loaded here -->
+                        </div>
+                        <div class="project-dropdown-footer">
+                            <button id="create-project-btn" class="btn btn-primary btn-sm">
+                                ➕ Create New Project
+                            </button>
+                            <button id="manage-projects-btn" class="btn btn-secondary btn-sm">
+                                ⚙️ Manage Projects
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
                     <span id="theme-icon">🌙</span>
                 </button>
@@ -374,6 +400,94 @@
                     <button type="submit" class="btn btn-primary" id="save-btn">Save Task</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Project Management Modal -->
+    <div id="project-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Project Management</h2>
+                <span class="close project-modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="tab-container">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="create-project">Create Project</button>
+                        <button class="tab-btn" data-tab="manage-projects">Manage Projects</button>
+                    </div>
+                    
+                    <!-- Create Project Tab -->
+                    <div id="create-project-tab" class="tab-content active">
+                        <form id="project-form">
+                            <div class="form-group">
+                                <label for="project-name">Project Name *</label>
+                                <input type="text" id="project-name" name="name" required 
+                                       placeholder="Enter project name">
+                                <div class="form-error" id="project-name-error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="project-description">Description</label>
+                                <textarea id="project-description" name="description" rows="3" 
+                                          placeholder="Optional project description"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="project-prefix">Display Prefix *</label>
+                                <input type="text" id="project-prefix" name="display_prefix" required 
+                                       placeholder="e.g., PF, WEB, API" maxlength="5">
+                                <small class="form-text">Short prefix for task IDs (2-5 characters)</small>
+                                <div class="form-error" id="project-prefix-error"></div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="project-cancel-btn">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="project-save-btn">
+                                    <span class="btn-text">Create Project</span>
+                                    <span class="btn-loading" style="display: none;">Creating...</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Manage Projects Tab -->
+                    <div id="manage-projects-tab" class="tab-content">
+                        <div class="project-search">
+                            <input type="text" id="project-search-input" placeholder="Search projects...">
+                        </div>
+                        <div id="project-list-container" class="project-list-container">
+                            <!-- Project list will be populated here -->
+                        </div>
+                        <div class="manage-actions">
+                            <button class="btn btn-secondary" id="refresh-projects-btn">Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success/Error Messages -->
+                <div id="project-message" class="message" style="display: none;">
+                    <span id="project-message-text"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Delete Confirmation Modal -->
+    <div id="project-delete-modal" class="modal" style="display: none;">
+        <div class="modal-content small">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <span class="close project-delete-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project "<strong id="delete-project-name"></strong>"?</p>
+                <p class="warning">This action cannot be undone. All tasks in this project will be permanently deleted.</p>
+                <div class="confirm-actions">
+                    <button class="btn btn-secondary" id="confirm-cancel-btn">Cancel</button>
+                    <button class="btn btn-danger" id="confirm-delete-btn">
+                        <span class="btn-text">Delete Project</span>
+                        <span class="btn-loading" style="display: none;">Deleting...</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

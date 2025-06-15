@@ -123,6 +123,13 @@
     gap: 8px;
 }
 
+.task-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
 /* Task Types */
 .task-type {
     padding: 4px 8px;
@@ -151,6 +158,20 @@
 .task-type-subtask {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
+}
+
+/* Task Project ID */
+.task-project-id {
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
 }
 
 /* Task Priority */
