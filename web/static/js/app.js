@@ -5,6 +5,7 @@ let hierarchyData = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
 
 console.log('ProjectFlow app.js loaded - starting initialization');
+alert('JavaScript is loading!');
 
 // DOM elements
 let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
