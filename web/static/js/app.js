@@ -4,35 +4,42 @@ let currentView = 'kanban';
 let hierarchyData = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
 
+console.log('ProjectFlow app.js loaded - starting initialization');
+
 // DOM elements
-const modal = document.getElementById('task-modal');
-const modalTitle = document.getElementById('modal-title');
-const taskForm = document.getElementById('task-form');
-const newTaskBtn = document.getElementById('new-task-btn');
-const cancelBtn = document.getElementById('cancel-btn');
-const closeBtn = document.querySelector('.close');
-const kanbanViewBtn = document.getElementById('kanban-view-btn');
-const hierarchyViewBtn = document.getElementById('hierarchy-view-btn');
-const timelineViewBtn = document.getElementById('timeline-view-btn');
-const taskBoard = document.querySelector('.task-board');
-const hierarchyView = document.getElementById('hierarchy-view');
-const timelineView = document.getElementById('timeline-view');
-
-// Task Detail Modal elements
-const taskDetailModal = document.getElementById('task-detail-modal');
-const detailModalClose = document.getElementById('detail-modal-close');
-const detailEditBtn = document.getElementById('detail-edit-btn');
-const detailDeleteBtn = document.getElementById('detail-delete-btn');
-
-console.log('Task Detail Modal DOM elements:', {
-    taskDetailModal,
-    detailModalClose,
-    detailEditBtn,
-    detailDeleteBtn
-});
+let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
+let kanbanViewBtn, hierarchyViewBtn, timelineViewBtn;
+let taskBoard, hierarchyView, timelineView;
+let taskDetailModal, detailModalClose, detailEditBtn, detailDeleteBtn;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DOM elements
+    modal = document.getElementById('task-modal');
+    modalTitle = document.getElementById('modal-title');
+    taskForm = document.getElementById('task-form');
+    newTaskBtn = document.getElementById('new-task-btn');
+    cancelBtn = document.getElementById('cancel-btn');
+    closeBtn = document.querySelector('.close');
+    kanbanViewBtn = document.getElementById('kanban-view-btn');
+    hierarchyViewBtn = document.getElementById('hierarchy-view-btn');
+    timelineViewBtn = document.getElementById('timeline-view-btn');
+    taskBoard = document.querySelector('.task-board');
+    hierarchyView = document.getElementById('hierarchy-view');
+    timelineView = document.getElementById('timeline-view');
+    
+    // Task Detail Modal elements
+    taskDetailModal = document.getElementById('task-detail-modal');
+    detailModalClose = document.getElementById('detail-modal-close');
+    detailEditBtn = document.getElementById('detail-edit-btn');
+    detailDeleteBtn = document.getElementById('detail-delete-btn');
+
+    console.log('Task Detail Modal DOM elements:', {
+        taskDetailModal,
+        detailModalClose,
+        detailEditBtn,
+        detailDeleteBtn
+    });
     initializeTheme();
     initializeEventListeners();
     initializeTaskDetailModal();
