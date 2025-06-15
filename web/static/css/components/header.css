@@ -10,7 +10,7 @@ header {
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 header::before {
@@ -90,6 +90,7 @@ header p {
 .project-selector-wrapper {
     position: relative;
     margin-right: 16px;
+    z-index: 9990;
 }
 
 .project-selector-btn {
@@ -134,14 +135,16 @@ header p {
     right: 0;
     margin-top: 8px;
     background: var(--bg-elevated);
-    border: 1px solid var(--border-light);
+    border: 2px solid var(--accent-primary);
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-xl);
-    min-width: 280px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    min-width: 300px;
     max-height: 400px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 9991;
     backdrop-filter: blur(10px);
+    opacity: 1;
+    visibility: visible;
 }
 
 .project-dropdown-header {

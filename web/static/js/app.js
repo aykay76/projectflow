@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
     initializeEventListeners();
     initializeProjectManagement();
+    initializeProjectModal();
     initializeTaskDetailModal();
     initializeTimelineControls();
     initializeKeyboardShortcuts();
@@ -631,7 +632,7 @@ async function loadTasks(projectId = null) {
         
         console.log(`Loading tasks for project: ${currentProjectId}`);
         
-        // For now, load all tasks and filter client-side until project-aware API is implemented
+        // Load all tasks and filter client-side by project_id
         const response = await fetch('/api/tasks');
         if (!response.ok) {
             throw new Error(`Failed to load tasks: ${response.status}`);
@@ -639,10 +640,22 @@ async function loadTasks(projectId = null) {
         
         const allTasks = await response.json();
         
-        // Filter tasks by project_id when available
-        // For now, return all tasks since project_id field doesn't exist yet in tasks
-        console.log(`Loaded ${allTasks.length} tasks for project ${currentProjectId}`);
-        return allTasks;
+        // Get the default project from the available projects
+        const isDefaultProject = currentProject && currentProject.name === 'Default Project';
+        
+        // Filter tasks by project_id
+        const filteredTasks = allTasks.filter(task => {
+            if (task.project_id) {
+                // Task has explicit project assignment
+                return task.project_id === currentProjectId;
+            } else {
+                // Task has no project_id - belongs to default project only
+                return isDefaultProject;
+            }
+        });
+        
+        console.log(`Loaded ${filteredTasks.length} tasks (filtered from ${allTasks.length} total) for project ${currentProject?.name || 'Unknown'}`);
+        return filteredTasks;
         
     } catch (error) {
         console.error('Error loading tasks:', error);
@@ -764,15 +777,470 @@ function formatDateTime(dateString) {
 }
 
 function showCreateProjectModal() {
-    // TODO: Implement create project modal
-    console.log('Create project modal not yet implemented');
-    showMessage('Create project feature coming soon!', 'info');
+    const modal = document.getElementById('project-modal');
+    if (!modal) {
+        console.error('Project modal not found');
+        return;
+    }
+    
+    // Switch to create project tab
+    switchProjectTab('create-project');
+    
+    // Clear form
+    document.getElementById('project-form').reset();
+    clearProjectFormErrors();
+    
+    // Show the modal
+    modal.style.display = 'block';
+    
+    // Focus on the project name field
+    setTimeout(() => {
+        const nameField = document.getElementById('project-name');
+        if (nameField) nameField.focus();
+    }, 100);
 }
 
 function showProjectManagementModal() {
-    // TODO: Implement project management modal
-    console.log('Project management modal not yet implemented');
-    showMessage('Project management feature coming soon!', 'info');
+    const modal = document.getElementById('project-modal');
+    if (!modal) {
+        console.error('Project modal not found');
+        return;
+    }
+    
+    // Switch to manage projects tab
+    switchProjectTab('manage-projects');
+    
+    // Load and display projects
+    refreshProjectList();
+    
+    // Show the modal
+    modal.style.display = 'block';
+}
+
+// Project Modal Initialization
+function initializeProjectModal() {
+    const modal = document.getElementById('project-modal');
+    const deleteModal = document.getElementById('project-delete-modal');
+    const projectForm = document.getElementById('project-form');
+    
+    if (!modal) {
+        console.log('Project modal not found, skipping initialization');
+        return;
+    }
+    
+    // Tab switching
+    const tabButtons = modal.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            switchProjectTab(tabId);
+        });
+    });
+    
+    // Close modal handlers
+    const closeButtons = modal.querySelectorAll('.close, .project-modal-close');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', closeProjectModal);
+    });
+    
+    // Cancel button
+    const cancelBtn = document.getElementById('project-cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeProjectModal);
+    }
+    
+    // Form submission
+    if (projectForm) {
+        projectForm.addEventListener('submit', handleProjectFormSubmit);
+    }
+    
+    // Project search
+    const searchInput = document.getElementById('project-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleProjectSearch);
+    }
+    
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-projects-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshProjectList);
+    }
+    
+    // Delete modal handlers
+    if (deleteModal) {
+        const deleteCloseButtons = deleteModal.querySelectorAll('.close, .project-delete-close');
+        deleteCloseButtons.forEach(btn => {
+            btn.addEventListener('click', closeDeleteModal);
+        });
+        
+        const cancelDeleteBtn = document.getElementById('confirm-cancel-btn');
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        }
+        
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', handleProjectDelete);
+        }
+    }
+    
+    // Close modals when clicking outside
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeProjectModal();
+        }
+        if (event.target === deleteModal) {
+            closeDeleteModal();
+        }
+    });
+}
+
+function switchProjectTab(tabId) {
+    const modal = document.getElementById('project-modal');
+    if (!modal) return;
+    
+    // Update tab buttons
+    const tabButtons = modal.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+    
+    // Update tab content
+    const tabContents = modal.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.toggle('active', content.id === `${tabId}-tab`);
+    });
+    
+    // Special handling for manage projects tab
+    if (tabId === 'manage-projects') {
+        refreshProjectList();
+    }
+}
+
+async function handleProjectFormSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = document.getElementById('project-save-btn');
+    const formData = new FormData(form);
+    
+    // Clear previous errors
+    clearProjectFormErrors();
+    
+    // Validate form
+    const name = formData.get('name').trim();
+    const prefix = formData.get('display_prefix').trim().toUpperCase();
+    const description = formData.get('description').trim();
+    
+    let hasErrors = false;
+    
+    if (!name) {
+        showFieldError('project-name-error', 'Project name is required');
+        hasErrors = true;
+    } else if (name.length < 2) {
+        showFieldError('project-name-error', 'Project name must be at least 2 characters');
+        hasErrors = true;
+    }
+    
+    if (!prefix) {
+        showFieldError('project-prefix-error', 'Display prefix is required');
+        hasErrors = true;
+    } else if (prefix.length < 2 || prefix.length > 5) {
+        showFieldError('project-prefix-error', 'Prefix must be 2-5 characters');
+        hasErrors = true;
+    } else if (!/^[A-Z]+$/.test(prefix)) {
+        showFieldError('project-prefix-error', 'Prefix must contain only letters');
+        hasErrors = true;
+    }
+    
+    // Check for duplicate name or prefix
+    const existingProject = availableProjects.find(p => 
+        p.name.toLowerCase() === name.toLowerCase() || 
+        p.display_prefix === prefix
+    );
+    
+    if (existingProject) {
+        if (existingProject.name.toLowerCase() === name.toLowerCase()) {
+            showFieldError('project-name-error', 'A project with this name already exists');
+            hasErrors = true;
+        }
+        if (existingProject.display_prefix === prefix) {
+            showFieldError('project-prefix-error', 'This prefix is already in use');
+            hasErrors = true;
+        }
+    }
+    
+    if (hasErrors) return;
+    
+    // Set loading state
+    setButtonLoading(submitBtn, true);
+    
+    try {
+        const projectData = {
+            name: name,
+            description: description,
+            display_prefix: prefix
+        };
+        
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(projectData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to create project: ${error}`);
+        }
+        
+        const newProject = await response.json();
+        
+        // Show success message
+        showProjectMessage('Project created successfully!', 'success');
+        
+        // Refresh projects and set as current
+        await loadAvailableProjects();
+        setCurrentProject(newProject);
+        
+        // Clear form
+        form.reset();
+        
+        setTimeout(() => {
+            closeProjectModal();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showProjectMessage('Failed to create project: ' + error.message, 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
+    }
+}
+
+async function refreshProjectList() {
+    const container = document.getElementById('project-list-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="padding: 20px; text-align: center;">Loading projects...</div>';
+    
+    try {
+        await loadAvailableProjects();
+        renderProjectList();
+    } catch (error) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--danger);">Failed to load projects</div>';
+    }
+}
+
+function renderProjectList() {
+    const container = document.getElementById('project-list-container');
+    if (!container) return;
+    
+    if (availableProjects.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                <p>No projects found.</p>
+                <p>Create your first project to get started!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = availableProjects.map(project => `
+        <div class="project-item ${project.id === currentProject?.id ? 'current' : ''}" data-project-id="${project.id}">
+            <div class="project-info">
+                <div class="project-name">
+                    <span class="project-prefix">${escapeHtml(project.display_prefix)}</span>
+                    ${escapeHtml(project.name)}
+                    ${project.id === currentProject?.id ? '<span style="color: var(--accent-primary); font-size: 0.8em; margin-left: 8px;">(Current)</span>' : ''}
+                </div>
+                <p class="project-description">${escapeHtml(project.description || 'No description')}</p>
+            </div>
+            <div class="project-actions">
+                ${project.id !== currentProject?.id ? `<button class="btn btn-sm btn-primary" onclick="switchToProject('${project.id}')">Switch</button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="editProject('${project.id}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="confirmDeleteProject('${project.id}', '${escapeHtml(project.name)}')">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function handleProjectSearch(event) {
+    const searchTerm = event.target.value.toLowerCase();
+    const projectItems = document.querySelectorAll('.project-item');
+    
+    projectItems.forEach(item => {
+        const projectName = item.querySelector('.project-name').textContent.toLowerCase();
+        const projectDesc = item.querySelector('.project-description').textContent.toLowerCase();
+        const matches = projectName.includes(searchTerm) || projectDesc.includes(searchTerm);
+        item.style.display = matches ? 'flex' : 'none';
+    });
+}
+
+async function switchToProject(projectId) {
+    const project = availableProjects.find(p => p.id === projectId);
+    if (project) {
+        setCurrentProject(project);
+        closeProjectModal();
+        showMessage(`Switched to project: ${project.name}`, 'success');
+    }
+}
+
+function editProject(projectId) {
+    const project = availableProjects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    // Switch to create project tab (which we'll use for editing)
+    switchProjectTab('create-project');
+    
+    // Populate form with project data
+    document.getElementById('project-name').value = project.name;
+    document.getElementById('project-description').value = project.description || '';
+    document.getElementById('project-prefix').value = project.display_prefix;
+    
+    // Update form for editing mode
+    const saveBtn = document.getElementById('project-save-btn');
+    const saveText = saveBtn.querySelector('.btn-text');
+    if (saveText) saveText.textContent = 'Update Project';
+    
+    // Store editing project ID
+    document.getElementById('project-form').setAttribute('data-editing-id', projectId);
+    
+    clearProjectFormErrors();
+}
+
+function confirmDeleteProject(projectId, projectName) {
+    const deleteModal = document.getElementById('project-delete-modal');
+    const nameSpan = document.getElementById('delete-project-name');
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    
+    if (deleteModal && nameSpan && confirmBtn) {
+        nameSpan.textContent = projectName;
+        confirmBtn.setAttribute('data-project-id', projectId);
+        deleteModal.style.display = 'block';
+    }
+}
+
+async function handleProjectDelete() {
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    const projectId = confirmBtn.getAttribute('data-project-id');
+    
+    if (!projectId) return;
+    
+    setButtonLoading(confirmBtn, true);
+    
+    try {
+        const response = await fetch(`/api/projects/${projectId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete project');
+        }
+        
+        // Refresh projects
+        await loadAvailableProjects();
+        
+        // If we deleted the current project, switch to another one
+        if (currentProject?.id === projectId) {
+            if (availableProjects.length > 0) {
+                setCurrentProject(availableProjects[0]);
+            } else {
+                setCurrentProject(null);
+            }
+        }
+        
+        closeDeleteModal();
+        refreshProjectList();
+        showProjectMessage('Project deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        showProjectMessage('Failed to delete project', 'error');
+    } finally {
+        setButtonLoading(confirmBtn, false);
+    }
+}
+
+function closeProjectModal() {
+    const modal = document.getElementById('project-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        
+        // Reset form
+        const form = document.getElementById('project-form');
+        if (form) {
+            form.reset();
+            form.removeAttribute('data-editing-id');
+        }
+        
+        // Reset button text
+        const saveBtn = document.getElementById('project-save-btn');
+        const saveText = saveBtn?.querySelector('.btn-text');
+        if (saveText) saveText.textContent = 'Create Project';
+        
+        clearProjectFormErrors();
+        hideProjectMessage();
+    }
+}
+
+function closeDeleteModal() {
+    const deleteModal = document.getElementById('project-delete-modal');
+    if (deleteModal) {
+        deleteModal.style.display = 'none';
+    }
+}
+
+function clearProjectFormErrors() {
+    const errors = document.querySelectorAll('.form-error');
+    errors.forEach(error => {
+        error.classList.remove('visible');
+        error.textContent = '';
+    });
+}
+
+function showFieldError(fieldId, message) {
+    const errorElement = document.getElementById(fieldId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.add('visible');
+    }
+}
+
+function setButtonLoading(button, loading) {
+    if (!button) return;
+    
+    if (loading) {
+        button.classList.add('loading');
+        button.disabled = true;
+    } else {
+        button.classList.remove('loading');
+        button.disabled = false;
+    }
+}
+
+function showProjectMessage(message, type = 'info') {
+    const messageElement = document.getElementById('project-message');
+    const messageText = document.getElementById('project-message-text');
+    
+    if (messageElement && messageText) {
+        messageText.textContent = message;
+        messageElement.className = `message ${type}`;
+        messageElement.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            hideProjectMessage();
+        }, 5000);
+    }
+}
+
+function hideProjectMessage() {
+    const messageElement = document.getElementById('project-message');
+    if (messageElement) {
+        messageElement.style.display = 'none';
+    }
 }
 
 // Keyboard Shortcuts
