@@ -166,7 +166,7 @@ function renderHierarchyNode(tasks, level) {
         const priorityClass = `priority-${task.priority}`;
         
         return `
-            <div class="hierarchy-item" data-id="${task.id}" style="margin-left: ${level * 20}px;">
+            <div class="hierarchy-item" data-id="${task.id}" style="margin-left: ${level * 15}px;">
                 <div class="hierarchy-task clickable-task" data-task-id="${task.id}" tabindex="0" role="button" aria-label="View details for ${task.title}">
                     ${hasChildren ? '<span class="hierarchy-toggle">▶</span>' : '<span class="hierarchy-spacer"></span>'}
                     <span class="task-type ${priorityClass}">${typeIcon} ${task.type}</span>
