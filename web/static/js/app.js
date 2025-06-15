@@ -5,7 +5,6 @@ let hierarchyData = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
 
 console.log('ProjectFlow app.js loaded - starting initialization');
-alert('JavaScript is loading!');
 
 // DOM elements
 let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
@@ -35,11 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
     detailEditBtn = document.getElementById('detail-edit-btn');
     detailDeleteBtn = document.getElementById('detail-delete-btn');
 
-    console.log('Task Detail Modal DOM elements:', {
-        taskDetailModal,
-        detailModalClose,
-        detailEditBtn,
-        detailDeleteBtn
+    console.log('Task Detail Modal DOM elements found:', {
+        taskDetailModal: !!taskDetailModal,
+        detailModalClose: !!detailModalClose,
+        detailEditBtn: !!detailEditBtn,
+        detailDeleteBtn: !!detailDeleteBtn
     });
     initializeTheme();
     initializeEventListeners();
@@ -134,7 +133,7 @@ function loadHierarchyView() {
 }
 
 function buildHierarchyTree(tasks, container) {
-    console.log('buildHierarchyTree called with tasks:', tasks.length);
+    console.log('Building hierarchy tree with', tasks.length, 'tasks');
     // Create a map of tasks by ID for quick lookup
     const taskMap = new Map();
     tasks.forEach(task => taskMap.set(task.id, { ...task, children: [] }));
@@ -151,7 +150,7 @@ function buildHierarchyTree(tasks, container) {
     
     // Render the hierarchy
     container.innerHTML = renderHierarchyNode(rootTasks, 0);
-    console.log('Hierarchy rendered, container innerHTML length:', container.innerHTML.length);
+    console.log('Hierarchy rendered, attaching click handlers...');
     
     // Attach click event listeners to clickable tasks
     attachHierarchyClickHandlers(container, taskMap);
@@ -625,13 +624,11 @@ function initializeTaskDetailModal() {
 }
 
 function attachHierarchyClickHandlers(container, taskMap) {
-    console.log('attachHierarchyClickHandlers called with:', container, taskMap);
     const clickableTasks = container.querySelectorAll('.clickable-task');
-    console.log('Found clickable tasks:', clickableTasks.length);
+    console.log('Attaching click handlers to', clickableTasks.length, 'clickable tasks');
     
     clickableTasks.forEach(taskElement => {
         const taskId = taskElement.dataset.taskId;
-        console.log('Attaching handler to task:', taskId);
         
         taskElement.addEventListener('click', (e) => {
             e.preventDefault();
@@ -650,12 +647,11 @@ function attachHierarchyClickHandlers(container, taskMap) {
 }
 
 function showTaskDetailModal(taskId, taskMap) {
-    console.log('showTaskDetailModal called with:', taskId, taskMap);
+    console.log('Showing task detail modal for:', taskId);
     const task = taskMap.get(taskId);
-    console.log('Task found:', task);
     
     if (!task || !taskDetailModal) {
-        console.error('Task not found or modal not available:', task, taskDetailModal);
+        console.error('Task not found or modal not available:', !!task, !!taskDetailModal);
         return;
     }
     
