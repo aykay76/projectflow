@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Filters</title>
+</head>
+<body>
+    <script>
+        console.log('Saved filters:', localStorage.getItem('projectflow_filters'));
+        
+        // Clear saved filters to test
+        if (localStorage.getItem('projectflow_filters')) {
+            console.log('Clearing saved filters...');
+            localStorage.removeItem('projectflow_filters');
+            console.log('Filters cleared. Reload the main page to test.');
+        } else {
+            console.log('No saved filters found.');
+        }
+    </script>
+    <p>Check console for debugging info. <a href="http://localhost:8081">Go back to main app</a></p>
+</body>
+</html>

@@ -1055,7 +1055,12 @@ function loadFilterState() {
             setTimeout(() => applyFilters(), 100);
         } catch (error) {
             console.error('Error loading filter state:', error);
+            // Ensure all tasks are visible if filter loading fails
+            setTimeout(() => applyFilters(), 100);
         }
+    } else {
+        // No saved filters, ensure all tasks are visible
+        setTimeout(() => applyFilters(), 100);
     }
 }
 
@@ -1328,6 +1333,17 @@ function applyFilters() {
     
     const taskCards = document.querySelectorAll('.task-card');
     let visibleCount = 0;
+    
+    // If no filters are active, show all tasks
+    const hasActiveFilters = searchTerm || statusFilter || priorityFilter || typeFilter || overdueFilter;
+    if (!hasActiveFilters) {
+        taskCards.forEach(card => {
+            card.style.display = 'block';
+            visibleCount++;
+        });
+        updateFilterResultsCount(visibleCount, taskCards.length);
+        return;
+    }
     
     taskCards.forEach(card => {
         let visible = true;
