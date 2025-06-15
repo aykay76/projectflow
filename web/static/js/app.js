@@ -24,6 +24,13 @@ const detailModalClose = document.getElementById('detail-modal-close');
 const detailEditBtn = document.getElementById('detail-edit-btn');
 const detailDeleteBtn = document.getElementById('detail-delete-btn');
 
+console.log('Task Detail Modal DOM elements:', {
+    taskDetailModal,
+    detailModalClose,
+    detailEditBtn,
+    detailDeleteBtn
+});
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
@@ -119,6 +126,7 @@ function loadHierarchyView() {
 }
 
 function buildHierarchyTree(tasks, container) {
+    console.log('buildHierarchyTree called with tasks:', tasks.length);
     // Create a map of tasks by ID for quick lookup
     const taskMap = new Map();
     tasks.forEach(task => taskMap.set(task.id, { ...task, children: [] }));
@@ -135,6 +143,7 @@ function buildHierarchyTree(tasks, container) {
     
     // Render the hierarchy
     container.innerHTML = renderHierarchyNode(rootTasks, 0);
+    console.log('Hierarchy rendered, container innerHTML length:', container.innerHTML.length);
     
     // Attach click event listeners to clickable tasks
     attachHierarchyClickHandlers(container, taskMap);
@@ -608,19 +617,24 @@ function initializeTaskDetailModal() {
 }
 
 function attachHierarchyClickHandlers(container, taskMap) {
+    console.log('attachHierarchyClickHandlers called with:', container, taskMap);
     const clickableTasks = container.querySelectorAll('.clickable-task');
+    console.log('Found clickable tasks:', clickableTasks.length);
     
     clickableTasks.forEach(taskElement => {
         const taskId = taskElement.dataset.taskId;
+        console.log('Attaching handler to task:', taskId);
         
         taskElement.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log('Task clicked:', taskId);
             showTaskDetailModal(taskId, taskMap);
         });
         
         taskElement.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
+                console.log('Task activated via keyboard:', taskId);
                 showTaskDetailModal(taskId, taskMap);
             }
         });
@@ -628,8 +642,14 @@ function attachHierarchyClickHandlers(container, taskMap) {
 }
 
 function showTaskDetailModal(taskId, taskMap) {
+    console.log('showTaskDetailModal called with:', taskId, taskMap);
     const task = taskMap.get(taskId);
-    if (!task || !taskDetailModal) return;
+    console.log('Task found:', task);
+    
+    if (!task || !taskDetailModal) {
+        console.error('Task not found or modal not available:', task, taskDetailModal);
+        return;
+    }
     
     // Populate modal with task data
     const titleElement = document.getElementById('detail-task-title');
