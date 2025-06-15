@@ -12,8 +12,34 @@
             <div class="header-content">
                 <h1>ProjectFlow</h1>
                 <p>Workflow Management for AI-Assisted Development</p>
+                <div class="current-project-info">
+                    <span id="current-project-display">No Project Selected</span>
+                </div>
             </div>
             <div class="header-controls">
+                <div class="project-selector-wrapper">
+                    <button id="project-selector-btn" class="project-selector-btn" title="Switch Project">
+                        <span id="project-selector-icon">📂</span>
+                        <span id="project-selector-text">Select Project</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div id="project-dropdown" class="project-dropdown" style="display: none;">
+                        <div class="project-dropdown-header">
+                            <h4>Switch Project</h4>
+                        </div>
+                        <div id="project-list" class="project-list">
+                            <!-- Projects will be loaded here -->
+                        </div>
+                        <div class="project-dropdown-footer">
+                            <button id="create-project-btn" class="btn btn-primary btn-sm">
+                                ➕ Create New Project
+                            </button>
+                            <button id="manage-projects-btn" class="btn btn-secondary btn-sm">
+                                ⚙️ Manage Projects
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
                     <span id="theme-icon">🌙</span>
                 </button>

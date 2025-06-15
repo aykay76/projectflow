@@ -4,6 +4,11 @@ let currentView = 'kanban';
 let hierarchyData = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
 
+// Project management state
+let currentProject = null;
+let availableProjects = [];
+let isLoadingProjects = false;
+
 console.log('ProjectFlow app.js loaded - starting initialization');
 
 // DOM elements
@@ -11,6 +16,10 @@ let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
 let kanbanViewBtn, hierarchyViewBtn, timelineViewBtn;
 let taskBoard, hierarchyView, timelineView;
 let taskDetailModal, detailModalClose, detailEditBtn, detailDeleteBtn;
+
+// Project management DOM elements
+let projectSelector, projectDropdown, currentProjectDisplay;
+let projectManagementBtn;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -34,6 +43,12 @@ document.addEventListener('DOMContentLoaded', function() {
     detailEditBtn = document.getElementById('detail-edit-btn');
     detailDeleteBtn = document.getElementById('detail-delete-btn');
 
+    // Project management elements
+    projectSelector = document.getElementById('project-selector-btn');
+    projectDropdown = document.getElementById('project-dropdown');
+    currentProjectDisplay = document.getElementById('current-project-display');
+    projectManagementBtn = document.getElementById('manage-projects-btn');
+
     console.log('Task Detail Modal DOM elements found:', {
         taskDetailModal: !!taskDetailModal,
         detailModalClose: !!detailModalClose,
@@ -42,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     initializeTheme();
     initializeEventListeners();
+    initializeProjectManagement();
     initializeTaskDetailModal();
     initializeTimelineControls();
     initializeKeyboardShortcuts();
@@ -316,6 +332,256 @@ function updateThemeIcon() {
     if (themeIcon) {
         themeIcon.textContent = currentTheme === 'light' ? '🌙' : '☀️';
     }
+}
+
+// Project Management System
+function initializeProjectManagement() {
+    console.log('Initializing project management system');
+    
+    // Load saved project preference
+    const savedProjectId = localStorage.getItem('projectflow_current_project');
+    
+    // Initialize project selector event listeners
+    if (projectSelector) {
+        projectSelector.addEventListener('click', toggleProjectDropdown);
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.project-selector-wrapper')) {
+            closeProjectDropdown();
+        }
+    });
+    
+    // Load projects and set current project
+    loadAvailableProjects().then(() => {
+        if (savedProjectId) {
+            const savedProject = availableProjects.find(p => p.id === savedProjectId);
+            if (savedProject) {
+                setCurrentProject(savedProject);
+            } else {
+                // Fallback to first available project or create default
+                handleInitialProjectSetup();
+            }
+        } else {
+            handleInitialProjectSetup();
+        }
+    });
+    
+    // Initialize create project button
+    const createProjectBtn = document.getElementById('create-project-btn');
+    if (createProjectBtn) {
+        createProjectBtn.addEventListener('click', () => {
+            closeProjectDropdown();
+            showCreateProjectModal();
+        });
+    }
+    
+    // Initialize manage projects button
+    if (projectManagementBtn) {
+        projectManagementBtn.addEventListener('click', () => {
+            closeProjectDropdown();
+            showProjectManagementModal();
+        });
+    }
+}
+
+async function loadAvailableProjects() {
+    if (isLoadingProjects) return;
+    
+    isLoadingProjects = true;
+    try {
+        console.log('Loading available projects...');
+        const response = await fetch('/api/projects');
+        if (!response.ok) {
+            throw new Error(`Failed to load projects: ${response.status}`);
+        }
+        
+        availableProjects = await response.json();
+        console.log('Loaded projects:', availableProjects);
+        updateProjectDropdown();
+        
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        showMessage('Failed to load projects', 'error');
+        availableProjects = [];
+    } finally {
+        isLoadingProjects = false;
+    }
+}
+
+function updateProjectDropdown() {
+    const projectList = document.getElementById('project-list');
+    if (!projectList) return;
+    
+    if (isLoadingProjects) {
+        projectList.innerHTML = '<div class="project-loading">Loading projects...</div>';
+        return;
+    }
+    
+    if (availableProjects.length === 0) {
+        projectList.innerHTML = `
+            <div class="project-empty">
+                <p>No projects found</p>
+                <p>Create your first project to get started!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    projectList.innerHTML = availableProjects.map(project => `
+        <div class="project-item ${currentProject && currentProject.id === project.id ? 'selected' : ''}" 
+             data-project-id="${project.id}">
+            <div class="project-item-name">${escapeHtml(project.name)}</div>
+            <div class="project-item-description">${escapeHtml(project.description || 'No description')}</div>
+        </div>
+    `).join('');
+    
+    // Add click handlers for project items
+    projectList.querySelectorAll('.project-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const projectId = item.dataset.projectId;
+            const project = availableProjects.find(p => p.id === projectId);
+            if (project) {
+                setCurrentProject(project);
+                closeProjectDropdown();
+            }
+        });
+    });
+}
+
+function setCurrentProject(project) {
+    console.log('Setting current project:', project);
+    currentProject = project;
+    
+    // Update UI
+    updateCurrentProjectDisplay();
+    updateProjectSelectorButton();
+    
+    // Save to localStorage
+    localStorage.setItem('projectflow_current_project', project.id);
+    
+    // Reload tasks for new project context
+    refreshCurrentView();
+    
+    showMessage(`Switched to project: ${project.name}`, 'success', 3000);
+}
+
+function updateCurrentProjectDisplay() {
+    if (currentProjectDisplay) {
+        if (currentProject) {
+            currentProjectDisplay.textContent = `Current: ${currentProject.name}`;
+        } else {
+            currentProjectDisplay.textContent = 'No Project Selected';
+        }
+    }
+}
+
+function updateProjectSelectorButton() {
+    const selectorText = document.getElementById('project-selector-text');
+    if (selectorText) {
+        if (currentProject) {
+            selectorText.textContent = currentProject.name;
+        } else {
+            selectorText.textContent = 'Select Project';
+        }
+    }
+}
+
+function toggleProjectDropdown() {
+    if (!projectDropdown) return;
+    
+    const isOpen = projectDropdown.style.display !== 'none';
+    if (isOpen) {
+        closeProjectDropdown();
+    } else {
+        openProjectDropdown();
+    }
+}
+
+function openProjectDropdown() {
+    if (!projectDropdown || !projectSelector) return;
+    
+    projectDropdown.style.display = 'block';
+    projectSelector.classList.add('open');
+    updateProjectDropdown();
+}
+
+function closeProjectDropdown() {
+    if (!projectDropdown || !projectSelector) return;
+    
+    projectDropdown.style.display = 'none';
+    projectSelector.classList.remove('open');
+}
+
+async function handleInitialProjectSetup() {
+    if (availableProjects.length > 0) {
+        // Use first available project
+        setCurrentProject(availableProjects[0]);
+    } else {
+        // Create a default project
+        try {
+            const defaultProject = await createProject({
+                name: 'Default Project',
+                description: 'Default project for task management',
+                display_prefix: 'PF'
+            });
+            availableProjects.push(defaultProject);
+            setCurrentProject(defaultProject);
+            updateProjectDropdown();
+        } catch (error) {
+            console.error('Failed to create default project:', error);
+            showMessage('Failed to create default project', 'error');
+        }
+    }
+}
+
+async function createProject(projectData) {
+    try {
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(projectData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to create project: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating project:', error);
+        throw error;
+    }
+}
+
+function refreshCurrentView() {
+    // Refresh the current view with new project context
+    switch (currentView) {
+        case 'kanban':
+            loadTasks();
+            break;
+        case 'hierarchy':
+            loadHierarchyView();
+            break;
+        case 'timeline':
+            loadTimelineView();
+            break;
+    }
+}
+
+function showCreateProjectModal() {
+    // TODO: Implement create project modal
+    console.log('Create project modal not yet implemented');
+    showMessage('Create project feature coming soon!', 'info');
+}
+
+function showProjectManagementModal() {
+    // TODO: Implement project management modal
+    console.log('Project management modal not yet implemented');
+    showMessage('Project management feature coming soon!', 'info');
 }
 
 // Keyboard Shortcuts
@@ -1842,4 +2108,17 @@ function updateOverdueIndicators() {
             }
         }
     });
+}
+
+// Utility Functions
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
