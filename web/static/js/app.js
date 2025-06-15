@@ -9,6 +9,13 @@ let currentProject = null;
 let availableProjects = [];
 let isLoadingProjects = false;
 
+// Project event system
+const projectEventListeners = {
+    'project-changed': [],
+    'project-loaded': [],
+    'projects-refreshed': []
+};
+
 console.log('ProjectFlow app.js loaded - starting initialization');
 
 // DOM elements
@@ -384,6 +391,22 @@ function initializeProjectManagement() {
             showProjectManagementModal();
         });
     }
+    
+    // Set up periodic project validation (every 30 seconds)
+    setInterval(() => {
+        if (currentProject) {
+            ProjectManager.validateCurrentProject();
+        }
+    }, 30000);
+    
+    // Set up project event listeners for debugging
+    addEventListener('project-changed', (data) => {
+        console.log('Project changed:', data.newProject.name);
+    });
+    
+    addEventListener('projects-refreshed', (data) => {
+        console.log('Projects refreshed, count:', data.projects.length);
+    });
 }
 
 async function loadAvailableProjects() {
@@ -400,6 +423,9 @@ async function loadAvailableProjects() {
         availableProjects = await response.json();
         console.log('Loaded projects:', availableProjects);
         updateProjectDropdown();
+        
+        // Dispatch project loaded event
+        dispatchProjectEvent('projects-refreshed', { projects: availableProjects });
         
     } catch (error) {
         console.error('Error loading projects:', error);
@@ -452,6 +478,7 @@ function updateProjectDropdown() {
 
 function setCurrentProject(project) {
     console.log('Setting current project:', project);
+    const previousProject = currentProject;
     currentProject = project;
     
     // Update UI
@@ -460,6 +487,12 @@ function setCurrentProject(project) {
     
     // Save to localStorage
     localStorage.setItem('projectflow_current_project', project.id);
+    
+    // Dispatch project change event
+    dispatchProjectEvent('project-changed', { 
+        newProject: project, 
+        previousProject: previousProject 
+    });
     
     // Reload tasks for new project context
     refreshCurrentView();
@@ -2122,3 +2155,183 @@ function escapeHtml(text) {
     };
     return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
+
+// Project Event System
+function addEventListener(eventType, callback) {
+    if (projectEventListeners[eventType]) {
+        projectEventListeners[eventType].push(callback);
+    }
+}
+
+function removeEventListener(eventType, callback) {
+    if (projectEventListeners[eventType]) {
+        const index = projectEventListeners[eventType].indexOf(callback);
+        if (index > -1) {
+            projectEventListeners[eventType].splice(index, 1);
+        }
+    }
+}
+
+function dispatchProjectEvent(eventType, data) {
+    console.log(`Dispatching project event: ${eventType}`, data);
+    if (projectEventListeners[eventType]) {
+        projectEventListeners[eventType].forEach(callback => {
+            try {
+                callback(data);
+            } catch (error) {
+                console.error(`Error in project event listener for ${eventType}:`, error);
+            }
+        });
+    }
+}
+
+// Enhanced Project State Management
+const ProjectManager = {
+    // Get current project
+    getCurrentProject() {
+        return currentProject;
+    },
+    
+    // Get all available projects
+    getAvailableProjects() {
+        return [...availableProjects];
+    },
+    
+    // Check if project exists
+    projectExists(projectId) {
+        return availableProjects.some(p => p.id === projectId);
+    },
+    
+    // Get project by ID
+    getProjectById(projectId) {
+        return availableProjects.find(p => p.id === projectId);
+    },
+    
+    // Refresh projects from server
+    async refreshProjects() {
+        try {
+            await loadAvailableProjects();
+            dispatchProjectEvent('projects-refreshed', { projects: availableProjects });
+            return availableProjects;
+        } catch (error) {
+            console.error('Failed to refresh projects:', error);
+            throw error;
+        }
+    },
+    
+    // Switch to project by ID
+    async switchToProject(projectId) {
+        const project = this.getProjectById(projectId);
+        if (!project) {
+            throw new Error(`Project not found: ${projectId}`);
+        }
+        
+        setCurrentProject(project);
+        return project;
+    },
+    
+    // Create new project
+    async createProject(projectData) {
+        try {
+            const newProject = await createProject(projectData);
+            availableProjects.push(newProject);
+            updateProjectDropdown();
+            dispatchProjectEvent('projects-refreshed', { projects: availableProjects });
+            return newProject;
+        } catch (error) {
+            console.error('Failed to create project:', error);
+            throw error;
+        }
+    },
+    
+    // Delete project
+    async deleteProject(projectId) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to delete project: ${response.status}`);
+            }
+            
+            // Remove from local cache
+            availableProjects = availableProjects.filter(p => p.id !== projectId);
+            
+            // If deleted project was current, switch to another
+            if (currentProject && currentProject.id === projectId) {
+                if (availableProjects.length > 0) {
+                    setCurrentProject(availableProjects[0]);
+                } else {
+                    await handleInitialProjectSetup();
+                }
+            }
+            
+            updateProjectDropdown();
+            dispatchProjectEvent('projects-refreshed', { projects: availableProjects });
+            
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+            throw error;
+        }
+    },
+    
+    // Update project
+    async updateProject(projectId, projectData) {
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(projectData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to update project: ${response.status}`);
+            }
+            
+            const updatedProject = await response.json();
+            
+            // Update local cache
+            const index = availableProjects.findIndex(p => p.id === projectId);
+            if (index > -1) {
+                availableProjects[index] = updatedProject;
+            }
+            
+            // Update current project if it's the one being updated
+            if (currentProject && currentProject.id === projectId) {
+                currentProject = updatedProject;
+                updateCurrentProjectDisplay();
+                updateProjectSelectorButton();
+            }
+            
+            updateProjectDropdown();
+            dispatchProjectEvent('projects-refreshed', { projects: availableProjects });
+            
+            return updatedProject;
+            
+        } catch (error) {
+            console.error('Failed to update project:', error);
+            throw error;
+        }
+    },
+    
+    // Validate project health (check if current project still exists)
+    async validateCurrentProject() {
+        if (!currentProject) return false;
+        
+        try {
+            const response = await fetch(`/api/projects/${currentProject.id}`);
+            if (!response.ok) {
+                console.warn('Current project no longer exists, switching to default');
+                await handleInitialProjectSetup();
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Error validating current project:', error);
+            return false;
+        }
+    }
+};
