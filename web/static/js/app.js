@@ -420,6 +420,9 @@ function initializeEventListeners() {
     // Add event listeners for hierarchy toggle functionality
     document.addEventListener('click', (event) => {
         if (event.target.classList.contains('hierarchy-toggle')) {
+            event.preventDefault();
+            event.stopPropagation(); // Prevent event from bubbling to parent task element
+            
             const hierarchyItem = event.target.closest('.hierarchy-item');
             const children = hierarchyItem.querySelector('.hierarchy-children');
             
@@ -631,6 +634,11 @@ function attachHierarchyClickHandlers(container, taskMap) {
         const taskId = taskElement.dataset.taskId;
         
         taskElement.addEventListener('click', (e) => {
+            // Don't open modal if clicking on the hierarchy toggle
+            if (e.target.classList.contains('hierarchy-toggle')) {
+                return;
+            }
+            
             e.preventDefault();
             console.log('Task clicked:', taskId);
             showTaskDetailModal(taskId, taskMap);
