@@ -383,6 +383,11 @@ function initializeProjectManagement() {
         } else {
             handleInitialProjectSetup();
         }
+        
+        // Load the initial view after project is set
+        setTimeout(() => {
+            refreshCurrentView();
+        }, 100);
     });
     
     // Initialize create project button
