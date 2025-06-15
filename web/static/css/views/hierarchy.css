@@ -40,6 +40,43 @@
     background: var(--bg-tertiary);
     border-color: var(--accent-primary);
     transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-task {
+    cursor: pointer;
+    outline: none;
+}
+
+.clickable-task:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+.clickable-task:active {
+    transform: translateX(2px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Visual indicator for clickable tasks */
+.clickable-task .task-title::after {
+    content: ' 👁️';
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-size: 0.8em;
+}
+
+.clickable-task:hover .task-title::after {
+    opacity: 0.7;
+}
+
+/* Enhanced hover effects for better UX */
+.hierarchy-task:hover .task-title {
+    color: var(--accent-primary);
+}
+
+.hierarchy-task:hover .task-type {
+    transform: scale(1.05);
 }
 
 .hierarchy-toggle {
@@ -102,4 +139,25 @@
 .hierarchy-children {
     margin-top: 8px;
     margin-left: 20px;
+}
+
+/* Loading state for hierarchy */
+.hierarchy-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.hierarchy-loading::before {
+    content: '⏳';
+    margin-right: 8px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
