@@ -1,0 +1,78 @@
+/* Responsive Design for Views */
+@media (max-width: 768px) {
+    .timeline-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    
+    .timeline-controls {
+        flex-wrap: wrap;
+    }
+    
+    .timeline-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .timeline-date {
+        min-width: auto;
+        align-self: flex-start;
+    }
+    
+    .hierarchy-task {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .hierarchy-task .task-type {
+        min-width: auto;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .modal-header {
+        padding: 20px 24px;
+    }
+    
+    .modal form {
+        padding: 24px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .header {
+        flex-direction: column;
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .task-board {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .action-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

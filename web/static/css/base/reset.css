@@ -1,0 +1,46 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    transition: var(--transition);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* Loading and Error Messages */
+.loading-message,
+.error-message,
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.error-message {
+    color: var(--error-color);
+}
+
+.loading-message::before {
+    content: '⏳ ';
+}
+
+.error-message::before {
+    content: '❌ ';
+}
+
+.no-data-message::before {
+    content: '📭 ';
+}
