@@ -137,15 +137,20 @@ function switchToView(viewName) {
 }
 
 function loadHierarchyView() {
+    console.log('Loading hierarchy view for current project');
     const hierarchyContainer = document.querySelector('.hierarchy-container');
     if (!hierarchyContainer) return;
+    
+    if (!currentProject) {
+        hierarchyContainer.innerHTML = '<div class="error-message">Please select a project first</div>';
+        return;
+    }
     
     // Show loading message
     hierarchyContainer.innerHTML = '<div class="loading-message">Loading hierarchy view...</div>';
     
     // Fetch tasks and build hierarchy
-    fetch('/api/tasks')
-        .then(response => response.json())
+    loadTasks()
         .then(tasks => {
             buildHierarchyTree(tasks, hierarchyContainer);
         })
@@ -213,15 +218,20 @@ function getTaskTypeIcon(type) {
 }
 
 function loadTimelineView() {
+    console.log('Loading timeline view for current project');
     const timelineContainer = document.querySelector('.timeline-container');
     if (!timelineContainer) return;
-    
+
+    if (!currentProject) {
+        timelineContainer.innerHTML = '<div class="error-message">Please select a project first</div>';
+        return;
+    }
+
     // Show loading message
     timelineContainer.innerHTML = '<div class="loading-message">Loading timeline view...</div>';
-    
+
     // Fetch tasks for timeline
-    fetch('/api/tasks')
-        .then(response => response.json())
+    loadTasks()
         .then(tasks => {
             buildTimelineView(tasks, timelineContainer);
         })
@@ -594,7 +604,7 @@ function refreshCurrentView() {
     // Refresh the current view with new project context
     switch (currentView) {
         case 'kanban':
-            loadTasks();
+            loadKanbanView();
             break;
         case 'hierarchy':
             loadHierarchyView();
@@ -603,6 +613,149 @@ function refreshCurrentView() {
             loadTimelineView();
             break;
     }
+}
+
+// Centralized task loading function with project context
+async function loadTasks(projectId = null) {
+    try {
+        const currentProjectId = projectId || (currentProject ? currentProject.id : null);
+        if (!currentProjectId) {
+            console.warn('No project selected for loading tasks');
+            return [];
+        }
+        
+        console.log(`Loading tasks for project: ${currentProjectId}`);
+        
+        // For now, load all tasks and filter client-side until project-aware API is implemented
+        const response = await fetch('/api/tasks');
+        if (!response.ok) {
+            throw new Error(`Failed to load tasks: ${response.status}`);
+        }
+        
+        const allTasks = await response.json();
+        
+        // Filter tasks by project_id when available
+        // For now, return all tasks since project_id field doesn't exist yet in tasks
+        console.log(`Loaded ${allTasks.length} tasks for project ${currentProjectId}`);
+        return allTasks;
+        
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        showMessage('Failed to load tasks', 'error');
+        return [];
+    }
+}
+
+function loadKanbanView() {
+    console.log('Loading kanban view for current project');
+    
+    if (!currentProject) {
+        console.warn('No project selected for kanban view');
+        showMessage('Please select a project first', 'warning');
+        return;
+    }
+    
+    loadTasks().then(tasks => {
+        updateKanbanBoard(tasks);
+    }).catch(error => {
+        console.error('Error loading kanban view:', error);
+        showMessage('Failed to load kanban view', 'error');
+    });
+}
+
+function updateKanbanBoard(tasks) {
+    console.log('Updating kanban board with', tasks.length, 'tasks');
+    
+    // Define status columns
+    const statusColumns = ['todo', 'in_progress', 'done', 'blocked'];
+    
+    statusColumns.forEach(status => {
+        const taskList = document.getElementById(`${status.replace('_', '-')}-tasks`);
+        if (!taskList) {
+            console.warn(`Task list not found for status: ${status}`);
+            return;
+        }
+        
+        // Filter tasks by status
+        const statusTasks = tasks.filter(task => task.status === status);
+        console.log(`Found ${statusTasks.length} tasks with status: ${status}`);
+        
+        // Clear existing tasks
+        taskList.innerHTML = '';
+        
+        // Add tasks to column
+        statusTasks.forEach(task => {
+            const taskCard = createTaskCard(task);
+            taskList.appendChild(taskCard);
+        });
+    });
+    
+    // Re-initialize drag and drop functionality
+    initializeDragAndDrop();
+}
+
+function createTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.dataset.id = task.id;
+    card.draggable = true;
+    
+    card.innerHTML = `
+        <div class="task-header">
+            <div class="task-header-left">
+                <span class="task-type task-type-${escapeHtml(task.type)}">${escapeHtml(task.type)}</span>
+                ${task.display_id ? `<span class="task-project-id">${escapeHtml(task.display_id)}</span>` : ''}
+            </div>
+            <span class="task-priority priority-${escapeHtml(task.priority)}">${escapeHtml(task.priority)}</span>
+        </div>
+        <h4 class="task-title">${escapeHtml(task.title)}</h4>
+        <p class="task-description">${escapeHtml(task.description || '')}</p>
+        <div class="task-meta">
+            <span class="task-date">${formatDate(task.created_at)}</span>
+            ${task.started_at ? `<span class="task-started-at">Started: ${formatDateTime(task.started_at)}</span>` : ''}
+            ${task.due_date ? `<span class="task-due-date">Due: ${formatDate(task.due_date)}</span>` : ''}
+            ${task.children && task.children.length > 0 ? `<span class="task-children">${task.children.length} subtasks</span>` : ''}
+        </div>
+    `;
+    
+    return card;
+}
+
+function initializeDragAndDrop() {
+    // Re-initialize drag and drop functionality for task cards
+    const taskCards = document.querySelectorAll('.task-card');
+    taskCards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+    
+    // Re-initialize drop zones
+    const taskLists = document.querySelectorAll('.task-list');
+    taskLists.forEach(list => {
+        list.addEventListener('dragover', handleDragOver);
+        list.addEventListener('drop', handleDrop);
+    });
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function showCreateProjectModal() {
@@ -786,6 +939,11 @@ function populateForm(task) {
 async function handleTaskSubmit(event) {
     event.preventDefault();
     
+    if (!currentProject) {
+        showMessage('Please select a project before creating tasks', 'error');
+        return;
+    }
+    
     showLoadingOverlay(currentEditingTask ? 'Updating task...' : 'Creating task...');
     
     const formData = new FormData(taskForm);
@@ -796,7 +954,8 @@ async function handleTaskSubmit(event) {
         priority: formData.get('priority'),
         status: formData.get('status'),
         due_date: formData.get('due_date') || null,
-        started_at: formData.get('started_at') ? new Date(formData.get('started_at')).toISOString() : null
+        started_at: formData.get('started_at') ? new Date(formData.get('started_at')).toISOString() : null,
+        project_id: currentProject.id  // Add project context to task
     };
 
     try {
@@ -826,7 +985,10 @@ async function handleTaskSubmit(event) {
         if (response.ok) {
             clearFormDraft(); // Clear saved draft
             closeTaskModal();
-            window.location.reload();
+            
+            // Refresh current view instead of full page reload
+            refreshCurrentView();
+            
             showMessage(
                 currentEditingTask ? 'Task updated successfully! 🎉' : 'Task created successfully! ✨',
                 'success'
