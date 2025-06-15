@@ -18,10 +18,17 @@ const taskBoard = document.querySelector('.task-board');
 const hierarchyView = document.getElementById('hierarchy-view');
 const timelineView = document.getElementById('timeline-view');
 
+// Task Detail Modal elements
+const taskDetailModal = document.getElementById('task-detail-modal');
+const detailModalClose = document.getElementById('detail-modal-close');
+const detailEditBtn = document.getElementById('detail-edit-btn');
+const detailDeleteBtn = document.getElementById('detail-delete-btn');
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
     initializeEventListeners();
+    initializeTaskDetailModal();
     initializeTimelineControls();
     initializeKeyboardShortcuts();
     initializeFiltering();
@@ -128,6 +135,9 @@ function buildHierarchyTree(tasks, container) {
     
     // Render the hierarchy
     container.innerHTML = renderHierarchyNode(rootTasks, 0);
+    
+    // Attach click event listeners to clickable tasks
+    attachHierarchyClickHandlers(container, taskMap);
 }
 
 function renderHierarchyNode(tasks, level) {
@@ -141,7 +151,7 @@ function renderHierarchyNode(tasks, level) {
         
         return `
             <div class="hierarchy-item" data-id="${task.id}" style="margin-left: ${level * 20}px;">
-                <div class="hierarchy-task">
+                <div class="hierarchy-task clickable-task" data-task-id="${task.id}" tabindex="0" role="button" aria-label="View details for ${task.title}">
                     ${hasChildren ? '<span class="hierarchy-toggle">▶</span>' : '<span class="hierarchy-spacer"></span>'}
                     <span class="task-type ${priorityClass}">${typeIcon} ${task.type}</span>
                     <span class="task-title">${task.title}</span>
@@ -552,6 +562,156 @@ async function deleteTask(taskId) {
     } catch (error) {
         console.error('Error deleting task:', error);
         showMessage('Failed to delete task. Please try again.', 'error');
+    }
+}
+
+// Task Detail Modal Functions
+function initializeTaskDetailModal() {
+    if (detailModalClose) {
+        detailModalClose.addEventListener('click', closeTaskDetailModal);
+    }
+    
+    if (taskDetailModal) {
+        taskDetailModal.addEventListener('click', (e) => {
+            if (e.target === taskDetailModal) {
+                closeTaskDetailModal();
+            }
+        });
+    }
+    
+    if (detailEditBtn) {
+        detailEditBtn.addEventListener('click', () => {
+            const taskId = detailEditBtn.dataset.taskId;
+            if (taskId) {
+                closeTaskDetailModal();
+                editTask(taskId);
+            }
+        });
+    }
+    
+    if (detailDeleteBtn) {
+        detailDeleteBtn.addEventListener('click', () => {
+            const taskId = detailDeleteBtn.dataset.taskId;
+            if (taskId && confirm('Are you sure you want to delete this task?')) {
+                deleteTask(taskId);
+                closeTaskDetailModal();
+            }
+        });
+    }
+    
+    // Handle Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && taskDetailModal && taskDetailModal.style.display === 'block') {
+            closeTaskDetailModal();
+        }
+    });
+}
+
+function attachHierarchyClickHandlers(container, taskMap) {
+    const clickableTasks = container.querySelectorAll('.clickable-task');
+    
+    clickableTasks.forEach(taskElement => {
+        const taskId = taskElement.dataset.taskId;
+        
+        taskElement.addEventListener('click', (e) => {
+            e.preventDefault();
+            showTaskDetailModal(taskId, taskMap);
+        });
+        
+        taskElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                showTaskDetailModal(taskId, taskMap);
+            }
+        });
+    });
+}
+
+function showTaskDetailModal(taskId, taskMap) {
+    const task = taskMap.get(taskId);
+    if (!task || !taskDetailModal) return;
+    
+    // Populate modal with task data
+    const titleElement = document.getElementById('detail-task-title');
+    const descriptionElement = document.getElementById('detail-task-description');
+    const typeElement = document.getElementById('detail-task-type');
+    const statusElement = document.getElementById('detail-task-status');
+    const priorityElement = document.getElementById('detail-task-priority');
+    const dueDateElement = document.getElementById('detail-task-due-date');
+    const startedAtElement = document.getElementById('detail-task-started-at');
+    const createdAtElement = document.getElementById('detail-task-created-at');
+    const childrenElement = document.getElementById('detail-task-children');
+    
+    // Set basic info
+    if (titleElement) titleElement.textContent = task.title;
+    if (descriptionElement) {
+        descriptionElement.textContent = task.description || 'No description provided';
+        descriptionElement.style.fontStyle = task.description ? 'normal' : 'italic';
+        descriptionElement.style.color = task.description ? 'inherit' : 'var(--text-secondary)';
+    }
+    
+    // Set type with icon
+    if (typeElement) {
+        const typeIcon = getTaskTypeIcon(task.type);
+        typeElement.innerHTML = `${typeIcon} ${task.type}`;
+        typeElement.className = `task-type task-type-${task.type}`;
+    }
+    
+    // Set status
+    if (statusElement) {
+        statusElement.textContent = task.status.replace('_', ' ');
+        statusElement.className = `task-status status-${task.status}`;
+    }
+    
+    // Set priority
+    if (priorityElement) {
+        priorityElement.textContent = task.priority;
+        priorityElement.className = `task-priority priority-${task.priority}`;
+    }
+    
+    // Handle dates
+    const dueDateRow = document.getElementById('detail-due-date-row');
+    if (task.due_date && dueDateElement && dueDateRow) {
+        dueDateElement.textContent = new Date(task.due_date).toLocaleDateString();
+        dueDateRow.style.display = 'flex';
+    } else if (dueDateRow) {
+        dueDateRow.style.display = 'none';
+    }
+    
+    const startedAtRow = document.getElementById('detail-started-at-row');
+    if (task.started_at && startedAtElement && startedAtRow) {
+        startedAtElement.textContent = new Date(task.started_at).toLocaleString();
+        startedAtRow.style.display = 'flex';
+    } else if (startedAtRow) {
+        startedAtRow.style.display = 'none';
+    }
+    
+    if (createdAtElement) {
+        createdAtElement.textContent = new Date(task.created_at).toLocaleString();
+    }
+    
+    // Handle children count
+    const childrenRow = document.getElementById('detail-children-row');
+    if (task.children && task.children.length > 0 && childrenElement && childrenRow) {
+        childrenElement.textContent = `${task.children.length} subtask${task.children.length !== 1 ? 's' : ''}`;
+        childrenRow.style.display = 'flex';
+    } else if (childrenRow) {
+        childrenRow.style.display = 'none';
+    }
+    
+    // Set task ID on action buttons
+    if (detailEditBtn) detailEditBtn.dataset.taskId = taskId;
+    if (detailDeleteBtn) detailDeleteBtn.dataset.taskId = taskId;
+    
+    // Show modal
+    taskDetailModal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeTaskDetailModal() {
+    if (taskDetailModal) {
+        taskDetailModal.style.display = 'none';
+        document.body.style.overflow = '';
     }
 }
 
