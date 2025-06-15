@@ -1,13 +1,20 @@
-/* Task Board Grid */
+/* Task Board Layout */
 .task-board {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 24px;
-    margin-bottom: 40px;
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    height: calc(100vh - 200px); /* Viewport height minus header and margins */
+    border-spacing: 24px 0;
+    margin: 0 -24px 40px -24px; /* Compensate for border spacing */
 }
 
 /* Column Styles */
 .column {
+    display: table-cell;
+    width: 25%;
+    height: 100%;
+    vertical-align: top;
+    overflow-y: auto;
     background: var(--bg-primary);
     border-radius: var(--border-radius-lg);
     padding: 20px;
@@ -56,10 +63,12 @@
 
 /* Task List */
 .task-list {
-    min-height: 200px;
+    min-height: calc(100vh - 300px); /* Viewport height minus header, column header, and margins */
     display: flex;
     flex-direction: column;
     gap: 16px;
+    overflow-y: auto;
+    padding-right: 8px; /* Space for scrollbar */
 }
 
 /* Modern Task Cards */
