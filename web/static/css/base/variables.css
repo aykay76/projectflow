@@ -10,10 +10,11 @@
     --border-color: #e2e8f0;
     --accent-primary: #3b82f6;
     --accent-primary-rgb: 59, 130, 246;
-    --accent-secondary: #6366f1;
-    --success-color: #10b981;
+    --accent-secondary: #6366f1;    --success-color: #10b981;
     --warning-color: #f59e0b;
     --error-color: #ef4444;
+    --error: #ef4444;
+    --danger-color: #ef4444;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -34,10 +35,11 @@
     --border-color: #475569;
     --accent-primary: #60a5fa;
     --accent-primary-rgb: 96, 165, 250;
-    --accent-secondary: #818cf8;
-    --success-color: #34d399;
+    --accent-secondary: #818cf8;    --success-color: #34d399;
     --warning-color: #fbbf24;
     --error-color: #f87171;
+    --error: #f87171;
+    --danger-color: #f87171;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);

@@ -1051,16 +1051,25 @@ function loadFilterState() {
                     }
                 }
             });
-            // Apply the loaded filters
-            setTimeout(() => applyFilters(), 100);
+            // Apply the loaded filters and update visual state
+            setTimeout(() => {
+                applyFilters();
+                updateFilterVisualState();
+            }, 100);
         } catch (error) {
             console.error('Error loading filter state:', error);
             // Ensure all tasks are visible if filter loading fails
-            setTimeout(() => applyFilters(), 100);
+            setTimeout(() => {
+                applyFilters();
+                updateFilterVisualState();
+            }, 100);
         }
     } else {
         // No saved filters, ensure all tasks are visible
-        setTimeout(() => applyFilters(), 100);
+        setTimeout(() => {
+            applyFilters();
+            updateFilterVisualState();
+        }, 100);
     }
 }
 
@@ -1298,10 +1307,12 @@ function initializeFiltering() {
             input.addEventListener('input', debounce(() => {
                 applyFilters();
                 saveFilterState();
+                updateFilterVisualState();
             }, 300));
             input.addEventListener('change', () => {
                 applyFilters();
-                saveFilterState();
+                saveFilterState(); 
+                updateFilterVisualState();
             });
         }
     });
@@ -1334,6 +1345,9 @@ function applyFilters() {
     const taskCards = document.querySelectorAll('.task-card');
     let visibleCount = 0;
     
+    // Update filter visual indicators
+    updateFilterVisualState();
+    
     // If no filters are active, show all tasks
     const hasActiveFilters = searchTerm || statusFilter || priorityFilter || typeFilter || overdueFilter;
     if (!hasActiveFilters) {
@@ -1342,8 +1356,12 @@ function applyFilters() {
             visibleCount++;
         });
         updateFilterResultsCount(visibleCount, taskCards.length);
+        hideActiveFilters();
         return;
     }
+    
+    // Show active filters
+    showActiveFilters();
     
     taskCards.forEach(card => {
         let visible = true;
@@ -1433,6 +1451,10 @@ function clearAllFilters() {
     // Clear saved filters
     localStorage.removeItem('projectflow_filters');
     
+    // Update visual state
+    updateFilterVisualState();
+    hideActiveFilters();
+    
     // Show all tasks
     const taskCards = document.querySelectorAll('.task-card');
     taskCards.forEach(card => {
@@ -1441,6 +1463,144 @@ function clearAllFilters() {
     
     updateFilterResultsCount(taskCards.length, taskCards.length);
     showMessage('All filters cleared! 🧹', 'info', 2000);
+}
+
+// New functions for filter visual management
+function updateFilterVisualState() {
+    const filterToggleBtn = document.getElementById('filter-toggle-btn');
+    const filterInputs = [
+        'filter-search',
+        'filter-status',
+        'filter-priority', 
+        'filter-type',
+        'filter-overdue'
+    ];
+    
+    let activeCount = 0;
+    
+    // Check each filter and update its visual state
+    filterInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input && input.value && input.value.trim() !== '') {
+            input.classList.add('filter-active');
+            activeCount++;
+        } else if (input) {
+            input.classList.remove('filter-active');
+        }
+    });
+    
+    // Update filter button state
+    if (filterToggleBtn) {
+        if (activeCount > 0) {
+            filterToggleBtn.classList.add('filter-toggle-active');
+            filterToggleBtn.setAttribute('data-active-count', activeCount);
+            filterToggleBtn.title = `${activeCount} filter(s) active`;
+        } else {
+            filterToggleBtn.classList.remove('filter-toggle-active');
+            filterToggleBtn.removeAttribute('data-active-count');
+            filterToggleBtn.title = 'Toggle Filters (F)';
+        }
+    }
+}
+
+function showActiveFilters() {
+    const container = document.getElementById('active-filters-container');
+    const list = document.getElementById('active-filters-list');
+    
+    if (!container || !list) return;
+    
+    const activeFilters = getActiveFilters();
+    
+    if (activeFilters.length === 0) {
+        hideActiveFilters();
+        return;
+    }
+    
+    list.innerHTML = activeFilters.map(filter => `
+        <div class="filter-badge">
+            <span>${filter.label}: ${filter.value}</span>
+            <button class="filter-badge-remove" onclick="removeFilter('${filter.key}')" title="Remove filter">×</button>
+        </div>
+    `).join('');
+    
+    container.style.display = 'block';
+}
+
+function hideActiveFilters() {
+    const container = document.getElementById('active-filters-container');
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+function getActiveFilters() {
+    const filters = [];
+    
+    const searchValue = document.getElementById('filter-search')?.value;
+    if (searchValue && searchValue.trim()) {
+        filters.push({
+            key: 'search',
+            label: 'Search',
+            value: `"${searchValue}"`
+        });
+    }
+    
+    const statusValue = document.getElementById('filter-status')?.value;
+    if (statusValue) {
+        const statusLabels = {
+            'todo': 'To Do',
+            'in_progress': 'In Progress',
+            'done': 'Done',
+            'blocked': 'Blocked'
+        };
+        filters.push({
+            key: 'status',
+            label: 'Status',
+            value: statusLabels[statusValue] || statusValue
+        });
+    }
+    
+    const priorityValue = document.getElementById('filter-priority')?.value;
+    if (priorityValue) {
+        filters.push({
+            key: 'priority',
+            label: 'Priority',
+            value: priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
+        });
+    }
+    
+    const typeValue = document.getElementById('filter-type')?.value;
+    if (typeValue) {
+        filters.push({
+            key: 'type',
+            label: 'Type',
+            value: typeValue.charAt(0).toUpperCase() + typeValue.slice(1)
+        });
+    }
+    
+    const overdueValue = document.getElementById('filter-overdue')?.value;
+    if (overdueValue) {
+        const overdueLabels = {
+            'overdue': 'Overdue Tasks',
+            'due-soon': 'Due Soon'
+        };
+        filters.push({
+            key: 'overdue',
+            label: 'Due Status',
+            value: overdueLabels[overdueValue] || overdueValue
+        });
+    }
+    
+    return filters;
+}
+
+function removeFilter(filterKey) {
+    const input = document.getElementById(`filter-${filterKey}`);
+    if (input) {
+        input.value = '';
+        applyFilters();
+        saveFilterState();
+    }
 }
 
 function updateFilterResultsCount(visible, total) {
