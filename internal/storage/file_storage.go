@@ -160,14 +160,14 @@ func (fs *FileStorage) listTasksUnsafe(projectID string) ([]*models.Task, error)
 		return nil, fmt.Errorf("failed to get project display prefix: %w", err)
 	}
 
-	// Scan the specific project's directory
-	projectDir := filepath.Join(fs.dataDir, "projects", displayPrefix)
+	// Scan the specific project's tasks directory
+	projectDir := filepath.Join(fs.dataDir, "projects", displayPrefix, "tasks")
 	entries, err := os.ReadDir(projectDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return tasks, nil // Project directory doesn't exist yet, return empty list
+			return tasks, nil // Project tasks directory doesn't exist yet, return empty list
 		}
-		return nil, fmt.Errorf("failed to read project directory %s: %w", projectDir, err)
+		return nil, fmt.Errorf("failed to read project tasks directory %s: %w", projectDir, err)
 	}
 
 	for _, entry := range entries {
