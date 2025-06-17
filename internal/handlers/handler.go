@@ -142,7 +142,7 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 	if projectID == "" {
 		projectID = "PF"
 	}
-	
+
 	tasks, err := h.storage.ListTasks(projectID)
 	if err != nil {
 		http.Error(w, "Failed to list tasks", http.StatusInternalServerError)

@@ -657,7 +657,7 @@ func TestPostgresStorage_ConcurrentAccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create dummy task: %v", err)
 	}
-	
+
 	tasks, err := storage.ListTasks(dummyTask.ProjectID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)

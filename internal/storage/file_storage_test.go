@@ -37,7 +37,7 @@ func TestFileStorage_CreateTask(t *testing.T) {
 	if task.ProjectID == "" {
 		t.Error("CreateTask() should assign task to default project")
 	}
-	
+
 	// Task should be saved with display ID as filename if available
 	filename := task.ID + ".json"
 	if task.DisplayID != "" {
@@ -251,7 +251,7 @@ func TestFileStorage_ListTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get default project: %v", err)
 	}
-	
+
 	tasks, err := storage.ListTasks(defaultProject.ID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)

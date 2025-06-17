@@ -363,19 +363,19 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 
 	for _, project := range projects {
 		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
-		
+
 		// Try both UUID.json and DisplayID.json files
 		task, err := fs.tryLoadTaskFile(tasksDir, id+".json")
 		if err == nil {
 			return task, nil
 		}
-		
+
 		// Also check all task files in this project to find one with matching ID
 		entries, err := os.ReadDir(tasksDir)
 		if err != nil {
 			continue // Skip this project if we can't read the directory
 		}
-		
+
 		for _, entry := range entries {
 			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
 				task, err := fs.tryLoadTaskFile(tasksDir, entry.Name())
