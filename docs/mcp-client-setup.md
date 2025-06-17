@@ -189,7 +189,7 @@ Once configured, the MCP client will have access to these tools:
 
 4. **Storage Directory**: Ensure the `STORAGE_DIR` exists and is writable:
    ```bash
-   mkdir -p /Users/vanilla/git/aykay76/projectflow/data/tasks
+   mkdir -p /Users/vanilla/git/aykay76/projectflow/data/projects
    ```
 
 ### Debug Mode

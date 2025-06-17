@@ -32,8 +32,13 @@ func TestFileStorage_CreateTask(t *testing.T) {
 		t.Error("CreateTask() should set task ID")
 	}
 
-	// Verify file was created
-	filePath := filepath.Join(tempDir, "tasks", task.ID+".json")
+	// Verify file was created in the correct project directory
+	// Since no project was specified, task should be assigned to default project
+	if task.ProjectID == "" {
+		t.Error("CreateTask() should assign task to default project")
+	}
+	
+	filePath := filepath.Join(tempDir, "projects", task.ProjectID, "tasks", task.ID+".json")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Error("CreateTask() should create file on disk")
 	}
