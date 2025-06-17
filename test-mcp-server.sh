@@ -20,7 +20,7 @@ chmod +x ./bin/mcp-server
 # Check if data directory exists
 if [ ! -d "./data" ]; then
     echo "📁 Creating data directory..."
-    mkdir -p ./data/tasks
+    mkdir -p ./data/projects
     echo "✅ Data directory created"
 fi
 
@@ -40,10 +40,10 @@ echo "📋 MCP Server Configuration Summary:"
 echo "   Binary Path: $(pwd)/bin/mcp-server"
 echo "   Working Directory: $(pwd)"
 echo "   Storage Directory: ./data"
-echo "   Tasks Directory: ./data/tasks"
+echo "   Projects Directory: ./data/projects"
 
-# Count existing tasks
-TASK_COUNT=$(find ./data/tasks -name "*.json" 2>/dev/null | wc -l | tr -d ' ')
+# Count existing tasks across all projects
+TASK_COUNT=$(find ./data/projects -name "*.json" -path "*/tasks/*" 2>/dev/null | wc -l | tr -d ' ')
 echo "   Existing Tasks: $TASK_COUNT"
 
 echo ""

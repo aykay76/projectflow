@@ -25,12 +25,6 @@ func NewFileStorage(dataDir string) (*FileStorage, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	// Create tasks subdirectory
-	tasksDir := filepath.Join(dataDir, "tasks")
-	if err := os.MkdirAll(tasksDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create tasks directory: %w", err)
-	}
-
 	// Create projects subdirectory
 	projectsDir := filepath.Join(dataDir, "projects")
 	if err := os.MkdirAll(projectsDir, 0755); err != nil {
@@ -146,19 +140,32 @@ func (fs *FileStorage) ListTasks() ([]*models.Task, error) {
 
 // listTasksUnsafe returns all tasks (must be called with mutex held)
 func (fs *FileStorage) listTasksUnsafe() ([]*models.Task, error) {
-	tasksDir := filepath.Join(fs.dataDir, "tasks")
-	entries, err := os.ReadDir(tasksDir)
+	// Get all projects first
+	projects, err := fs.listProjectsUnsafe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read tasks directory: %w", err)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
 
 	var tasks []*models.Task
-	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
-			taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
-			task, err := fs.getTaskUnsafe(taskID)
-			if err == nil {
-				tasks = append(tasks, task)
+
+	// Scan each project's tasks directory
+	for _, project := range projects {
+		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
+		entries, err := os.ReadDir(tasksDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue // Project tasks directory doesn't exist yet, skip it
+			}
+			return nil, fmt.Errorf("failed to read tasks directory %s: %w", tasksDir, err)
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+				taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
+				task, err := fs.getTaskUnsafe(taskID)
+				if err == nil {
+					tasks = append(tasks, task)
+				}
 			}
 		}
 	}
@@ -344,39 +351,62 @@ func (fs *FileStorage) Close() error {
 // Internal unsafe methods (must be called with mutex held)
 
 func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
-	filePath := filepath.Join(fs.dataDir, "tasks", id+".json")
-	data, err := os.ReadFile(filePath)
+	// Get all projects first
+	projects, err := fs.listProjectsUnsafe()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("task not found: %s", id)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	// Search for the task in each project's tasks directory
+	for _, project := range projects {
+		filePath := filepath.Join(fs.dataDir, "projects", project.ID, "tasks", id+".json")
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue // Try next project
+			}
+			return nil, fmt.Errorf("failed to read task file: %w", err)
 		}
-		return nil, fmt.Errorf("failed to read task file: %w", err)
+
+		var task models.Task
+		if err := json.Unmarshal(data, &task); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal task: %w", err)
+		}
+
+		return &task, nil
 	}
 
-	var task models.Task
-	if err := json.Unmarshal(data, &task); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal task: %w", err)
-	}
-
-	return &task, nil
+	return nil, fmt.Errorf("task not found: %s", id)
 }
 
 func (fs *FileStorage) getTaskByDisplayIDUnsafe(displayID string) (*models.Task, error) {
-	tasksDir := filepath.Join(fs.dataDir, "tasks")
-	entries, err := os.ReadDir(tasksDir)
+	// Get all projects first
+	projects, err := fs.listProjectsUnsafe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read tasks directory: %w", err)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
 
 	// Normalize input display ID for case-insensitive comparison
 	normalizedDisplayID := strings.ToUpper(displayID)
 
-	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
-			taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
-			task, err := fs.getTaskUnsafe(taskID)
-			if err == nil && strings.ToUpper(task.DisplayID) == normalizedDisplayID {
-				return task, nil
+	// Search for the task in each project's tasks directory
+	for _, project := range projects {
+		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
+		entries, err := os.ReadDir(tasksDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue // Project directory doesn't exist yet, skip it
+			}
+			return nil, fmt.Errorf("failed to read tasks directory %s: %w", tasksDir, err)
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+				taskID := entry.Name()[:len(entry.Name())-5] // Remove .json extension
+				task, err := fs.getTaskUnsafe(taskID)
+				if err == nil && strings.ToUpper(task.DisplayID) == normalizedDisplayID {
+					return task, nil
+				}
 			}
 		}
 	}
@@ -385,7 +415,25 @@ func (fs *FileStorage) getTaskByDisplayIDUnsafe(displayID string) (*models.Task,
 }
 
 func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {
-	filePath := filepath.Join(fs.dataDir, "tasks", task.ID+".json")
+	// Determine which project directory to save to
+	projectID := task.ProjectID
+	if projectID == "" {
+		// For backward compatibility, assign to default project
+		defaultProject, err := fs.getOrCreateDefaultProjectUnsafe()
+		if err != nil {
+			return fmt.Errorf("failed to get default project: %w", err)
+		}
+		task.ProjectID = defaultProject.ID
+		projectID = defaultProject.ID
+	}
+
+	// Ensure the project tasks directory exists
+	tasksDir := filepath.Join(fs.dataDir, "projects", projectID, "tasks")
+	if err := os.MkdirAll(tasksDir, 0755); err != nil {
+		return fmt.Errorf("failed to create tasks directory: %w", err)
+	}
+
+	filePath := filepath.Join(tasksDir, task.ID+".json")
 	data, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal task: %w", err)
@@ -399,17 +447,43 @@ func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {
 }
 
 func (fs *FileStorage) deleteTaskUnsafe(id string) error {
-	filePath := filepath.Join(fs.dataDir, "tasks", id+".json")
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete task file: %w", err)
+	// Get all projects and try to delete from each one
+	projects, err := fs.listProjectsUnsafe()
+	if err != nil {
+		return fmt.Errorf("failed to list projects: %w", err)
 	}
-	return nil
+
+	for _, project := range projects {
+		filePath := filepath.Join(fs.dataDir, "projects", project.ID, "tasks", id+".json")
+		err := os.Remove(filePath)
+		if err == nil {
+			return nil // Successfully deleted
+		}
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to delete task file: %w", err)
+		}
+		// File doesn't exist in this project, try next
+	}
+
+	// If we get here, task wasn't found in any project
+	return nil // Don't error if task doesn't exist (idempotent delete)
 }
 
 func (fs *FileStorage) taskExistsUnsafe(id string) bool {
-	filePath := filepath.Join(fs.dataDir, "tasks", id+".json")
-	_, err := os.Stat(filePath)
-	return err == nil
+	// Get all projects and check each one
+	projects, err := fs.listProjectsUnsafe()
+	if err != nil {
+		return false
+	}
+
+	for _, project := range projects {
+		filePath := filepath.Join(fs.dataDir, "projects", project.ID, "tasks", id+".json")
+		if _, err := os.Stat(filePath); err == nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Internal project methods (must be called with mutex held)

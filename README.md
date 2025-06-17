@@ -285,8 +285,8 @@ your-project/
 
 1. **Initialize ProjectFlow in your project:**
    ```bash
-   mkdir -p .projectflow/data/tasks
-   echo ".projectflow/data/tasks/*.json" >> .gitignore  # Optional: exclude task files
+   mkdir -p .projectflow/data/projects
+   echo ".projectflow/data/projects/*/*.json" >> .gitignore  # Optional: exclude project and task files
    ```
 
 2. **Configure VS Code MCP:**
