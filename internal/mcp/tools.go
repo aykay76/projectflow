@@ -109,6 +109,11 @@ func (s *MCPServer) handleCreateTask(args map[string]interface{}) (ToolCallResul
 	// Create new task
 	task := models.NewTask(title, description)
 
+	// Set project ID if provided
+	if projectID, ok := args["project_id"].(string); ok && projectID != "" {
+		task.ProjectID = projectID
+	}
+
 	// Set optional fields
 	if status, ok := args["status"].(string); ok && status != "" {
 		if !models.IsValidStatus(status) {

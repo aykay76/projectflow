@@ -135,6 +135,10 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 						"type":        "string",
 						"description": "The description of the task",
 					},
+					"project_id": map[string]interface{}{
+						"type":        "string",
+						"description": "The ID of the project to create the task in (optional, defaults to default project)",
+					},
 					"status": map[string]interface{}{
 						"type":        "string",
 						"description": "The status of the task",
