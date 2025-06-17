@@ -38,12 +38,18 @@ func TestFileStorage_CreateTask(t *testing.T) {
 		t.Error("CreateTask() should assign task to default project")
 	}
 
+	// Get the project to find its display prefix
+	project, err := storage.GetProject(task.ProjectID)
+	if err != nil {
+		t.Fatalf("Failed to get project: %v", err)
+	}
+
 	// Task should be saved with display ID as filename if available
 	filename := task.ID + ".json"
 	if task.DisplayID != "" {
 		filename = task.DisplayID + ".json"
 	}
-	filePath := filepath.Join(tempDir, "projects", task.ProjectID, "tasks", filename)
+	filePath := filepath.Join(tempDir, "projects", project.DisplayPrefix, filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Error("CreateTask() should create file on disk")
 	}

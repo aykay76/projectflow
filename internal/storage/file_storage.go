@@ -147,20 +147,26 @@ func (fs *FileStorage) listTasksUnsafe(projectID string) ([]*models.Task, error)
 		return tasks, nil
 	}
 
-	// Scan the specific project's tasks directory
-	tasksDir := filepath.Join(fs.dataDir, "projects", projectID, "tasks")
-	entries, err := os.ReadDir(tasksDir)
+	// Get the project's display prefix for the directory structure
+	displayPrefix, err := fs.getProjectDisplayPrefixUnsafe(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project display prefix: %w", err)
+	}
+
+	// Scan the specific project's directory
+	projectDir := filepath.Join(fs.dataDir, "projects", displayPrefix)
+	entries, err := os.ReadDir(projectDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return tasks, nil // Project tasks directory doesn't exist yet, return empty list
+			return tasks, nil // Project directory doesn't exist yet, return empty list
 		}
-		return nil, fmt.Errorf("failed to read tasks directory %s: %w", tasksDir, err)
+		return nil, fmt.Errorf("failed to read project directory %s: %w", projectDir, err)
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
 			// Load the task directly from the file
-			task, err := fs.tryLoadTaskFile(tasksDir, entry.Name())
+			task, err := fs.tryLoadTaskFile(projectDir, entry.Name())
 			if err == nil {
 				tasks = append(tasks, task)
 			}
@@ -351,8 +357,8 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 	parts := strings.Split(id, "-")
 	if len(parts) == 2 {
 		// This looks like a display ID (e.g., "PF-1")
-		projectID := parts[0]
-		return fs.tryLoadTaskFile(filepath.Join(fs.dataDir, "projects", projectID, "tasks"), id+".json")
+		displayPrefix := parts[0]
+		return fs.tryLoadTaskFile(filepath.Join(fs.dataDir, "projects", displayPrefix), id+".json")
 	}
 
 	// If it's not a display ID, it might be a UUID - search all projects
@@ -362,23 +368,23 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 	}
 
 	for _, project := range projects {
-		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
+		projectDir := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix)
 
 		// Try both UUID.json and DisplayID.json files
-		task, err := fs.tryLoadTaskFile(tasksDir, id+".json")
+		task, err := fs.tryLoadTaskFile(projectDir, id+".json")
 		if err == nil {
 			return task, nil
 		}
 
 		// Also check all task files in this project to find one with matching ID
-		entries, err := os.ReadDir(tasksDir)
+		entries, err := os.ReadDir(projectDir)
 		if err != nil {
 			continue // Skip this project if we can't read the directory
 		}
 
 		for _, entry := range entries {
 			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
-				task, err := fs.tryLoadTaskFile(tasksDir, entry.Name())
+				task, err := fs.tryLoadTaskFile(projectDir, entry.Name())
 				if err == nil && task.ID == id {
 					return task, nil
 				}
@@ -390,8 +396,8 @@ func (fs *FileStorage) getTaskUnsafe(id string) (*models.Task, error) {
 }
 
 // tryLoadTaskFile attempts to load a task from a specific file path
-func (fs *FileStorage) tryLoadTaskFile(tasksDir, filename string) (*models.Task, error) {
-	filePath := filepath.Join(tasksDir, filename)
+func (fs *FileStorage) tryLoadTaskFile(projectDir, filename string) (*models.Task, error) {
+	filePath := filepath.Join(projectDir, filename)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -415,21 +421,21 @@ func (fs *FileStorage) getTaskByDisplayIDUnsafe(displayID string) (*models.Task,
 	// Normalize input display ID for case-insensitive comparison
 	normalizedDisplayID := strings.ToUpper(displayID)
 
-	// Search for the task in each project's tasks directory
+	// Search for the task in each project's directory
 	for _, project := range projects {
-		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
-		entries, err := os.ReadDir(tasksDir)
+		projectDir := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix)
+		entries, err := os.ReadDir(projectDir)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue // Project directory doesn't exist yet, skip it
 			}
-			return nil, fmt.Errorf("failed to read tasks directory %s: %w", tasksDir, err)
+			return nil, fmt.Errorf("failed to read project directory %s: %w", projectDir, err)
 		}
 
 		for _, entry := range entries {
 			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
 				// Try to load the task file directly
-				task, err := fs.tryLoadTaskFile(tasksDir, entry.Name())
+				task, err := fs.tryLoadTaskFile(projectDir, entry.Name())
 				if err == nil && strings.ToUpper(task.DisplayID) == normalizedDisplayID {
 					return task, nil
 				}
@@ -453,10 +459,16 @@ func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {
 		projectID = defaultProject.ID
 	}
 
-	// Ensure the project tasks directory exists
-	tasksDir := filepath.Join(fs.dataDir, "projects", projectID, "tasks")
-	if err := os.MkdirAll(tasksDir, 0755); err != nil {
-		return fmt.Errorf("failed to create tasks directory: %w", err)
+	// Get the project's display prefix for the directory structure
+	displayPrefix, err := fs.getProjectDisplayPrefixUnsafe(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to get project display prefix: %w", err)
+	}
+
+	// Ensure the project directory exists (using display prefix)
+	projectDir := filepath.Join(fs.dataDir, "projects", displayPrefix)
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
 	// Use display_id as filename if available, otherwise fallback to id
@@ -464,11 +476,11 @@ func (fs *FileStorage) saveTaskUnsafe(task *models.Task) error {
 	if task.DisplayID != "" {
 		filename = task.DisplayID + ".json"
 	}
-	filePath := filepath.Join(tasksDir, filename)
+	filePath := filepath.Join(projectDir, filename)
 
 	// For migration support: if we're saving with display_id but old id file exists, remove it
 	if task.DisplayID != "" {
-		oldFilePath := filepath.Join(tasksDir, task.ID+".json")
+		oldFilePath := filepath.Join(projectDir, task.ID+".json")
 		if _, err := os.Stat(oldFilePath); err == nil {
 			// Old file exists, remove it after successful save
 			defer func() {
@@ -497,16 +509,22 @@ func (fs *FileStorage) deleteTaskUnsafe(id string) error {
 		return nil
 	}
 
+	// Get the project's display prefix for the directory structure
+	displayPrefix, err := fs.getProjectDisplayPrefixUnsafe(task.ProjectID)
+	if err != nil {
+		return fmt.Errorf("failed to get project display prefix: %w", err)
+	}
+
 	// Try to delete by display_id first (new format)
 	if task.DisplayID != "" {
-		displayFilePath := filepath.Join(fs.dataDir, "projects", task.ProjectID, "tasks", task.DisplayID+".json")
+		displayFilePath := filepath.Join(fs.dataDir, "projects", displayPrefix, task.DisplayID+".json")
 		if err := os.Remove(displayFilePath); err == nil {
 			return nil // Successfully deleted by display_id
 		}
 	}
 
 	// Try to delete by id (old format)
-	idFilePath := filepath.Join(fs.dataDir, "projects", task.ProjectID, "tasks", task.ID+".json")
+	idFilePath := filepath.Join(fs.dataDir, "projects", displayPrefix, task.ID+".json")
 	if err := os.Remove(idFilePath); err == nil {
 		return nil // Successfully deleted by id
 	}
@@ -520,14 +538,14 @@ func (fs *FileStorage) deleteTaskUnsafe(id string) error {
 	for _, project := range projects {
 		// Try display_id filename if available
 		if task.DisplayID != "" {
-			displayFilePath := filepath.Join(fs.dataDir, "projects", project.ID, "tasks", task.DisplayID+".json")
+			displayFilePath := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix, task.DisplayID+".json")
 			if err := os.Remove(displayFilePath); err == nil {
 				return nil // Successfully deleted
 			}
 		}
 
 		// Try id filename
-		idFilePath := filepath.Join(fs.dataDir, "projects", project.ID, "tasks", task.ID+".json")
+		idFilePath := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix, task.ID+".json")
 		if err := os.Remove(idFilePath); err == nil {
 			return nil // Successfully deleted
 		}
@@ -545,23 +563,23 @@ func (fs *FileStorage) taskExistsUnsafe(id string) bool {
 	}
 
 	for _, project := range projects {
-		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
+		projectDir := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix)
 
 		// First check for display_id filename (assume id might be display_id)
-		displayFilePath := filepath.Join(tasksDir, id+".json")
+		displayFilePath := filepath.Join(projectDir, id+".json")
 		if _, err := os.Stat(displayFilePath); err == nil {
 			return true
 		}
 
 		// Check all files to see if any task has this id
-		entries, err := os.ReadDir(tasksDir)
+		entries, err := os.ReadDir(projectDir)
 		if err != nil {
 			continue // Skip this project if can't read directory
 		}
 
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-				if task, err := fs.tryLoadTaskFile(tasksDir, entry.Name()); err == nil {
+				if task, err := fs.tryLoadTaskFile(projectDir, entry.Name()); err == nil {
 					if task.ID == id {
 						return true
 					}
@@ -574,6 +592,15 @@ func (fs *FileStorage) taskExistsUnsafe(id string) bool {
 }
 
 // Internal project methods (must be called with mutex held)
+
+// getProjectDisplayPrefixUnsafe retrieves the display prefix for a project by ID
+func (fs *FileStorage) getProjectDisplayPrefixUnsafe(projectID string) (string, error) {
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return "", err
+	}
+	return project.DisplayPrefix, nil
+}
 
 func (fs *FileStorage) getProjectUnsafe(id string) (*models.Project, error) {
 	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
@@ -769,21 +796,21 @@ func (fs *FileStorage) listAllTasksUnsafe() ([]*models.Task, error) {
 	var tasks []*models.Task
 	seenTasks := make(map[string]bool) // Track task IDs to avoid duplicates
 
-	// Scan each project's tasks directory
+	// Scan each project's directory
 	for _, project := range projects {
-		tasksDir := filepath.Join(fs.dataDir, "projects", project.ID, "tasks")
-		entries, err := os.ReadDir(tasksDir)
+		projectDir := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix)
+		entries, err := os.ReadDir(projectDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				continue // Project tasks directory doesn't exist yet, skip it
+				continue // Project directory doesn't exist yet, skip it
 			}
-			return nil, fmt.Errorf("failed to read tasks directory %s: %w", tasksDir, err)
+			return nil, fmt.Errorf("failed to read project directory %s: %w", projectDir, err)
 		}
 
 		for _, entry := range entries {
 			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
 				// Load the task directly from the file
-				task, err := fs.tryLoadTaskFile(tasksDir, entry.Name())
+				task, err := fs.tryLoadTaskFile(projectDir, entry.Name())
 				if err == nil && !seenTasks[task.ID] {
 					tasks = append(tasks, task)
 					seenTasks[task.ID] = true
