@@ -31,9 +31,16 @@ func NewFileStorage(dataDir string) (*FileStorage, error) {
 		return nil, fmt.Errorf("failed to create projects directory: %w", err)
 	}
 
-	return &FileStorage{
+	fs := &FileStorage{
 		dataDir: dataDir,
-	}, nil
+	}
+
+	// Run migration to convert UUID-based project files to display prefix-based
+	if err := fs.MigrateProjectFilesToDisplayPrefix(); err != nil {
+		return nil, fmt.Errorf("failed to migrate project files: %w", err)
+	}
+
+	return fs, nil
 }
 
 // CreateTask creates a new task and assigns it an ID
@@ -287,6 +294,13 @@ func (fs *FileStorage) GetProject(id string) (*models.Project, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getProjectUnsafe(id)
+}
+
+// GetProjectByDisplayPrefix retrieves a project by its display prefix
+func (fs *FileStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+	return fs.getProjectUnsafe(displayPrefix)
 }
 
 // UpdateProject updates an existing project
@@ -595,6 +609,18 @@ func (fs *FileStorage) taskExistsUnsafe(id string) bool {
 
 // getProjectDisplayPrefixUnsafe retrieves the display prefix for a project by ID
 func (fs *FileStorage) getProjectDisplayPrefixUnsafe(projectID string) (string, error) {
+	// If the projectID looks like a display prefix (short string without hyphens indicating UUID),
+	// we can return it directly. Otherwise, look up the project.
+	if len(projectID) < 10 && !strings.Contains(projectID, "-") {
+		// This looks like a display prefix, verify it exists
+		project, err := fs.getProjectUnsafe(projectID)
+		if err != nil {
+			return "", err
+		}
+		return project.DisplayPrefix, nil
+	}
+
+	// This might be a UUID, look up the project to get display prefix
 	project, err := fs.getProjectUnsafe(projectID)
 	if err != nil {
 		return "", err
@@ -603,11 +629,13 @@ func (fs *FileStorage) getProjectDisplayPrefixUnsafe(projectID string) (string, 
 }
 
 func (fs *FileStorage) getProjectUnsafe(id string) (*models.Project, error) {
+	// First try to find by display prefix (new format)
 	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("project not found: %s", id)
+			// If not found by display prefix, try to find by UUID (legacy format)
+			return fs.getProjectByUUIDUnsafe(id)
 		}
 		return nil, fmt.Errorf("failed to read project file: %w", err)
 	}
@@ -620,8 +648,43 @@ func (fs *FileStorage) getProjectUnsafe(id string) (*models.Project, error) {
 	return &project, nil
 }
 
+// getProjectByUUIDUnsafe looks for a project by UUID (legacy format)
+func (fs *FileStorage) getProjectByUUIDUnsafe(uuid string) (*models.Project, error) {
+	projectsDir := filepath.Join(fs.dataDir, "projects")
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read projects directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			// Check if this is a UUID-named file (not a display prefix)
+			fileName := strings.TrimSuffix(entry.Name(), ".json")
+			if strings.Contains(fileName, "-") && len(fileName) == 36 { // UUID format
+				filePath := filepath.Join(projectsDir, entry.Name())
+				data, err := os.ReadFile(filePath)
+				if err != nil {
+					continue
+				}
+
+				var project models.Project
+				if err := json.Unmarshal(data, &project); err != nil {
+					continue
+				}
+
+				if project.ID == uuid {
+					return &project, nil
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("project not found: %s", uuid)
+}
+
 func (fs *FileStorage) saveProjectUnsafe(project *models.Project) error {
-	filePath := filepath.Join(fs.dataDir, "projects", project.ID+".json")
+	// Use display prefix for file naming instead of UUID
+	filePath := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix+".json")
 	data, err := json.MarshalIndent(project, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal project: %w", err)
@@ -635,10 +698,27 @@ func (fs *FileStorage) saveProjectUnsafe(project *models.Project) error {
 }
 
 func (fs *FileStorage) deleteProjectUnsafe(id string) error {
+	// Try to delete by display prefix first (new format)
 	filePath := filepath.Join(fs.dataDir, "projects", id+".json")
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete project file: %w", err)
+		// If not found by display prefix, try by UUID (legacy format)
+		project, err := fs.getProjectByUUIDUnsafe(id)
+		if err != nil {
+			return fmt.Errorf("failed to delete project file: %w", err)
+		}
+		// Delete using the project's display prefix
+		filePath = filepath.Join(fs.dataDir, "projects", project.DisplayPrefix+".json")
+		if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to delete project file: %w", err)
+		}
 	}
+
+	// Also delete counter file
+	counterPath := filepath.Join(fs.dataDir, "projects", id+".counter")
+	if err := os.Remove(counterPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete project counter file: %w", err)
+	}
+
 	return nil
 }
 
@@ -752,7 +832,13 @@ func (fs *FileStorage) getNextDisplayIDUnsafe(projectID string) (string, error) 
 
 // getProjectCounterUnsafe reads the current counter value for a project
 func (fs *FileStorage) getProjectCounterUnsafe(projectID string) (int, error) {
-	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	// First try to find the project to get its display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find project: %w", err)
+	}
+
+	counterFile := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix+".counter")
 	data, err := os.ReadFile(counterFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -772,7 +858,13 @@ func (fs *FileStorage) getProjectCounterUnsafe(projectID string) (int, error) {
 
 // saveProjectCounterUnsafe saves the counter value for a project
 func (fs *FileStorage) saveProjectCounterUnsafe(projectID string, counter int) error {
-	counterFile := filepath.Join(fs.dataDir, "projects", projectID+".counter")
+	// First try to find the project to get its display prefix
+	project, err := fs.getProjectUnsafe(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to find project: %w", err)
+	}
+
+	counterFile := filepath.Join(fs.dataDir, "projects", project.DisplayPrefix+".counter")
 	data, err := json.Marshal(counter)
 	if err != nil {
 		return fmt.Errorf("failed to marshal counter: %w", err)
@@ -820,4 +912,62 @@ func (fs *FileStorage) listAllTasksUnsafe() ([]*models.Task, error) {
 	}
 
 	return tasks, nil
+}
+
+// MigrateProjectFilesToDisplayPrefix migrates existing UUID-based project files to display prefix naming
+func (fs *FileStorage) MigrateProjectFilesToDisplayPrefix() error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	projectsDir := filepath.Join(fs.dataDir, "projects")
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return fmt.Errorf("failed to read projects directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			fileName := strings.TrimSuffix(entry.Name(), ".json")
+
+			// Check if this is a UUID-named file (36 chars with hyphens)
+			if len(fileName) == 36 && strings.Count(fileName, "-") == 4 {
+				// This is a UUID-based file, migrate it
+				oldPath := filepath.Join(projectsDir, entry.Name())
+
+				// Read the project to get its display prefix
+				data, err := os.ReadFile(oldPath)
+				if err != nil {
+					continue // Skip files we can't read
+				}
+
+				var project models.Project
+				if err := json.Unmarshal(data, &project); err != nil {
+					continue // Skip files we can't parse
+				}
+
+				// Create new file with display prefix name
+				newPath := filepath.Join(projectsDir, project.DisplayPrefix+".json")
+
+				// Only migrate if the new file doesn't already exist
+				if _, err := os.Stat(newPath); os.IsNotExist(err) {
+					if err := os.Rename(oldPath, newPath); err != nil {
+						return fmt.Errorf("failed to rename project file %s to %s: %w", oldPath, newPath, err)
+					}
+
+					// Also migrate the counter file if it exists
+					oldCounterPath := filepath.Join(projectsDir, fileName+".counter")
+					newCounterPath := filepath.Join(projectsDir, project.DisplayPrefix+".counter")
+
+					if _, err := os.Stat(oldCounterPath); err == nil {
+						if err := os.Rename(oldCounterPath, newCounterPath); err != nil {
+							// Log warning but don't fail the migration
+							fmt.Printf("Warning: failed to rename counter file %s to %s: %v\n", oldCounterPath, newCounterPath, err)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

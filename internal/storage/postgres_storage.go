@@ -718,6 +718,45 @@ func (ps *PostgresStorage) GetProjectByName(name string) (*models.Project, error
 	return &project, nil
 }
 
+// GetProjectByDisplayPrefix retrieves a project by display prefix
+func (ps *PostgresStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	selectSQL := `
+		SELECT id, name, description, display_prefix, settings, created_at, updated_at
+		FROM projects WHERE display_prefix = $1`
+
+	row := ps.db.QueryRow(selectSQL, displayPrefix)
+
+	var project models.Project
+	var settingsJSON []byte
+
+	err := row.Scan(
+		&project.ID,
+		&project.Name,
+		&project.Description,
+		&project.DisplayPrefix,
+		&settingsJSON,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("project not found: %s", displayPrefix)
+		}
+		return nil, fmt.Errorf("failed to query project: %w", err)
+	}
+
+	// Unmarshal settings JSON
+	if err := json.Unmarshal(settingsJSON, &project.Settings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal settings: %w", err)
+	}
+
+	return &project, nil
+}
+
 // ProjectExists checks if a project exists
 func (ps *PostgresStorage) ProjectExists(id string) bool {
 	ps.mu.RLock()
