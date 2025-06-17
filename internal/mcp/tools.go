@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aykay76/projectflow/internal/models"
@@ -39,6 +40,16 @@ func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 		result, callErr = s.handleDeleteTask(toolCallReq.Arguments)
 	case "get_task_hierarchy":
 		result, callErr = s.handleGetTaskHierarchy(toolCallReq.Arguments)
+	case "list_projects":
+		result, callErr = s.handleListProjects(toolCallReq.Arguments)
+	case "create_project":
+		result, callErr = s.handleCreateProject(toolCallReq.Arguments)
+	case "get_project":
+		result, callErr = s.handleGetProject(toolCallReq.Arguments)
+	case "update_project":
+		result, callErr = s.handleUpdateProject(toolCallReq.Arguments)
+	case "delete_project":
+		result, callErr = s.handleDeleteProject(toolCallReq.Arguments)
 	default:
 		return s.createErrorResponse(request.ID, -32601, "Unknown tool", nil)
 	}
@@ -62,10 +73,10 @@ func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 
 // handleListTasks handles the list_tasks tool call
 func (s *MCPServer) handleListTasks(args map[string]interface{}) (ToolCallResult, error) {
-	// Get project_id from args, default to "PF" if not specified
-	projectID := "PF"
-	if pid, ok := args["project_id"].(string); ok && pid != "" {
-		projectID = pid
+	// project_id is now required
+	projectID, ok := args["project_id"].(string)
+	if !ok || projectID == "" {
+		return ToolCallResult{}, fmt.Errorf("project_id is required")
 	}
 
 	tasks, err := s.storage.ListTasks(projectID)
@@ -297,6 +308,144 @@ func (s *MCPServer) handleGetTaskHierarchy(args map[string]interface{}) (ToolCal
 		Content: []Content{{
 			Type: "text",
 			Text: fmt.Sprintf("Task hierarchy:\n\n%s", string(hierarchyJSON)),
+		}},
+	}, nil
+}
+
+// handleListProjects handles the list_projects tool call
+func (s *MCPServer) handleListProjects(args map[string]interface{}) (ToolCallResult, error) {
+	projects, err := s.storage.ListProjects()
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	projectsJSON, err := json.MarshalIndent(projects, "", "  ")
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to marshal projects: %w", err)
+	}
+
+	return ToolCallResult{
+		Content: []Content{{
+			Type: "text",
+			Text: fmt.Sprintf("Found %d projects:\n\n%s", len(projects), string(projectsJSON)),
+		}},
+	}, nil
+}
+
+// handleCreateProject handles the create_project tool call
+func (s *MCPServer) handleCreateProject(args map[string]interface{}) (ToolCallResult, error) {
+	name, ok := args["name"].(string)
+	if !ok || name == "" {
+		return ToolCallResult{}, fmt.Errorf("name is required and must be a string")
+	}
+
+	description, _ := args["description"].(string)
+	prefix, _ := args["prefix"].(string)
+
+	// Default prefix if not provided
+	if prefix == "" {
+		prefix = strings.ToUpper(name[:2]) // Use first two letters of name as default
+	}
+
+	// Create new project
+	project := models.NewProject(name, description, prefix)
+
+	if err := s.storage.CreateProject(project); err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to create project: %w", err)
+	}
+
+	return ToolCallResult{
+		Content: []Content{{
+			Type: "text",
+			Text: fmt.Sprintf("Successfully created project: %s (ID: %s, Prefix: %s)", project.Name, project.ID, project.DisplayPrefix),
+		}},
+	}, nil
+}
+
+// handleGetProject handles the get_project tool call
+func (s *MCPServer) handleGetProject(args map[string]interface{}) (ToolCallResult, error) {
+	id, ok := args["id"].(string)
+	if !ok || id == "" {
+		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
+	}
+
+	project, err := s.storage.GetProject(id)
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
+	}
+
+	projectJSON, err := json.MarshalIndent(project, "", "  ")
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to marshal project: %w", err)
+	}
+
+	return ToolCallResult{
+		Content: []Content{{
+			Type: "text",
+			Text: fmt.Sprintf("Project details:\n\n%s", string(projectJSON)),
+		}},
+	}, nil
+}
+
+// handleUpdateProject handles the update_project tool call
+func (s *MCPServer) handleUpdateProject(args map[string]interface{}) (ToolCallResult, error) {
+	id, ok := args["id"].(string)
+	if !ok || id == "" {
+		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
+	}
+
+	// Get existing project
+	project, err := s.storage.GetProject(id)
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
+	}
+
+	// Update fields if provided
+	if name, ok := args["name"].(string); ok && name != "" {
+		project.Name = name
+	}
+	if description, ok := args["description"].(string); ok {
+		project.Description = description
+	}
+	if prefix, ok := args["prefix"].(string); ok {
+		project.DisplayPrefix = prefix
+	}
+
+	project.UpdatedAt = time.Now()
+
+	if err := s.storage.UpdateProject(project); err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to update project: %w", err)
+	}
+
+	return ToolCallResult{
+		Content: []Content{{
+			Type: "text",
+			Text: fmt.Sprintf("Successfully updated project: %s (ID: %s)", project.Name, project.ID),
+		}},
+	}, nil
+}
+
+// handleDeleteProject handles the delete_project tool call
+func (s *MCPServer) handleDeleteProject(args map[string]interface{}) (ToolCallResult, error) {
+	id, ok := args["id"].(string)
+	if !ok || id == "" {
+		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
+	}
+
+	// Get project details before deletion for confirmation message
+	project, err := s.storage.GetProject(id)
+	if err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
+	}
+
+	if err := s.storage.DeleteProject(id); err != nil {
+		return ToolCallResult{}, fmt.Errorf("failed to delete project: %w", err)
+	}
+
+	return ToolCallResult{
+		Content: []Content{{
+			Type: "text",
+			Text: fmt.Sprintf("Successfully deleted project: %s (ID: %s)", project.Name, project.ID),
 		}},
 	}, nil
 }

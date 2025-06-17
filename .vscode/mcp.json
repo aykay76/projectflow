@@ -4,7 +4,7 @@
             "command": "${workspaceFolder}/build/mcp-server",
             "args": [],
             "env": {
-                "STORAGE_DIR": "${workspaceFolder}/data"
+                "DATA_DIR": "${workspaceFolder}/data"
             }
         }
     }

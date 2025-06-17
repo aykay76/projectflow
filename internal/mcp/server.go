@@ -115,10 +115,10 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 				"properties": map[string]interface{}{
 					"project_id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to list tasks from (defaults to 'PF' if not specified)",
+						"description": "The ID of the project to list tasks from (required)",
 					},
 				},
-				"required": []string{},
+				"required": []string{"project_id"},
 			},
 		},
 		{
@@ -242,6 +242,91 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 				"type":       "object",
 				"properties": map[string]interface{}{},
 				"required":   []string{},
+			},
+		},
+		{
+			Name:        "list_projects",
+			Description: "List all available projects",
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+				"required":   []string{},
+			},
+		},
+		{
+			Name:        "create_project",
+			Description: "Create a new project",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"name": map[string]interface{}{
+						"type":        "string",
+						"description": "The name of the project",
+					},
+					"description": map[string]interface{}{
+						"type":        "string",
+						"description": "The description of the project",
+					},
+					"prefix": map[string]interface{}{
+						"type":        "string",
+						"description": "The prefix for task display IDs (e.g., 'PF', 'WEB')",
+					},
+				},
+				"required": []string{"name"},
+			},
+		},
+		{
+			Name:        "get_project",
+			Description: "Get details of a specific project by ID",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "The ID of the project to retrieve",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+		{
+			Name:        "update_project",
+			Description: "Update an existing project",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "The ID of the project to update",
+					},
+					"name": map[string]interface{}{
+						"type":        "string",
+						"description": "The name of the project",
+					},
+					"description": map[string]interface{}{
+						"type":        "string",
+						"description": "The description of the project",
+					},
+					"prefix": map[string]interface{}{
+						"type":        "string",
+						"description": "The prefix for task display IDs",
+					},
+				},
+				"required": []string{"id"},
+			},
+		},
+		{
+			Name:        "delete_project",
+			Description: "Delete a project by ID",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "The ID of the project to delete",
+					},
+				},
+				"required": []string{"id"},
 			},
 		},
 	}
