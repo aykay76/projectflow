@@ -109,11 +109,16 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 	tools := []Tool{
 		{
 			Name:        "list_tasks",
-			Description: "List all tasks in the project",
+			Description: "List tasks in the project",
 			InputSchema: map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-				"required":   []string{},
+				"type": "object",
+				"properties": map[string]interface{}{
+					"project_id": map[string]interface{}{
+						"type":        "string",
+						"description": "The ID of the project to list tasks from (defaults to 'PF' if not specified)",
+					},
+				},
+				"required": []string{},
 			},
 		},
 		{

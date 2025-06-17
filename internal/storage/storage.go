@@ -12,7 +12,7 @@ type Storage interface {
 	GetTaskByDisplayID(displayID string) (*models.Task, error)
 	UpdateTask(task *models.Task) error
 	DeleteTask(id string) error
-	ListTasks() ([]*models.Task, error)
+	ListTasks(projectID string) ([]*models.Task, error)
 
 	// Hierarchy operations
 	GetTaskChildren(parentID string) ([]*models.Task, error)

@@ -58,7 +58,8 @@ func (h *Handler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := h.storage.ListTasks()
+	// Default to showing tasks from the "PF" project
+	tasks, err := h.storage.ListTasks("PF")
 	if err != nil {
 		http.Error(w, "Failed to load tasks", http.StatusInternalServerError)
 		return
@@ -136,7 +137,13 @@ func (h *Handler) HandleTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.storage.ListTasks()
+	// Get project_id from query parameters, default to "PF"
+	projectID := r.URL.Query().Get("project_id")
+	if projectID == "" {
+		projectID = "PF"
+	}
+	
+	tasks, err := h.storage.ListTasks(projectID)
 	if err != nil {
 		http.Error(w, "Failed to list tasks", http.StatusInternalServerError)
 		return

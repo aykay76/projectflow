@@ -38,7 +38,12 @@ func TestFileStorage_CreateTask(t *testing.T) {
 		t.Error("CreateTask() should assign task to default project")
 	}
 	
-	filePath := filepath.Join(tempDir, "projects", task.ProjectID, "tasks", task.ID+".json")
+	// Task should be saved with display ID as filename if available
+	filename := task.ID + ".json"
+	if task.DisplayID != "" {
+		filename = task.DisplayID + ".json"
+	}
+	filePath := filepath.Join(tempDir, "projects", task.ProjectID, "tasks", filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Error("CreateTask() should create file on disk")
 	}
@@ -240,8 +245,14 @@ func TestFileStorage_ListTasks(t *testing.T) {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
-	// List tasks
-	tasks, err := storage.ListTasks()
+	// List tasks from the default project
+	// Tasks created without project ID are assigned to the default project
+	defaultProject, err := storage.getOrCreateDefaultProjectUnsafe()
+	if err != nil {
+		t.Fatalf("Failed to get default project: %v", err)
+	}
+	
+	tasks, err := storage.ListTasks(defaultProject.ID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)
 	}

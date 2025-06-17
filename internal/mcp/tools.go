@@ -62,9 +62,15 @@ func (s *MCPServer) handleToolsCall(request JSONRPCRequest) JSONRPCResponse {
 
 // handleListTasks handles the list_tasks tool call
 func (s *MCPServer) handleListTasks(args map[string]interface{}) (ToolCallResult, error) {
-	tasks, err := s.storage.ListTasks()
+	// Get project_id from args, default to "PF" if not specified
+	projectID := "PF"
+	if pid, ok := args["project_id"].(string); ok && pid != "" {
+		projectID = pid
+	}
+
+	tasks, err := s.storage.ListTasks(projectID)
 	if err != nil {
-		return ToolCallResult{}, fmt.Errorf("failed to list tasks: %w", err)
+		return ToolCallResult{}, fmt.Errorf("failed to list tasks for project %s: %w", projectID, err)
 	}
 
 	tasksJSON, err := json.MarshalIndent(tasks, "", "  ")
@@ -75,7 +81,7 @@ func (s *MCPServer) handleListTasks(args map[string]interface{}) (ToolCallResult
 	return ToolCallResult{
 		Content: []Content{{
 			Type: "text",
-			Text: fmt.Sprintf("Found %d tasks:\n\n%s", len(tasks), string(tasksJSON)),
+			Text: fmt.Sprintf("Found %d tasks in project %s:\n\n%s", len(tasks), projectID, string(tasksJSON)),
 		}},
 	}, nil
 }

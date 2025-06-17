@@ -3,6 +3,8 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/aykay76/projectflow/internal/models"
 )
 
 // handleResourcesList handles the resources/list request
@@ -84,12 +86,23 @@ func (s *MCPServer) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse 
 
 // readTasksResource reads the tasks resource
 func (s *MCPServer) readTasksResource() ([]Content, error) {
-	tasks, err := s.storage.ListTasks()
+	// Get all projects first
+	projects, err := s.storage.ListProjects()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tasks: %w", err)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
 
-	tasksJSON, err := json.MarshalIndent(tasks, "", "  ")
+	// Get tasks from all projects
+	var allTasks []*models.Task
+	for _, project := range projects {
+		tasks, err := s.storage.ListTasks(project.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list tasks for project %s: %w", project.ID, err)
+		}
+		allTasks = append(allTasks, tasks...)
+	}
+
+	tasksJSON, err := json.MarshalIndent(allTasks, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal tasks: %w", err)
 	}
@@ -120,14 +133,25 @@ func (s *MCPServer) readHierarchyResource() ([]Content, error) {
 
 // readSummaryResource reads the summary resource
 func (s *MCPServer) readSummaryResource() ([]Content, error) {
-	tasks, err := s.storage.ListTasks()
+	// Get all projects first
+	projects, err := s.storage.ListProjects()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tasks: %w", err)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	// Get tasks from all projects
+	var allTasks []*models.Task
+	for _, project := range projects {
+		tasks, err := s.storage.ListTasks(project.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list tasks for project %s: %w", project.ID, err)
+		}
+		allTasks = append(allTasks, tasks...)
 	}
 
 	// Calculate statistics
 	stats := map[string]int{
-		"total":       len(tasks),
+		"total":       len(allTasks),
 		"todo":        0,
 		"in_progress": 0,
 		"done":        0,
@@ -143,7 +167,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 		"overdue":     0,
 	}
 
-	for _, task := range tasks {
+	for _, task := range allTasks {
 		// Count by status
 		switch task.Status {
 		case "todo":

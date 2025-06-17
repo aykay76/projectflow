@@ -280,8 +280,9 @@ func TestPostgresStorage_ListTasks(t *testing.T) {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
-	// List tasks
-	tasks, err := storage.ListTasks()
+	// List tasks - since tasks are created without project ID, they get assigned to default project
+	// For postgres tests, we'll use the project ID that the tasks were assigned
+	tasks, err := storage.ListTasks(task1.ProjectID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)
 	}
@@ -605,7 +606,7 @@ func TestPostgresStorage_TransactionRollback(t *testing.T) {
 	}
 
 	// Verify the task was not created (transaction rolled back)
-	tasks, err := storage.ListTasks()
+	tasks, err := storage.ListTasks(parentTask.ProjectID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)
 	}
@@ -650,12 +651,19 @@ func TestPostgresStorage_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Verify all tasks were created
-	tasks, err := storage.ListTasks()
+	// Create a dummy task to get the default project ID
+	dummyTask := models.NewTask("Dummy", "Dummy")
+	err := storage.CreateTask(dummyTask)
+	if err != nil {
+		t.Fatalf("Failed to create dummy task: %v", err)
+	}
+	
+	tasks, err := storage.ListTasks(dummyTask.ProjectID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)
 	}
 
-	expectedCount := numGoroutines * tasksPerGoroutine
+	expectedCount := numGoroutines*tasksPerGoroutine + 1 // +1 for dummy task
 	if len(tasks) != expectedCount {
 		t.Errorf("Expected %d tasks, got %d", expectedCount, len(tasks))
 	}

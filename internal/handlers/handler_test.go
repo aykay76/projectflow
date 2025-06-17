@@ -99,7 +99,7 @@ func (m *mockStorage) DeleteTask(id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListTasks() ([]*models.Task, error) {
+func (m *mockStorage) ListTasks(projectID string) ([]*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -107,9 +107,12 @@ func (m *mockStorage) ListTasks() ([]*models.Task, error) {
 
 	tasks := make([]*models.Task, 0, len(m.tasks))
 	for _, task := range m.tasks {
-		// Return copies to avoid mutation
-		taskCopy := *task
-		tasks = append(tasks, &taskCopy)
+		// Filter by project ID if specified, otherwise include all tasks
+		if projectID == "" || task.ProjectID == projectID {
+			// Return copies to avoid mutation
+			taskCopy := *task
+			tasks = append(tasks, &taskCopy)
+		}
 	}
 	return tasks, nil
 }

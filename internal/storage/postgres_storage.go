@@ -367,16 +367,21 @@ func (ps *PostgresStorage) DeleteTask(id string) error {
 	return tx.Commit()
 }
 
-// ListTasks returns all tasks
-func (ps *PostgresStorage) ListTasks() ([]*models.Task, error) {
+// ListTasks returns tasks for a specific project
+func (ps *PostgresStorage) ListTasks(projectID string) ([]*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
+	// If no projectID specified, return empty list
+	if projectID == "" {
+		return []*models.Task{}, nil
+	}
+
 	querySQL := `
 		SELECT id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
-		FROM tasks ORDER BY created_at DESC`
+		FROM tasks WHERE project_id = $1 ORDER BY created_at DESC`
 
-	rows, err := ps.db.Query(querySQL)
+	rows, err := ps.db.Query(querySQL, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}

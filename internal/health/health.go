@@ -93,8 +93,8 @@ func (h *HealthChecker) checkStorage() Check {
 		Name: "storage",
 	}
 
-	// Try to list tasks to verify storage is working
-	_, err := h.storage.ListTasks()
+	// Try to list tasks to verify storage is working (use default project "PF")
+	_, err := h.storage.ListTasks("PF")
 	if err != nil {
 		check.Status = "unhealthy"
 		check.Error = err.Error()
