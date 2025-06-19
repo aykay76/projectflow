@@ -1,3 +1,6 @@
+// Import utilities
+import { escapeHtml as escapeHtmlUtil, formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, debounce as debounceUtil } from './utils-safe.js';
+
 // Application state
 let currentEditingTask = null;
 let currentView = 'kanban';
@@ -2759,17 +2762,8 @@ function updateOverdueIndicators() {
 }
 
 // Utility Functions
-function escapeHtml(text) {
-    if (!text) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-}
+// Use imported escapeHtml function
+const escapeHtml = escapeHtmlUtil;
 
 // Project Event System
 function addEventListener(eventType, callback) {
