@@ -115,7 +115,7 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 				"properties": map[string]interface{}{
 					"project_id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to list tasks from (required)",
+						"description": "The display prefix of the project to list tasks from (required)",
 					},
 				},
 				"required": []string{"project_id"},
@@ -137,7 +137,7 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 					},
 					"project_id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to create the task in (optional, defaults to default project)",
+						"description": "The display prefix of the project to create the task in (optional, defaults to default project)",
 					},
 					"status": map[string]interface{}{
 						"type":        "string",
@@ -281,13 +281,13 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 		},
 		{
 			Name:        "get_project",
-			Description: "Get details of a specific project by ID",
+			Description: "Get details of a specific project by display prefix",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to retrieve",
+						"description": "The display prefix of the project to retrieve",
 					},
 				},
 				"required": []string{"id"},
@@ -301,7 +301,7 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 				"properties": map[string]interface{}{
 					"id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to update",
+						"description": "The display prefix of the project to update",
 					},
 					"name": map[string]interface{}{
 						"type":        "string",
@@ -321,13 +321,13 @@ func (s *MCPServer) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 		},
 		{
 			Name:        "delete_project",
-			Description: "Delete a project by ID",
+			Description: "Delete a project by display prefix",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"id": map[string]interface{}{
 						"type":        "string",
-						"description": "The ID of the project to delete",
+						"description": "The display prefix of the project to delete",
 					},
 				},
 				"required": []string{"id"},
