@@ -1,12 +1,17 @@
 // Import utilities
 import { escapeHtml as escapeHtmlUtil, formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, debounce as debounceUtil } from './utils-safe.js';
 import { showMessage as showMessageUtil, showLoadingOverlay as showLoadingOverlayUtil, hideLoadingOverlay as hideLoadingOverlayUtil } from './notifications.js';
+import { initializeTheme as initializeThemeUtil, toggleTheme as toggleThemeUtil, updateThemeIcon as updateThemeIconUtil, getCurrentTheme } from './theme-manager.js';
 
 // Application state
 let currentEditingTask = null;
 let currentView = 'kanban';
 let hierarchyData = [];
-let currentTheme = localStorage.getItem('theme') || 'light';
+
+// Imported theme functions
+const initializeTheme = initializeThemeUtil;
+const toggleTheme = toggleThemeUtil;
+const updateThemeIcon = updateThemeIconUtil;
 
 // Project management state
 let currentProject = null;
@@ -322,40 +327,6 @@ function initializeTimelineControls() {
 }
 
 // Theme Management
-function initializeTheme() {
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = document.getElementById('theme-icon');
-    
-    // Apply saved theme
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    updateThemeIcon();
-    
-    // Theme toggle event listener
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
-    }
-}
-
-function toggleTheme() {
-    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('theme', currentTheme);
-    updateThemeIcon();
-    
-    // Add a subtle animation to indicate theme change
-    document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-    setTimeout(() => {
-        document.body.style.transition = '';
-    }, 300);
-}
-
-function updateThemeIcon() {
-    const themeIcon = document.getElementById('theme-icon');
-    if (themeIcon) {
-        themeIcon.textContent = currentTheme === 'light' ? '🌙' : '☀️';
-    }
-}
-
 // Project Management System
 function initializeProjectManagement() {
     console.log('Initializing project management system');
