@@ -1,17 +1,8 @@
-// Import utilities
-import { escapeHtml as escapeHtmlUtil, formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, debounce as debounceUtil } from './utils-safe.js';
-import { showMessage as showMessageUtil, showLoadingOverlay as showLoadingOverlayUtil, hideLoadingOverlay as hideLoadingOverlayUtil } from './notifications.js';
-import { initializeTheme as initializeThemeUtil, toggleTheme as toggleThemeUtil, updateThemeIcon as updateThemeIconUtil, getCurrentTheme } from './theme-manager.js';
-
 // Application state
 let currentEditingTask = null;
 let currentView = 'kanban';
 let hierarchyData = [];
-
-// Imported theme functions
-const initializeTheme = initializeThemeUtil;
-const toggleTheme = toggleThemeUtil;
-const updateThemeIcon = updateThemeIconUtil;
+let currentTheme = localStorage.getItem('theme') || 'light';
 
 // Project management state
 let currentProject = null;
@@ -327,6 +318,40 @@ function initializeTimelineControls() {
 }
 
 // Theme Management
+function initializeTheme() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    updateThemeIcon();
+    
+    // Theme toggle event listener
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+}
+
+function toggleTheme() {
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('theme', currentTheme);
+    updateThemeIcon();
+    
+    // Add a subtle animation to indicate theme change
+    document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+    setTimeout(() => {
+        document.body.style.transition = '';
+    }, 300);
+}
+
+function updateThemeIcon() {
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = currentTheme === 'light' ? '🌙' : '☀️';
+    }
+}
+
 // Project Management System
 function initializeProjectManagement() {
     console.log('Initializing project management system');
@@ -709,9 +734,26 @@ function initializeDragAndDrop() {
     });
 }
 
-// Use imported date formatting functions
-const formatDate = formatDateUtil;
-const formatDateTime = formatDateTimeUtil;
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
 
 function showCreateProjectModal() {
     const modal = document.getElementById('project-modal');
@@ -1672,10 +1714,72 @@ function showKeyboardShortcuts() {
 }
 
 // Enhanced message system with toast notifications
-// Use imported notification functions
-const showMessage = showMessageUtil;
-const showLoadingOverlay = showLoadingOverlayUtil;
-const hideLoadingOverlay = hideLoadingOverlayUtil;
+function showMessage(text, type = 'info', duration = 4000) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${text}</span>
+            <button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.animation = 'toastSlideOut 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    }
+}
+
+// Loading overlay functionality
+function showLoadingOverlay(message = 'Loading...') {
+    let overlay = document.querySelector('.loading-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <div class="loading-text">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    
+    overlay.querySelector('.loading-text').textContent = message;
+    overlay.classList.add('show');
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+}
 
 // Context menu functionality
 let contextMenu = null;
@@ -1983,8 +2087,17 @@ document.addEventListener('dragend', (event) => {
 });
 
 // Utility functions
-// Use imported debounce function
-const debounce = debounceUtil;
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
 // Auto-save form data
 function initializeAutoSave() {
@@ -2646,8 +2759,17 @@ function updateOverdueIndicators() {
 }
 
 // Utility Functions
-// Use imported escapeHtml function
-const escapeHtml = escapeHtmlUtil;
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
 
 // Project Event System
 function addEventListener(eventType, callback) {
