@@ -408,13 +408,6 @@ function initializeProjectManagement() {
         });
     }
     
-    // Set up periodic project validation (every 30 seconds)
-    setInterval(() => {
-        if (currentProject) {
-            ProjectManager.validateCurrentProject();
-        }
-    }, 30000);
-    
     // Set up project event listeners for debugging
     addEventListener('project-changed', (data) => {
         console.log('Project changed:', data.newProject.name);
@@ -632,30 +625,16 @@ async function loadTasks(projectId = null) {
         
         console.log(`Loading tasks for project: ${currentProjectId}`);
         
-        // Load all tasks and filter client-side by project_id
-        const response = await fetch('/api/tasks');
+        // Load tasks with project_id parameter to avoid defaulting to "PF"
+        const response = await fetch(`/api/tasks?project_id=${encodeURIComponent(currentProjectId)}`);
         if (!response.ok) {
             throw new Error(`Failed to load tasks: ${response.status}`);
         }
         
-        const allTasks = await response.json();
+        const tasks = await response.json();
         
-        // Get the default project from the available projects
-        const isDefaultProject = currentProject && currentProject.name === 'Default Project';
-        
-        // Filter tasks by project_id
-        const filteredTasks = allTasks.filter(task => {
-            if (task.project_id) {
-                // Task has explicit project assignment
-                return task.project_id === currentProjectId;
-            } else {
-                // Task has no project_id - belongs to default project only
-                return isDefaultProject;
-            }
-        });
-        
-        console.log(`Loaded ${filteredTasks.length} tasks (filtered from ${allTasks.length} total) for project ${currentProject?.name || 'Unknown'}`);
-        return filteredTasks;
+        console.log(`Loaded ${tasks.length} tasks for project ${currentProject?.name || 'Unknown'}`);
+        return tasks;
         
     } catch (error) {
         console.error('Error loading tasks:', error);
@@ -2253,6 +2232,7 @@ function initializeMobileEnhancements() {
     document.addEventListener('touchmove', (e) => {
         if (!startX || !startY) return;
         
+        
         const card = e.target.closest('.task-card');
         if (!card) return;
 
@@ -2887,7 +2867,7 @@ const ProjectManager = {
             });
             
             if (!response.ok) {
-                throw new Error(`Failed to delete project: ${response.status}`);
+                throw new Error('Failed to delete project');
             }
             
             // Remove from local cache
@@ -2952,21 +2932,41 @@ const ProjectManager = {
         }
     },
     
-    // Validate project health (check if current project still exists)
+    // Validate current project on-demand (only when user performs actions)
+    async validateOnDemand() {
+        if (!currentProject) {
+            await this.handleInitialProjectSetup();
+            return false;
+        }
+        
+        return await this.validateCurrentProject();
+    },
+
     async validateCurrentProject() {
-        if (!currentProject) return false;
+        if (!currentProject) {
+            console.warn('No current project to validate');
+            return false;
+        }
         
         try {
             const response = await fetch(`/api/projects/${currentProject.id}`);
             if (!response.ok) {
-                console.warn('Current project no longer exists, switching to default');
-                await handleInitialProjectSetup();
-                return false;
+                // Only handle actual 404s (project deleted), not other HTTP errors
+                if (response.status === 404) {
+                    console.warn('Current project no longer exists, switching to default');
+                    await handleInitialProjectSetup();
+                    return false;
+                } else {
+                    // For other errors (500, network issues, etc.), just log and continue
+                    console.warn(`Project validation failed with status ${response.status}, but continuing with current project`);
+                    return true;
+                }
             }
             return true;
         } catch (error) {
-            console.error('Error validating current project:', error);
-            return false;
+            // Network errors, etc. - don't switch projects, just log
+            console.warn('Error validating current project (network/connectivity issue):', error.message);
+            return true; // Assume project is still valid, network might be temporarily down
         }
     }
 };
