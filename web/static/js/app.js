@@ -737,26 +737,9 @@ function initializeDragAndDrop() {
     });
 }
 
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
-}
-
-function formatDateTime(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+// Use imported date formatting functions
+const formatDate = formatDateUtil;
+const formatDateTime = formatDateTimeUtil;
 
 function showCreateProjectModal() {
     const modal = document.getElementById('project-modal');
@@ -2090,17 +2073,8 @@ document.addEventListener('dragend', (event) => {
 });
 
 // Utility functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+// Use imported debounce function
+const debounce = debounceUtil;
 
 // Auto-save form data
 function initializeAutoSave() {
