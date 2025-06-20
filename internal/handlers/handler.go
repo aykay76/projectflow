@@ -173,6 +173,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 		Priority    string `json:"priority"`
 		Type        string `json:"type"`
 		ParentID    string `json:"parent_id"`
+		ProjectID   string `json:"project_id"`  // Add project_id field
 		DueDate     string `json:"due_date"`
 		StartedAt   string `json:"started_at"`
 	}
@@ -188,6 +189,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	task.Title = taskCreate.Title
 	task.Description = taskCreate.Description
 	task.ParentID = taskCreate.ParentID
+	task.ProjectID = taskCreate.ProjectID  // Set project_id from request
 
 	// Handle due_date
 	if taskCreate.DueDate != "" {

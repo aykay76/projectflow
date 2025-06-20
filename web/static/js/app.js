@@ -27,6 +27,37 @@ const projectEventListeners = {
 
 console.log('ProjectFlow app.js loaded - starting initialization');
 
+// Global fetch interceptor to prevent UUID project_id usage
+const originalFetch = window.fetch;
+window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('/api/tasks') && url.includes('project_id=')) {
+        const urlObj = new URL(url, window.location.origin);
+        const projectId = urlObj.searchParams.get('project_id');
+        
+        // Check if project_id looks like a UUID (contains dashes and is long)
+        if (projectId && projectId.includes('-') && projectId.length > 10) {
+            console.warn('INTERCEPTED: UUID project_id detected in API call:', projectId);
+            console.warn('Original URL:', url);
+            
+            // Replace with display_prefix if available
+            if (currentProject && currentProject.display_prefix) {
+                urlObj.searchParams.set('project_id', currentProject.display_prefix);
+                const newUrl = urlObj.toString();
+                console.log('CORRECTED URL:', newUrl);
+                return originalFetch.call(this, newUrl, options);
+            } else {
+                // If no current project, try to use "PF" as fallback
+                urlObj.searchParams.set('project_id', 'PF');
+                const newUrl = urlObj.toString();
+                console.log('FALLBACK URL:', newUrl);
+                return originalFetch.call(this, newUrl, options);
+            }
+        }
+    }
+    
+    return originalFetch.call(this, url, options);
+};
+
 // DOM elements
 let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
 let kanbanViewBtn, hierarchyViewBtn, timelineViewBtn;
