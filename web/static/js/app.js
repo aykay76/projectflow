@@ -73,7 +73,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     initializeTheme();
     initializeEventListeners();
-    initializeProjectManagement();
     initializeProjectModal();
     initializeTaskDetailModal();
     initializeTimelineControls();
@@ -88,11 +87,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateOverdueIndicators();
     updateTaskCounts();
     
-    // Load saved view preference
-    const savedView = localStorage.getItem('projectflow_current_view');
-    if (savedView && ['kanban', 'hierarchy', 'timeline'].includes(savedView)) {
-        switchToView(savedView);
-    }
+    // Initialize project management first, then load view
+    initializeProjectManagement();
+    
+    // Load saved view preference only after project management is initialized
+    // This will be called from initializeProjectManagement() after project is set
 });
 
 // View Management
@@ -362,7 +361,14 @@ function initializeProjectManagement() {
         
         // Load the initial view after project is set
         setTimeout(() => {
-            refreshCurrentView();
+            // Load saved view preference
+            const savedView = localStorage.getItem('projectflow_current_view');
+            if (savedView && ['kanban', 'hierarchy', 'timeline'].includes(savedView)) {
+                switchToView(savedView);
+            } else {
+                // Default to kanban view
+                switchToView('kanban');
+            }
         }, 100);
     });
     
@@ -598,7 +604,24 @@ async function loadTasks(projectPrefix = null) {
             return [];
         }
         
+        // SAFEGUARD: Ensure we're not sending a UUID instead of display_prefix
+        if (currentProjectPrefix.length > 10 || currentProjectPrefix.includes('-')) {
+            console.error('CRITICAL: Attempting to use UUID instead of display_prefix:', currentProjectPrefix);
+            console.error('Current project object:', currentProject);
+            showMessage('Project configuration error - using display prefix instead', 'warning');
+            
+            // Force use of display_prefix from current project
+            if (currentProject && currentProject.display_prefix) {
+                const correctedPrefix = currentProject.display_prefix;
+                console.log('Correcting to use display_prefix:', correctedPrefix);
+                return loadTasks(correctedPrefix);
+            }
+            return [];
+        }
+        
         console.log(`Loading tasks for project: ${currentProjectPrefix}`);
+        console.log('DEBUG: currentProject object:', currentProject);
+        console.log('DEBUG: projectPrefix parameter:', projectPrefix);
         
         // Load tasks with project_id parameter using display prefix
         const response = await fetch(`/api/tasks?project_id=${encodeURIComponent(currentProjectPrefix)}`);
@@ -1367,6 +1390,9 @@ async function handleTaskSubmit(event) {
         started_at: formData.get('started_at') ? new Date(formData.get('started_at')).toISOString() : null,
         project_id: currentProject.display_prefix  // Add project context to task using display prefix
     };
+    
+    console.log('DEBUG: Task data being sent:', taskData);
+    console.log('DEBUG: Current project object:', currentProject);
 
     try {
         let response;

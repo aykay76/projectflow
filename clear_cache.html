@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Cache</title>
+</head>
+<body>
+    <h1>Clear ProjectFlow Cache</h1>
+    <button onclick="clearCache()">Clear All LocalStorage</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearCache() {
+            localStorage.clear();
+            document.getElementById('result').innerHTML = 'Cache cleared!';
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        }
+        
+        // Show current cache
+        document.addEventListener('DOMContentLoaded', () => {
+            const cache = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                cache[key] = localStorage.getItem(key);
+            }
+            console.log('Current localStorage:', cache);
+        });
+    </script>
+</body>
+</html>
