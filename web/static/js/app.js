@@ -2749,10 +2749,10 @@ const ProjectManager = {
             }
             
             // Remove from local cache
-            availableProjects = availableProjects.filter(p => p.id !== projectId);
+            availableProjects = availableProjects.filter(p => p.display_prefix !== projectId);
             
             // If deleted project was current, switch to another
-            if (currentProject && currentProject.id === projectId) {
+            if (currentProject && currentProject.display_prefix === projectId) {
                 if (availableProjects.length > 0) {
                     setCurrentProject(availableProjects[0]);
                 } else {
@@ -2787,13 +2787,13 @@ const ProjectManager = {
             const updatedProject = await response.json();
             
             // Update local cache
-            const index = availableProjects.findIndex(p => p.id === projectId);
+            const index = availableProjects.findIndex(p => p.display_prefix === projectId);
             if (index > -1) {
                 availableProjects[index] = updatedProject;
             }
             
             // Update current project if it's the one being updated
-            if (currentProject && currentProject.id === projectId) {
+            if (currentProject && currentProject.display_prefix === projectId) {
                 currentProject = updatedProject;
                 updateCurrentProjectDisplay();
                 updateProjectSelectorButton();
@@ -2827,7 +2827,7 @@ const ProjectManager = {
         }
         
         try {
-            const response = await fetch(`/api/projects/${currentProject.id}`);
+            const response = await fetch(`/api/projects/${currentProject.display_prefix}`);
             if (!response.ok) {
                 // Only handle actual 404s (project deleted), not other HTTP errors
                 if (response.status === 404) {

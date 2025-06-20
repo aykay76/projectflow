@@ -137,18 +137,25 @@ func (h *Handler) HandleTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	requestID := middleware.GetRequestID(ctx)
+
 	// Get project_id from query parameters, default to "PF"
 	projectID := r.URL.Query().Get("project_id")
 	if projectID == "" {
 		projectID = "PF"
 	}
 
+	logger.InfoContext(ctx, "Listing tasks", "project_id", projectID, "request_id", requestID)
+
 	tasks, err := h.storage.ListTasks(projectID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to list tasks", "error", err, "project_id", projectID, "request_id", requestID)
 		http.Error(w, "Failed to list tasks", http.StatusInternalServerError)
 		return
 	}
 
+	logger.InfoContext(ctx, "Tasks loaded successfully", "count", len(tasks), "project_id", projectID, "request_id", requestID)
 	json.NewEncoder(w).Encode(tasks)
 }
 
