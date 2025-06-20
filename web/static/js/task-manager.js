@@ -336,4 +336,6 @@ class TaskManager {
     }
 }
 
+// Export both the class and singleton instance
+export { TaskManager };
 export const taskManager = new TaskManager();

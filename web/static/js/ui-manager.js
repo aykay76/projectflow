@@ -396,7 +396,5 @@ class UIManager {
     }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = UIManager;
-}
+// Export using ES6 module syntax
+export { UIManager };
