@@ -70,12 +70,12 @@ For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postg
 
 1. Build the image:
    ```bash
-   docker build -t projectflow .
+   podman build -t projectflow .
    ```
 
 2. Run the container:
    ```bash
-   docker run -p 8081:8081 -v $(pwd)/data:/app/data projectflow
+   podman run -p 8081:8081 -v $(pwd)/data:/app/data projectflow
    ```
 
 ## API Documentation

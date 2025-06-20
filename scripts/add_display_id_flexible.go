@@ -1,3 +1,7 @@
+// DEPRECATED: This script was used to migrate tasks to use display_prefix instead of UUIDs.
+// The migration has been completed successfully. All tasks now use display_prefix format (e.g., PF-1, PF-2).
+// This file is kept for historical reference only.
+
 package main
 
 import (

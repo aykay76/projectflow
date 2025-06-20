@@ -49,7 +49,7 @@ func TestFileStorage_CreateTask(t *testing.T) {
 	if task.DisplayID != "" {
 		filename = task.DisplayID + ".json"
 	}
-	filePath := filepath.Join(tempDir, "projects", project.DisplayPrefix, filename)
+	filePath := filepath.Join(tempDir, "projects", project.DisplayPrefix, "tasks", filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Error("CreateTask() should create file on disk")
 	}
@@ -366,7 +366,7 @@ func TestFileStorage_CreateProject(t *testing.T) {
 	}
 
 	// Verify file was created
-	filePath := filepath.Join(tempDir, "projects", project.ID+".json")
+	filePath := filepath.Join(tempDir, "projects", project.DisplayPrefix+".json")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Error("CreateProject() should create file on disk")
 	}
@@ -488,7 +488,7 @@ func TestFileStorage_DeleteProject(t *testing.T) {
 	}
 
 	// Verify file was deleted
-	filePath := filepath.Join(tempDir, "projects", project.ID+".json")
+	filePath := filepath.Join(tempDir, "projects", project.DisplayPrefix+".json")
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		t.Error("DeleteProject() should remove file from disk")
 	}

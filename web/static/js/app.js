@@ -27,6 +27,37 @@ const projectEventListeners = {
 
 console.log('ProjectFlow app.js loaded - starting initialization');
 
+// Global fetch interceptor to prevent UUID project_id usage
+const originalFetch = window.fetch;
+window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('/api/tasks') && url.includes('project_id=')) {
+        const urlObj = new URL(url, window.location.origin);
+        const projectId = urlObj.searchParams.get('project_id');
+        
+        // Check if project_id looks like a UUID (contains dashes and is long)
+        if (projectId && projectId.includes('-') && projectId.length > 10) {
+            console.warn('INTERCEPTED: UUID project_id detected in API call:', projectId);
+            console.warn('Original URL:', url);
+            
+            // Replace with display_prefix if available
+            if (currentProject && currentProject.display_prefix) {
+                urlObj.searchParams.set('project_id', currentProject.display_prefix);
+                const newUrl = urlObj.toString();
+                console.log('CORRECTED URL:', newUrl);
+                return originalFetch.call(this, newUrl, options);
+            } else {
+                // If no current project, try to use "PF" as fallback
+                urlObj.searchParams.set('project_id', 'PF');
+                const newUrl = urlObj.toString();
+                console.log('FALLBACK URL:', newUrl);
+                return originalFetch.call(this, newUrl, options);
+            }
+        }
+    }
+    
+    return originalFetch.call(this, url, options);
+};
+
 // DOM elements
 let modal, modalTitle, taskForm, newTaskBtn, cancelBtn, closeBtn;
 let kanbanViewBtn, hierarchyViewBtn, timelineViewBtn;
@@ -73,7 +104,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     initializeTheme();
     initializeEventListeners();
-    initializeProjectManagement();
     initializeProjectModal();
     initializeTaskDetailModal();
     initializeTimelineControls();
@@ -88,11 +118,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateOverdueIndicators();
     updateTaskCounts();
     
-    // Load saved view preference
-    const savedView = localStorage.getItem('projectflow_current_view');
-    if (savedView && ['kanban', 'hierarchy', 'timeline'].includes(savedView)) {
-        switchToView(savedView);
-    }
+    // Initialize project management first, then load view
+    initializeProjectManagement();
+    
+    // Load saved view preference only after project management is initialized
+    // This will be called from initializeProjectManagement() after project is set
 });
 
 // View Management
@@ -332,7 +362,7 @@ function initializeProjectManagement() {
     console.log('Initializing project management system');
     
     // Load saved project preference
-    const savedProjectId = localStorage.getItem('projectflow_current_project');
+    const savedProjectPrefix = localStorage.getItem('projectflow_current_project');
     
     // Initialize project selector event listeners
     if (projectSelector) {
@@ -348,8 +378,8 @@ function initializeProjectManagement() {
     
     // Load projects and set current project
     loadAvailableProjects().then(() => {
-        if (savedProjectId) {
-            const savedProject = availableProjects.find(p => p.id === savedProjectId);
+        if (savedProjectPrefix) {
+            const savedProject = availableProjects.find(p => p.display_prefix === savedProjectPrefix);
             if (savedProject) {
                 setCurrentProject(savedProject);
             } else {
@@ -362,7 +392,14 @@ function initializeProjectManagement() {
         
         // Load the initial view after project is set
         setTimeout(() => {
-            refreshCurrentView();
+            // Load saved view preference
+            const savedView = localStorage.getItem('projectflow_current_view');
+            if (savedView && ['kanban', 'hierarchy', 'timeline'].includes(savedView)) {
+                switchToView(savedView);
+            } else {
+                // Default to kanban view
+                switchToView('kanban');
+            }
         }, 100);
     });
     
@@ -440,8 +477,8 @@ function updateProjectDropdown() {
     }
     
     projectList.innerHTML = availableProjects.map(project => `
-        <div class="project-item ${currentProject && currentProject.id === project.id ? 'selected' : ''}" 
-             data-project-id="${project.id}">
+        <div class="project-item ${currentProject && currentProject.display_prefix === project.display_prefix ? 'selected' : ''}" 
+             data-project-id="${project.display_prefix}">
             <div class="project-item-name">${escapeHtml(project.name)}</div>
             <div class="project-item-description">${escapeHtml(project.description || 'No description')}</div>
         </div>
@@ -450,8 +487,8 @@ function updateProjectDropdown() {
     // Add click handlers for project items
     projectList.querySelectorAll('.project-item').forEach(item => {
         item.addEventListener('click', () => {
-            const projectId = item.dataset.projectId;
-            const project = availableProjects.find(p => p.id === projectId);
+            const projectPrefix = item.dataset.projectId;
+            const project = availableProjects.find(p => p.display_prefix === projectPrefix);
             if (project) {
                 setCurrentProject(project);
                 closeProjectDropdown();
@@ -469,8 +506,8 @@ function setCurrentProject(project) {
     updateCurrentProjectDisplay();
     updateProjectSelectorButton();
     
-    // Save to localStorage
-    localStorage.setItem('projectflow_current_project', project.id);
+    // Save to localStorage using display_prefix instead of id
+    localStorage.setItem('projectflow_current_project', project.display_prefix);
     
     // Dispatch project change event
     dispatchProjectEvent('project-changed', { 
@@ -590,18 +627,35 @@ function refreshCurrentView() {
 }
 
 // Centralized task loading function with project context
-async function loadTasks(projectId = null) {
+async function loadTasks(projectPrefix = null) {
     try {
-        const currentProjectId = projectId || (currentProject ? currentProject.id : null);
-        if (!currentProjectId) {
+        const currentProjectPrefix = projectPrefix || (currentProject ? currentProject.display_prefix : null);
+        if (!currentProjectPrefix) {
             console.warn('No project selected for loading tasks');
             return [];
         }
         
-        console.log(`Loading tasks for project: ${currentProjectId}`);
+        // SAFEGUARD: Ensure we're not sending a UUID instead of display_prefix
+        if (currentProjectPrefix.length > 10 || currentProjectPrefix.includes('-')) {
+            console.error('CRITICAL: Attempting to use UUID instead of display_prefix:', currentProjectPrefix);
+            console.error('Current project object:', currentProject);
+            showMessage('Project configuration error - using display prefix instead', 'warning');
+            
+            // Force use of display_prefix from current project
+            if (currentProject && currentProject.display_prefix) {
+                const correctedPrefix = currentProject.display_prefix;
+                console.log('Correcting to use display_prefix:', correctedPrefix);
+                return loadTasks(correctedPrefix);
+            }
+            return [];
+        }
         
-        // Load tasks with project_id parameter to avoid defaulting to "PF"
-        const response = await fetch(`/api/tasks?project_id=${encodeURIComponent(currentProjectId)}`);
+        console.log(`Loading tasks for project: ${currentProjectPrefix}`);
+        console.log('DEBUG: currentProject object:', currentProject);
+        console.log('DEBUG: projectPrefix parameter:', projectPrefix);
+        
+        // Load tasks with project_id parameter using display prefix
+        const response = await fetch(`/api/tasks?project_id=${encodeURIComponent(currentProjectPrefix)}`);
         if (!response.ok) {
             throw new Error(`Failed to load tasks: ${response.status}`);
         }
@@ -985,19 +1039,19 @@ function renderProjectList() {
     }
     
     container.innerHTML = availableProjects.map(project => `
-        <div class="project-item ${project.id === currentProject?.id ? 'current' : ''}" data-project-id="${project.id}">
+        <div class="project-item ${project.display_prefix === currentProject?.display_prefix ? 'current' : ''}" data-project-id="${project.display_prefix}">
             <div class="project-info">
                 <div class="project-name">
                     <span class="project-prefix">${escapeHtml(project.display_prefix)}</span>
                     ${escapeHtml(project.name)}
-                    ${project.id === currentProject?.id ? '<span style="color: var(--accent-primary); font-size: 0.8em; margin-left: 8px;">(Current)</span>' : ''}
+                    ${project.display_prefix === currentProject?.display_prefix ? '<span style="color: var(--accent-primary); font-size: 0.8em; margin-left: 8px;">(Current)</span>' : ''}
                 </div>
                 <p class="project-description">${escapeHtml(project.description || 'No description')}</p>
             </div>
             <div class="project-actions">
-                ${project.id !== currentProject?.id ? `<button class="btn btn-sm btn-primary" onclick="switchToProject('${project.id}')">Switch</button>` : ''}
-                <button class="btn btn-sm btn-secondary" onclick="editProject('${project.id}')">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="confirmDeleteProject('${project.id}', '${escapeHtml(project.name)}')">Delete</button>
+                ${project.display_prefix !== currentProject?.display_prefix ? `<button class="btn btn-sm btn-primary" onclick="switchToProject('${project.display_prefix}')">Switch</button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="editProject('${project.display_prefix}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="confirmDeleteProject('${project.display_prefix}', '${escapeHtml(project.name)}')">Delete</button>
             </div>
         </div>
     `).join('');
@@ -1015,8 +1069,8 @@ function handleProjectSearch(event) {
     });
 }
 
-async function switchToProject(projectId) {
-    const project = availableProjects.find(p => p.id === projectId);
+async function switchToProject(projectPrefix) {
+    const project = availableProjects.find(p => p.display_prefix === projectPrefix);
     if (project) {
         setCurrentProject(project);
         closeProjectModal();
@@ -1024,8 +1078,8 @@ async function switchToProject(projectId) {
     }
 }
 
-function editProject(projectId) {
-    const project = availableProjects.find(p => p.id === projectId);
+function editProject(projectPrefix) {
+    const project = availableProjects.find(p => p.display_prefix === projectPrefix);
     if (!project) return;
     
     // Switch to create project tab (which we'll use for editing)
@@ -1047,28 +1101,28 @@ function editProject(projectId) {
     clearProjectFormErrors();
 }
 
-function confirmDeleteProject(projectId, projectName) {
+function confirmDeleteProject(projectPrefix, projectName) {
     const deleteModal = document.getElementById('project-delete-modal');
     const nameSpan = document.getElementById('delete-project-name');
     const confirmBtn = document.getElementById('confirm-delete-btn');
     
     if (deleteModal && nameSpan && confirmBtn) {
         nameSpan.textContent = projectName;
-        confirmBtn.setAttribute('data-project-id', projectId);
+        confirmBtn.setAttribute('data-project-id', projectPrefix);
         deleteModal.style.display = 'block';
     }
 }
 
 async function handleProjectDelete() {
     const confirmBtn = document.getElementById('confirm-delete-btn');
-    const projectId = confirmBtn.getAttribute('data-project-id');
+    const projectPrefix = confirmBtn.getAttribute('data-project-id');
     
-    if (!projectId) return;
+    if (!projectPrefix) return;
     
     setButtonLoading(confirmBtn, true);
     
     try {
-        const response = await fetch(`/api/projects/${projectId}`, {
+        const response = await fetch(`/api/projects/${projectPrefix}`, {
             method: 'DELETE'
         });
         
@@ -1365,8 +1419,11 @@ async function handleTaskSubmit(event) {
         status: formData.get('status'),
         due_date: formData.get('due_date') || null,
         started_at: formData.get('started_at') ? new Date(formData.get('started_at')).toISOString() : null,
-        project_id: currentProject.id  // Add project context to task
+        project_id: currentProject.display_prefix  // Add project context to task using display prefix
     };
+    
+    console.log('DEBUG: Task data being sent:', taskData);
+    console.log('DEBUG: Current project object:', currentProject);
 
     try {
         let response;
@@ -2749,10 +2806,10 @@ const ProjectManager = {
             }
             
             // Remove from local cache
-            availableProjects = availableProjects.filter(p => p.id !== projectId);
+            availableProjects = availableProjects.filter(p => p.display_prefix !== projectId);
             
             // If deleted project was current, switch to another
-            if (currentProject && currentProject.id === projectId) {
+            if (currentProject && currentProject.display_prefix === projectId) {
                 if (availableProjects.length > 0) {
                     setCurrentProject(availableProjects[0]);
                 } else {
@@ -2787,13 +2844,13 @@ const ProjectManager = {
             const updatedProject = await response.json();
             
             // Update local cache
-            const index = availableProjects.findIndex(p => p.id === projectId);
+            const index = availableProjects.findIndex(p => p.display_prefix === projectId);
             if (index > -1) {
                 availableProjects[index] = updatedProject;
             }
             
             // Update current project if it's the one being updated
-            if (currentProject && currentProject.id === projectId) {
+            if (currentProject && currentProject.display_prefix === projectId) {
                 currentProject = updatedProject;
                 updateCurrentProjectDisplay();
                 updateProjectSelectorButton();
@@ -2827,7 +2884,7 @@ const ProjectManager = {
         }
         
         try {
-            const response = await fetch(`/api/projects/${currentProject.id}`);
+            const response = await fetch(`/api/projects/${currentProject.display_prefix}`);
             if (!response.ok) {
                 // Only handle actual 404s (project deleted), not other HTTP errors
                 if (response.status === 404) {

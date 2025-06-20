@@ -20,9 +20,8 @@ class TaskManager {
     }
 
     async loadTasks(projectId = null) {
-        try {
-            const currentProject = stateManager.getCurrentProject();
-            const targetProjectId = projectId || (currentProject ? currentProject.id : null);
+        try {        const currentProject = stateManager.getCurrentProject();
+        const targetProjectId = projectId || (currentProject ? currentProject.display_prefix : null);
             
             if (!targetProjectId) {
                 console.warn('No project selected for loading tasks');
@@ -50,7 +49,7 @@ class TaskManager {
         // Add project context to task
         const taskWithProject = {
             ...taskData,
-            project_id: currentProject.id
+            project_id: currentProject.display_prefix
         };
 
         try {
