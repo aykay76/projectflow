@@ -32,7 +32,7 @@ class ProjectFlowApp {
         this.dragDropManager = new DragDropManager(this.apiClient, this.stateManager);
         this.uiManager = new UIManager(this.stateManager, this.taskManager);
         this.filterManager = new FilterManager(this.stateManager);
-        this.viewManager = new ViewManager(this.stateManager, this.taskManager, this.projectManager);
+        this.viewManager = new ViewManager();
         
         // Store references globally for compatibility
         window.projectFlowApp = this;

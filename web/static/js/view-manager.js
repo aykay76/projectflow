@@ -46,8 +46,26 @@ class ViewManager {
             timelineBtn.addEventListener('click', () => this.switchToView('timeline'));
         }
 
-        // Set initial view
+        // Set initial view and ensure proper display state
         this.updateViewButtons();
+        this.initializeViewDisplay();
+    }
+
+    initializeViewDisplay() {
+        // Ensure only the current view is visible on initial load
+        const currentView = stateManager.getCurrentView();
+        const allViews = ['kanban', 'hierarchy', 'timeline'];
+        
+        allViews.forEach(view => {
+            const viewContainer = document.getElementById(`${view}-view`);
+            if (viewContainer) {
+                if (view === currentView) {
+                    viewContainer.style.display = 'block';
+                } else {
+                    viewContainer.style.display = 'none';
+                }
+            }
+        });
     }
 
     switchToView(viewName) {
@@ -325,6 +343,23 @@ class ViewManager {
                 event.preventDefault();
                 const views = ['kanban', 'hierarchy', 'timeline'];
                 this.switchToView(views[parseInt(event.key) - 1]);
+            }
+        });
+    }
+
+    initializeViewDisplay() {
+        // Ensure only the current view is visible on initial load
+        const currentView = stateManager.getCurrentView();
+        const allViews = ['kanban', 'hierarchy', 'timeline'];
+        
+        allViews.forEach(view => {
+            const viewContainer = document.getElementById(`${view}-view`);
+            if (viewContainer) {
+                if (view === currentView) {
+                    viewContainer.style.display = 'block';
+                } else {
+                    viewContainer.style.display = 'none';
+                }
             }
         });
     }
