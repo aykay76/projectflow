@@ -313,4 +313,6 @@ class ProjectManager {
     }
 }
 
+// Export both the class and singleton instance
+export { ProjectManager };
 export const projectManager = new ProjectManager();

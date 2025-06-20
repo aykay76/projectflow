@@ -581,7 +581,5 @@ class FilterManager {
     }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = FilterManager;
-}
+// Export using ES6 module syntax
+export { FilterManager };

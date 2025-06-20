@@ -7,9 +7,19 @@ class UIManager {
         this.keyboardShortcuts = new Map();
         this.isMobile = this.detectMobile();
         
-        this.initializeTheme();
+        // Apply theme immediately to avoid flash
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        
+        // Don't initialize theme here - wait for DOM to be ready
         this.initializeKeyboardShortcuts();
         this.initializeMobileEnhancements();
+    }
+
+    /**
+     * Initialize the UI Manager - called after DOM is ready
+     */
+    init() {
+        this.initializeTheme();
     }
 
     /**
@@ -24,12 +34,16 @@ class UIManager {
      * Initialize theme system
      */
     initializeTheme() {
+        // Apply theme and update UI elements
         this.applyTheme(this.currentTheme);
         
         // Theme toggle button
         const themeToggle = document.getElementById('theme-toggle');
         if (themeToggle) {
             themeToggle.addEventListener('click', () => this.toggleTheme());
+            console.log('Theme toggle event listener attached');
+        } else {
+            console.warn('Theme toggle button not found');
         }
 
         // Listen for system theme changes
@@ -50,10 +64,15 @@ class UIManager {
         document.documentElement.setAttribute('data-theme', theme);
         this.currentTheme = theme;
         
-        // Update theme toggle button
+        // Update theme toggle button icon
+        const themeIcon = document.getElementById('theme-icon');
         const themeToggle = document.getElementById('theme-toggle');
+        
+        if (themeIcon) {
+            themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
         if (themeToggle) {
-            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
             themeToggle.title = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
         }
     }
@@ -66,12 +85,25 @@ class UIManager {
         this.applyTheme(newTheme);
         localStorage.setItem('theme', newTheme);
         
-        // Show feedback
-        window.messageManager?.showMessage(
-            `Switched to ${newTheme} theme! ${newTheme === 'dark' ? '🌙' : '☀️'}`, 
-            'info', 
-            2000
-        );
+        // Show feedback - try multiple notification methods
+        if (window.projectFlowApp?.notificationManager?.showMessage) {
+            window.projectFlowApp.notificationManager.showMessage(
+                `Switched to ${newTheme} theme! ${newTheme === 'dark' ? '🌙' : '☀️'}`, 
+                'info', 
+                2000
+            );
+        } else if (window.messageManager?.showMessage) {
+            window.messageManager.showMessage(
+                `Switched to ${newTheme} theme! ${newTheme === 'dark' ? '🌙' : '☀️'}`, 
+                'info', 
+                2000
+            );
+        } else if (window.showMessage) {
+            window.showMessage(
+                `Switched to ${newTheme} theme! ${newTheme === 'dark' ? '🌙' : '☀️'}`, 
+                'info'
+            );
+        }
     }
 
     /**
@@ -364,7 +396,5 @@ class UIManager {
     }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = UIManager;
-}
+// Export using ES6 module syntax
+export { UIManager };

@@ -330,4 +330,6 @@ class ViewManager {
     }
 }
 
+// Export both the class and singleton instance
+export { ViewManager };
 export const viewManager = new ViewManager();
