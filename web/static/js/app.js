@@ -167,8 +167,8 @@ class ProjectFlowApp {
     async loadInitialData() {
         try {
             // Load projects first - only if method exists
-            if (this.projectManager.loadProjects) {
-                await this.projectManager.loadProjects();
+            if (this.projectManager.loadAvailableProjects) {
+                await this.projectManager.loadAvailableProjects();
             }
             
             // Load tasks for current project - only if method exists

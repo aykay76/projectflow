@@ -8,6 +8,7 @@ import { showMessage } from './utils.js';
 class ProjectManager {
     constructor() {
         this.initializeEventListeners();
+        this.setupDOMEventListeners();
     }
 
     initializeEventListeners() {
@@ -19,6 +20,66 @@ class ProjectManager {
         stateManager.addEventListener('projects-refreshed', (data) => {
             this.onProjectsRefreshed(data.projects);
         });
+    }
+
+    setupDOMEventListeners() {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.attachProjectDropdownListeners();
+            });
+        } else {
+            this.attachProjectDropdownListeners();
+        }
+    }
+
+    attachProjectDropdownListeners() {
+        const projectSelectorBtn = document.getElementById('project-selector-btn');
+        if (projectSelectorBtn) {
+            projectSelectorBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleProjectDropdown();
+            });
+            console.log('Project selector button event listener attached');
+        } else {
+            console.warn('Project selector button not found in DOM');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const projectDropdown = document.getElementById('project-dropdown');
+            const projectSelector = document.getElementById('project-selector-btn');
+            
+            if (projectDropdown && projectSelector) {
+                const isClickInsideDropdown = projectDropdown.contains(e.target);
+                const isClickOnSelector = projectSelector.contains(e.target);
+                
+                if (!isClickInsideDropdown && !isClickOnSelector) {
+                    this.closeProjectDropdown();
+                }
+            }
+        });
+
+        // Set up create project button
+        const createProjectBtn = document.getElementById('create-project-btn');
+        if (createProjectBtn) {
+            createProjectBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showCreateProjectDialog();
+            });
+        }
+
+        // Set up manage projects button
+        const manageProjectsBtn = document.getElementById('manage-projects-btn');
+        if (manageProjectsBtn) {
+            manageProjectsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showManageProjectsDialog();
+            });
+        }
     }
 
     async loadAvailableProjects() {
@@ -249,6 +310,21 @@ class ProjectManager {
         projectSelector.classList.remove('open');
     }
 
+    // Dialog methods
+    showCreateProjectDialog() {
+        // TODO: Implement create project dialog
+        console.log('Create project dialog - to be implemented');
+        showMessage('Create project dialog - coming soon!', 'info');
+        this.closeProjectDropdown();
+    }
+
+    showManageProjectsDialog() {
+        // TODO: Implement manage projects dialog
+        console.log('Manage projects dialog - to be implemented');
+        showMessage('Manage projects dialog - coming soon!', 'info');
+        this.closeProjectDropdown();
+    }
+
     // Event handlers
     onProjectChanged(newProject, previousProject) {
         console.log('Project changed:', newProject?.name || 'None');
@@ -264,7 +340,7 @@ class ProjectManager {
         this.updateProjectDropdown();
     }
 
-    // Utility method
+    // Utility methods
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -310,6 +386,15 @@ class ProjectManager {
             console.warn('Error validating current project (network/connectivity issue):', error.message);
             return true; // Assume project is still valid, network might be temporarily down
         }
+    }
+
+    // Utility methods for compatibility
+    getCurrentProject() {
+        return stateManager.getCurrentProject();
+    }
+
+    getAvailableProjects() {
+        return stateManager.getAvailableProjects();
     }
 }
 
