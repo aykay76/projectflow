@@ -320,12 +320,50 @@ header p {
     margin-left: auto; /* Push buttons to the right */
 }
 
+/* Touch and Hover States */
+.header-menu-btn:active,
+.theme-toggle:active,
+.project-selector-btn:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+@media (hover: hover) {
+    .header-menu-btn:hover,
+    .theme-toggle:hover,
+    .project-selector-btn:hover {
+        transform: translateY(-1px);
+    }
+}
+
+@media (hover: none) {
+    .header-menu-btn:hover,
+    .theme-toggle:hover,
+    .project-selector-btn:hover {
+        transform: none;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     header {
         flex-direction: column;
-        padding: 16px;
-        gap: 12px;
+        padding: 12px 16px;
+        gap: 8px;
+    }
+
+    header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 2px;
+    }
+
+    header p {
+        font-size: 0.9rem;
+    }
+
+    .current-project-info {
+        margin-top: 2px;
+        font-size: 0.8rem;
     }
 
     .header-controls {
@@ -333,23 +371,66 @@ header p {
         justify-content: flex-end;
     }
 
+    .header-menu-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+    }
+
     .header-menu {
-        min-width: 260px;
+        min-width: 280px;
+        right: -8px;
+    }
+
+    .header-menu-section {
+        padding: 20px 16px;
+    }
+
+    .theme-toggle,
+    .project-selector-btn {
+        padding: 14px 12px;
+        font-size: 1rem;
+        min-height: 48px;
     }
 
     .actions {
-        flex-direction: row; /* Keep row layout on mobile */
-        gap: 16px;
+        flex-direction: row;
+        gap: 12px;
         align-items: center;
+        margin-bottom: 20px;
     }
 
     .view-controls {
-        flex: 1; /* Allow view controls to take available space */
+        flex: 1;
         justify-content: flex-start;
     }
 
     .action-buttons {
-        margin-left: auto; /* Keep buttons on the right */
-        gap: 8px; /* Slightly reduce gap on mobile */
+        margin-left: auto;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding: 10px 12px;
+    }
+
+    header h1 {
+        font-size: 1.6rem;
+    }
+
+    header p {
+        font-size: 0.85rem;
+    }
+
+    .header-menu {
+        right: -12px;
+        min-width: calc(100vw - 24px);
+        max-width: 320px;
+    }
+
+    .header-menu-section {
+        padding: 16px 12px;
     }
 }

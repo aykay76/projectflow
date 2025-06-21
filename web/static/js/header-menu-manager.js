@@ -20,16 +20,31 @@ class HeaderMenuManager {
     }
 
     bindEvents() {
-        // Toggle menu on button click
+        // Toggle menu on button click (supports both mouse and touch)
         this.menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleMenu();
+        });
+
+        // Add touch support for mobile devices
+        this.menuBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double tap zoom
         });
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (this.isMenuOpen && !this.menu.contains(e.target) && !this.menuBtn.contains(e.target)) {
                 // Don't close if clicking on project dropdown
+                const projectDropdown = document.getElementById('project-dropdown');
+                if (!projectDropdown || !projectDropdown.contains(e.target)) {
+                    this.closeMenu();
+                }
+            }
+        });
+
+        // Touch events for mobile
+        document.addEventListener('touchstart', (e) => {
+            if (this.isMenuOpen && !this.menu.contains(e.target) && !this.menuBtn.contains(e.target)) {
                 const projectDropdown = document.getElementById('project-dropdown');
                 if (!projectDropdown || !projectDropdown.contains(e.target)) {
                     this.closeMenu();
