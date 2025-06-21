@@ -29,7 +29,11 @@ class HeaderMenuManager {
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (this.isMenuOpen && !this.menu.contains(e.target) && !this.menuBtn.contains(e.target)) {
-                this.closeMenu();
+                // Don't close if clicking on project dropdown
+                const projectDropdown = document.getElementById('project-dropdown');
+                if (!projectDropdown || !projectDropdown.contains(e.target)) {
+                    this.closeMenu();
+                }
             }
         });
 
@@ -37,6 +41,12 @@ class HeaderMenuManager {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isMenuOpen) {
                 this.closeMenu();
+                this.menuBtn.focus(); // Return focus to menu button
+            }
+            
+            // Handle arrow key navigation within menu
+            if (this.isMenuOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                this.handleKeyboardNavigation(e);
             }
         });
 
@@ -84,6 +94,49 @@ class HeaderMenuManager {
                 this.menu.style.visibility = 'hidden';
             }
         }, 200);
+    }
+
+    /**
+     * Handle keyboard navigation within the menu
+     */
+    handleKeyboardNavigation(e) {
+        e.preventDefault();
+        const focusableElements = this.menu.querySelectorAll('button, [tabindex="0"]');
+        const currentIndex = Array.from(focusableElements).indexOf(document.activeElement);
+        
+        let nextIndex;
+        if (e.key === 'ArrowDown') {
+            nextIndex = currentIndex < focusableElements.length - 1 ? currentIndex + 1 : 0;
+        } else if (e.key === 'ArrowUp') {
+            nextIndex = currentIndex > 0 ? currentIndex - 1 : focusableElements.length - 1;
+        }
+        
+        if (nextIndex !== undefined && focusableElements[nextIndex]) {
+            focusableElements[nextIndex].focus();
+        }
+    }
+
+    /**
+     * Get the current menu state
+     */
+    isOpen() {
+        return this.isMenuOpen;
+    }
+
+    /**
+     * Force close the menu (useful for other components)
+     */
+    forceClose() {
+        if (this.isMenuOpen) {
+            this.closeMenu();
+        }
+    }
+
+    /**
+     * Get reference to menu element
+     */
+    getMenuElement() {
+        return this.menu;
     }
 }
 

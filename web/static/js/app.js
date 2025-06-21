@@ -15,6 +15,7 @@ import { FilterManager } from './filter-manager.js';
 import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
 import HeaderMenuManager from './header-menu-manager.js';
+import HeaderMenuManager from './header-menu-manager.js';
 
 /**
  * Main Application Class
