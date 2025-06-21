@@ -7,7 +7,13 @@ class HeaderMenuManager {
         this.menuBtn = null;
         this.menu = null;
         this.isMenuOpen = false;
-        this.init();
+        
+        // Defer initialization to ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     init() {
@@ -154,10 +160,5 @@ class HeaderMenuManager {
         return this.menu;
     }
 }
-
-// Initialize header menu when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.headerMenuManager = new HeaderMenuManager();
-});
 
 export default HeaderMenuManager;

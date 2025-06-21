@@ -15,7 +15,6 @@ import { FilterManager } from './filter-manager.js';
 import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
 import HeaderMenuManager from './header-menu-manager.js';
-import HeaderMenuManager from './header-menu-manager.js';
 
 /**
  * Main Application Class
@@ -115,7 +114,7 @@ class ProjectFlowApp {
         if (this.uiManager.init) this.uiManager.init();
         if (this.filterManager.init) this.filterManager.init();
         if (this.notificationManager.init) this.notificationManager.init();
-        if (this.headerMenuManager.init) this.headerMenuManager.init();
+        // HeaderMenuManager initializes itself in constructor
     }
 
     /**
