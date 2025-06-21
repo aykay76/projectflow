@@ -25,6 +25,7 @@ export class TaskDetailManager {
 
         this.setupEventListeners();
         this.setupKanbanCardClickHandlers();
+        this.setupTaskActionHandlers();
     }
 
     /**
@@ -312,17 +313,7 @@ export class TaskDetailManager {
     handleEdit() {
         if (this.currentTask) {
             this.hideModal();
-            
-            // Trigger edit task functionality
-            if (window.projectFlowApp?.taskManager?.editTask) {
-                window.projectFlowApp.taskManager.editTask(this.currentTask.id);
-            } else {
-                // Fallback: trigger existing edit button
-                const editBtn = document.querySelector(`[data-id="${this.currentTask.id}"] .edit-task`);
-                if (editBtn) {
-                    editBtn.click();
-                }
-            }
+            this.openEditModal(this.currentTask.id);
         }
     }
 
@@ -331,30 +322,245 @@ export class TaskDetailManager {
      */
     async handleDelete() {
         if (this.currentTask) {
-            const confirmDelete = confirm(`Are you sure you want to delete "${this.currentTask.title}"?`);
-            if (confirmDelete) {
-                try {
-                    this.hideModal();
-                    
-                    // Use task manager if available
-                    if (window.projectFlowApp?.taskManager?.deleteTask) {
-                        await window.projectFlowApp.taskManager.deleteTask(this.currentTask.id);
-                    } else {
-                        // Fallback: trigger existing delete button
-                        const deleteBtn = document.querySelector(`[data-id="${this.currentTask.id}"] .delete-task`);
-                        if (deleteBtn) {
-                            deleteBtn.click();
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error deleting task:', error);
-                    if (window.projectFlowApp?.notificationManager?.showMessage) {
-                        window.projectFlowApp.notificationManager.showMessage(
-                            'Failed to delete task: ' + error.message, 
-                            'error'
-                        );
-                    }
+            this.hideModal();
+            await this.handleDeleteTask(this.currentTask.id);
+        }
+    }
+
+    /**
+     * Setup event delegation for task action buttons (edit/delete)
+     */
+    setupTaskActionHandlers() {
+        // Use event delegation to handle dynamically added buttons
+        document.addEventListener('click', (e) => {
+            // Handle edit button clicks
+            if (e.target.classList.contains('edit-task')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = e.target.dataset.id;
+                if (taskId) {
+                    this.openEditModal(taskId);
                 }
+            }
+            
+            // Handle delete button clicks
+            if (e.target.classList.contains('delete-task')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = e.target.dataset.id;
+                if (taskId) {
+                    this.handleDeleteTask(taskId);
+                }
+            }
+        });
+    }
+
+    /**
+     * Open edit modal for a task
+     */
+    async openEditModal(taskId) {
+        try {
+            const task = await this.apiClient.getTask(taskId);
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            this.populateEditModal(task);
+            this.showEditModal();
+
+        } catch (error) {
+            console.error('Error loading task for editing:', error);
+            if (window.projectFlowApp?.notificationManager?.showMessage) {
+                window.projectFlowApp.notificationManager.showMessage(
+                    'Failed to load task for editing: ' + error.message, 
+                    'error'
+                );
+            }
+        }
+    }
+
+    /**
+     * Populate the edit modal with task data
+     */
+    populateEditModal(task) {
+        const modal = document.getElementById('task-modal');
+        if (!modal) return;
+
+        // Set modal title
+        const modalTitle = modal.querySelector('#modal-title');
+        if (modalTitle) {
+            modalTitle.textContent = `Edit Task - ${task.display_id || task.id}`;
+        }
+
+        // Populate form fields
+        const form = modal.querySelector('#task-form');
+        if (form) {
+            form.dataset.taskId = task.id; // Store task ID for update
+
+            const titleInput = form.querySelector('#task-title');
+            const descriptionInput = form.querySelector('#task-description');
+            const typeSelect = form.querySelector('#task-type');
+            const prioritySelect = form.querySelector('#task-priority');
+            const statusSelect = form.querySelector('#task-status');
+            const dueDateInput = form.querySelector('#task-due-date');
+            const startedAtInput = form.querySelector('#task-started-at');
+
+            if (titleInput) titleInput.value = task.title || '';
+            if (descriptionInput) descriptionInput.value = task.description || '';
+            if (typeSelect) typeSelect.value = task.type || 'task';
+            if (prioritySelect) prioritySelect.value = task.priority || 'medium';
+            if (statusSelect) statusSelect.value = task.status || 'todo';
+            
+            if (dueDateInput && task.due_date) {
+                // Convert date to YYYY-MM-DD format
+                const dueDate = new Date(task.due_date);
+                dueDateInput.value = dueDate.toISOString().split('T')[0];
+            }
+
+            if (startedAtInput && task.started_at) {
+                // Convert to datetime-local format
+                const startedAt = new Date(task.started_at);
+                startedAtInput.value = startedAt.toISOString().slice(0, 16);
+            }
+        }
+
+        // Setup form submission for updates
+        this.setupEditFormSubmission();
+    }
+
+    /**
+     * Setup form submission for task updates
+     */
+    setupEditFormSubmission() {
+        const form = document.getElementById('task-form');
+        if (!form) return;
+
+        // Remove existing listeners to avoid duplicates
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+
+        newForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const taskId = newForm.dataset.taskId;
+            if (!taskId) return;
+
+            const formData = new FormData(newForm);
+            const taskData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                type: formData.get('type'),
+                priority: formData.get('priority'),
+                status: formData.get('status'),
+                due_date: formData.get('due_date') || null,
+                started_at: formData.get('started_at') || null
+            };
+
+            try {
+                await this.apiClient.updateTask(taskId, taskData);
+                this.hideEditModal();
+                
+                // Refresh the view
+                if (window.projectFlowApp?.taskManager?.refreshTasks) {
+                    window.projectFlowApp.taskManager.refreshTasks();
+                }
+
+                if (window.projectFlowApp?.notificationManager?.showMessage) {
+                    window.projectFlowApp.notificationManager.showMessage(
+                        'Task updated successfully! 🎉', 
+                        'success'
+                    );
+                }
+            } catch (error) {
+                console.error('Error updating task:', error);
+                if (window.projectFlowApp?.notificationManager?.showMessage) {
+                    window.projectFlowApp.notificationManager.showMessage(
+                        'Failed to update task: ' + error.message, 
+                        'error'
+                    );
+                }
+            }
+        });
+
+        // Setup cancel button
+        const cancelBtn = newForm.querySelector('#cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                this.hideEditModal();
+            });
+        }
+
+        // Setup close button
+        const modal = document.getElementById('task-modal');
+        const closeBtn = modal?.querySelector('.close');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.hideEditModal();
+        }
+    }
+
+    /**
+     * Show the edit modal
+     */
+    showEditModal() {
+        const modal = document.getElementById('task-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    /**
+     * Hide the edit modal
+     */
+    hideEditModal() {
+        const modal = document.getElementById('task-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            
+            // Clear form data
+            const form = modal.querySelector('#task-form');
+            if (form) {
+                form.reset();
+                form.removeAttribute('data-task-id');
+            }
+        }
+    }
+
+    /**
+     * Handle delete task
+     */
+    async handleDeleteTask(taskId) {
+        try {
+            const task = await this.apiClient.getTask(taskId);
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            const confirmDelete = confirm(`Are you sure you want to delete "${task.title}"?`);
+            if (confirmDelete) {
+                await this.apiClient.deleteTask(taskId);
+                
+                // Remove the task card from the DOM immediately for better UX
+                const taskCard = document.querySelector(`[data-id="${taskId}"]`);
+                if (taskCard) {
+                    taskCard.remove();
+                }
+                
+                if (window.projectFlowApp?.notificationManager?.showMessage) {
+                    window.projectFlowApp.notificationManager.showMessage(
+                        'Task deleted successfully!', 
+                        'success'
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            if (window.projectFlowApp?.notificationManager?.showMessage) {
+                window.projectFlowApp.notificationManager.showMessage(
+                    'Failed to delete task: ' + error.message, 
+                    'error'
+                );
             }
         }
     }
