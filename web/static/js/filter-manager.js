@@ -14,9 +14,112 @@ class FilterManager {
         
         this.searchHistory = JSON.parse(localStorage.getItem('projectflow_search_history') || '[]');
         this.maxSearchHistory = 10;
+        this.isFilterPanelVisible = false;
         
         this.initializeFiltering();
         this.initializeSearch();
+    }
+
+    /**
+     * Initialize the filter manager (called by app.js)
+     */
+    init() {
+        this.initializeFilterToggle();
+    }
+
+    /**
+     * Initialize filter panel toggle functionality
+     */
+    initializeFilterToggle() {
+        const filterToggleBtn = document.getElementById('filter-toggle-btn');
+        const filterPanel = document.getElementById('filter-panel');
+
+        if (filterToggleBtn && filterPanel) {
+            filterToggleBtn.addEventListener('click', () => {
+                this.toggleFilterPanel();
+            });
+
+            // Handle keyboard shortcut (F key)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    // Only trigger if not focused on an input element
+                    const activeElement = document.activeElement;
+                    if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        this.toggleFilterPanel();
+                    }
+                }
+            });
+
+            // Close filter panel when clicking outside
+            document.addEventListener('click', (e) => {
+                if (this.isFilterPanelVisible && 
+                    !filterPanel.contains(e.target) && 
+                    !filterToggleBtn.contains(e.target)) {
+                    this.hideFilterPanel();
+                }
+            });
+
+            // Close filter panel on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.isFilterPanelVisible) {
+                    this.hideFilterPanel();
+                }
+            });
+        }
+    }
+
+    /**
+     * Toggle the visibility of the filter panel
+     */
+    toggleFilterPanel() {
+        if (this.isFilterPanelVisible) {
+            this.hideFilterPanel();
+        } else {
+            this.showFilterPanel();
+        }
+    }
+
+    /**
+     * Show the filter panel
+     */
+    showFilterPanel() {
+        const filterPanel = document.getElementById('filter-panel');
+        const filterToggleBtn = document.getElementById('filter-toggle-btn');
+
+        if (filterPanel) {
+            filterPanel.style.display = 'block';
+            this.isFilterPanelVisible = true;
+
+            // Update button appearance
+            if (filterToggleBtn) {
+                filterToggleBtn.classList.add('active');
+            }
+
+            // Focus on search input if available
+            const searchInput = document.getElementById('filter-search');
+            if (searchInput) {
+                setTimeout(() => searchInput.focus(), 100);
+            }
+        }
+    }
+
+    /**
+     * Hide the filter panel
+     */
+    hideFilterPanel() {
+        const filterPanel = document.getElementById('filter-panel');
+        const filterToggleBtn = document.getElementById('filter-toggle-btn');
+
+        if (filterPanel) {
+            filterPanel.style.display = 'none';
+            this.isFilterPanelVisible = false;
+
+            // Update button appearance
+            if (filterToggleBtn) {
+                filterToggleBtn.classList.remove('active');
+            }
+        }
     }
 
     /**
@@ -24,7 +127,7 @@ class FilterManager {
      */
     initializeFiltering() {
         // Status filter
-        const statusFilter = document.getElementById('status-filter');
+        const statusFilter = document.getElementById('filter-status');
         if (statusFilter) {
             statusFilter.addEventListener('change', (e) => {
                 this.setFilter('status', e.target.value);
@@ -33,7 +136,7 @@ class FilterManager {
         }
 
         // Priority filter
-        const priorityFilter = document.getElementById('priority-filter');
+        const priorityFilter = document.getElementById('filter-priority');
         if (priorityFilter) {
             priorityFilter.addEventListener('change', (e) => {
                 this.setFilter('priority', e.target.value);
@@ -42,7 +145,7 @@ class FilterManager {
         }
 
         // Type filter
-        const typeFilter = document.getElementById('type-filter');
+        const typeFilter = document.getElementById('filter-type');
         if (typeFilter) {
             typeFilter.addEventListener('change', (e) => {
                 this.setFilter('type', e.target.value);
@@ -50,12 +153,25 @@ class FilterManager {
             });
         }
 
-        // Due date filter
-        const dueDateFilter = document.getElementById('due-date-filter');
-        if (dueDateFilter) {
-            dueDateFilter.addEventListener('change', (e) => {
+        // Overdue filter
+        const overdueFilter = document.getElementById('filter-overdue');
+        if (overdueFilter) {
+            overdueFilter.addEventListener('change', (e) => {
                 this.setFilter('dueDate', e.target.value);
                 this.applyFilters();
+            });
+        }
+
+        // Search input
+        const searchInput = document.getElementById('filter-search');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.setFilter('search', e.target.value);
+                    this.applyFilters();
+                }, 300);
             });
         }
 

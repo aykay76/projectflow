@@ -68,3 +68,21 @@
     background: #dc2626;
     transform: translateY(-1px);
 }
+
+/* Filter Toggle Button Active State */
+.btn.active {
+    background: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+.btn-secondary.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.btn-secondary.active:hover {
+    background: var(--accent-secondary);
+}
