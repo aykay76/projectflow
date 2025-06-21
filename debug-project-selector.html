@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Selector Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug { margin: 10px; padding: 10px; border: 1px solid #ccc; }
+        button { padding: 10px; margin: 5px; }
+        #project-list { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        .project-item { padding: 5px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .project-item:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Project Selector Debug Test</h1>
+    
+    <div class="debug">
+        <h3>API Test</h3>
+        <button onclick="testAPI()">Test Projects API</button>
+        <div id="api-result"></div>
+    </div>
+    
+    <div class="debug">
+        <h3>Project Selector Test</h3>
+        <button id="project-selector-btn">Project Selector</button>
+        <div id="project-dropdown" style="display: none;">
+            <div id="project-list">Loading...</div>
+        </div>
+    </div>
+    
+    <div class="debug">
+        <h3>Logs</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logs = document.getElementById('logs');
+            logs.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        async function testAPI() {
+            try {
+                log('Testing projects API...');
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                log('Projects loaded: ' + JSON.stringify(projects));
+                document.getElementById('api-result').innerHTML = '<pre>' + JSON.stringify(projects, null, 2) + '</pre>';
+                
+                // Update project list
+                updateProjectList(projects);
+            } catch (error) {
+                log('API Error: ' + error.message);
+            }
+        }
+
+        function updateProjectList(projects) {
+            const projectList = document.getElementById('project-list');
+            if (projects.length === 0) {
+                projectList.innerHTML = 'No projects found';
+                return;
+            }
+            
+            projectList.innerHTML = projects.map(project => 
+                `<div class="project-item" onclick="selectProject('${project.id}', '${project.name}')">
+                    <strong>${project.name}</strong><br>
+                    <small>${project.description || 'No description'}</small>
+                </div>`
+            ).join('');
+        }
+
+        function selectProject(id, name) {
+            log('Project selected: ' + name + ' (ID: ' + id + ')');
+            document.getElementById('project-selector-btn').textContent = name;
+            toggleDropdown();
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('project-dropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Setup event listeners
+        document.getElementById('project-selector-btn').addEventListener('click', toggleDropdown);
+        
+        // Auto-test API on load
+        window.addEventListener('load', testAPI);
+        
+        log('Test page loaded');
+    </script>
+</body>
+</html>

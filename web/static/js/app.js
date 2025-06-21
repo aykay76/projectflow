@@ -189,18 +189,13 @@ class ProjectFlowApp {
      */
     async loadInitialData() {
         try {
-            console.log('Loading initial data...');
             // Load projects first - only if method exists
             if (this.projectManager.loadAvailableProjects) {
-                console.log('Calling loadAvailableProjects');
                 await this.projectManager.loadAvailableProjects();
-            } else {
-                console.warn('loadAvailableProjects method not available');
             }
             
             // Load tasks for current project - only if method exists
             const currentProject = this.projectManager.getCurrentProject ? this.projectManager.getCurrentProject() : null;
-            console.log('Current project after loading:', currentProject);
             if (currentProject && this.taskManager.loadTasks) {
                 await this.taskManager.loadTasks(currentProject.id);
             }
