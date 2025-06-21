@@ -5,11 +5,11 @@ class FilterManager {
     constructor() {
         this.filters = {
             search: '',
-            status: 'all',
-            priority: 'all',
-            type: 'all',
-            assignee: 'all',
-            dueDate: 'all'
+            status: '',
+            priority: '',
+            type: '',
+            assignee: '',
+            dueDate: ''
         };
         
         this.searchHistory = JSON.parse(localStorage.getItem('projectflow_search_history') || '[]');
@@ -298,7 +298,7 @@ class FilterManager {
         // Update task counts
         this.updateTaskCounts(filteredTasks);
         
-        console.log(`Applied filters: ${Object.entries(this.filters).filter(([k, v]) => v !== 'all' && v !== '').map(([k, v]) => `${k}:${v}`).join(', ')}`);
+        console.log(`Applied filters: ${Object.entries(this.filters).filter(([k, v]) => v !== '').map(([k, v]) => `${k}:${v}`).join(', ')}`);
     }
 
     /**
@@ -312,22 +312,22 @@ class FilterManager {
             }
 
             // Status filter
-            if (this.filters.status !== 'all' && task.status !== this.filters.status) {
+            if (this.filters.status && task.status !== this.filters.status) {
                 return false;
             }
 
             // Priority filter
-            if (this.filters.priority !== 'all' && task.priority !== this.filters.priority) {
+            if (this.filters.priority && task.priority !== this.filters.priority) {
                 return false;
             }
 
             // Type filter
-            if (this.filters.type !== 'all' && task.type !== this.filters.type) {
+            if (this.filters.type && task.type !== this.filters.type) {
                 return false;
             }
 
             // Due date filter
-            if (this.filters.dueDate !== 'all' && !this.matchesDueDateFilter(task, this.filters.dueDate)) {
+            if (this.filters.dueDate && !this.matchesDueDateFilter(task, this.filters.dueDate)) {
                 return false;
             }
 
@@ -553,14 +553,21 @@ class FilterManager {
      * Update filter UI elements
      */
     updateFilterUI() {
-        Object.entries(this.filters).forEach(([filterType, value]) => {
-            const element = document.getElementById(`${filterType}-filter`);
-            if (element) {
-                element.value = value;
-            }
-        });
+        // Update filter select elements
+        const statusFilter = document.getElementById('filter-status');
+        if (statusFilter) statusFilter.value = this.filters.status;
+        
+        const priorityFilter = document.getElementById('filter-priority');
+        if (priorityFilter) priorityFilter.value = this.filters.priority;
+        
+        const typeFilter = document.getElementById('filter-type');
+        if (typeFilter) typeFilter.value = this.filters.type;
+        
+        const overdueFilter = document.getElementById('filter-overdue');
+        if (overdueFilter) overdueFilter.value = this.filters.dueDate;
 
-        const searchInput = document.getElementById('search-input');
+        // Update search input
+        const searchInput = document.getElementById('filter-search');
         if (searchInput) {
             searchInput.value = this.filters.search;
         }
@@ -571,7 +578,7 @@ class FilterManager {
      */
     clearSearch() {
         this.setFilter('search', '');
-        const searchInput = document.getElementById('search-input');
+        const searchInput = document.getElementById('filter-search');
         if (searchInput) {
             searchInput.value = '';
         }
@@ -584,11 +591,11 @@ class FilterManager {
     clearAllFilters() {
         this.filters = {
             search: '',
-            status: 'all',
-            priority: 'all',
-            type: 'all',
-            assignee: 'all',
-            dueDate: 'all'
+            status: '',
+            priority: '',
+            type: '',
+            assignee: '',
+            dueDate: ''
         };
         
         this.updateFilterUI();
