@@ -7,15 +7,36 @@ class HeaderMenuManager {
         this.menuBtn = null;
         this.menu = null;
         this.isMenuOpen = false;
-        this.init();
+        this.isInitialized = false;
+        this.retryCount = 0;
+        this.maxRetries = 5;
+        
+        // Defer initialization to ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     init() {
+        if (this.isInitialized) {
+            return;
+        }
+        
+        // Try to find elements
         this.menuBtn = document.getElementById('header-menu-btn');
         this.menu = document.getElementById('header-menu');
 
         if (this.menuBtn && this.menu) {
             this.bindEvents();
+            this.isInitialized = true;
+        } else {
+            // If elements not found and haven't exceeded max retries, try again
+            if (this.retryCount < this.maxRetries) {
+                this.retryCount++;
+                setTimeout(() => this.init(), 100);
+            }
         }
     }
 
@@ -154,10 +175,5 @@ class HeaderMenuManager {
         return this.menu;
     }
 }
-
-// Initialize header menu when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.headerMenuManager = new HeaderMenuManager();
-});
 
 export default HeaderMenuManager;

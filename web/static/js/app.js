@@ -15,7 +15,6 @@ import { FilterManager } from './filter-manager.js';
 import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
 import HeaderMenuManager from './header-menu-manager.js';
-import HeaderMenuManager from './header-menu-manager.js';
 
 /**
  * Main Application Class
@@ -37,13 +36,31 @@ class ProjectFlowApp {
         this.uiManager = new UIManager(this.stateManager, this.taskManager);
         this.filterManager = new FilterManager(this.stateManager);
         this.viewManager = new ViewManager();
-        this.headerMenuManager = new HeaderMenuManager();
+        
+        // Initialize HeaderMenuManager after DOM is ready
+        this.initializeHeaderMenu();
         
         // Store references globally for compatibility
         window.projectFlowApp = this;
         this.setupGlobalReferences();
         
         this.init();
+    }
+
+    /**
+     * Initialize header menu with proper timing
+     */
+    initializeHeaderMenu() {
+        const setupHeaderMenu = () => {
+            this.headerMenuManager = new HeaderMenuManager();
+            window.headerMenuManager = this.headerMenuManager;
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupHeaderMenu);
+        } else {
+            setupHeaderMenu();
+        }
     }
 
     /**
@@ -115,7 +132,7 @@ class ProjectFlowApp {
         if (this.uiManager.init) this.uiManager.init();
         if (this.filterManager.init) this.filterManager.init();
         if (this.notificationManager.init) this.notificationManager.init();
-        if (this.headerMenuManager.init) this.headerMenuManager.init();
+        // HeaderMenuManager initializes itself in constructor
     }
 
     /**
