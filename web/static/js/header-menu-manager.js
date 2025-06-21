@@ -71,6 +71,12 @@ class HeaderMenuManager {
         this.isMenuOpen = false;
         this.menuBtn.setAttribute('aria-expanded', 'false');
         
+        // Close any open submenus like project dropdown
+        const projectDropdown = document.getElementById('project-dropdown');
+        if (projectDropdown) {
+            projectDropdown.style.display = 'none';
+        }
+        
         // Hide after animation
         setTimeout(() => {
             if (!this.isMenuOpen) {

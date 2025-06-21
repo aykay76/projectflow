@@ -124,12 +124,11 @@ header p {
 
 .header-menu-section h4 {
     margin: 0 0 12px 0;
-    color: var(--text-primary);
-    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    opacity: 0.8;
 }
 
 /* Theme Toggle Button in Menu */
@@ -213,9 +212,9 @@ header p {
     border: 2px solid var(--accent-primary);
     border-radius: var(--border-radius);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    max-height: 300px;
+    max-height: 250px;
     overflow-y: auto;
-    z-index: 9991;
+    z-index: 10000;
     backdrop-filter: blur(10px);
     opacity: 1;
     visibility: visible;
