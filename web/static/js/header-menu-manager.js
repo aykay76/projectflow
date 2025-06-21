@@ -4,7 +4,6 @@
  */
 class HeaderMenuManager {
     constructor() {
-        console.log('HeaderMenuManager constructor called');
         this.menuBtn = null;
         this.menu = null;
         this.isMenuOpen = false;
@@ -14,51 +13,29 @@ class HeaderMenuManager {
         
         // Defer initialization to ensure DOM is ready
         if (document.readyState === 'loading') {
-            console.log('DOM is loading, waiting for DOMContentLoaded...');
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('DOM loaded, initializing HeaderMenuManager...');
-                this.init();
-            });
+            document.addEventListener('DOMContentLoaded', () => this.init());
         } else {
-            console.log('DOM is ready, initializing HeaderMenuManager immediately...');
             this.init();
         }
     }
 
     init() {
         if (this.isInitialized) {
-            console.log('HeaderMenuManager already initialized, skipping...');
             return;
         }
-        
-        console.log('HeaderMenuManager init() called, retry count:', this.retryCount);
         
         // Try to find elements
         this.menuBtn = document.getElementById('header-menu-btn');
         this.menu = document.getElementById('header-menu');
 
-        console.log('HeaderMenuManager initializing...', {
-            menuBtn: this.menuBtn,
-            menu: this.menu,
-            readyState: document.readyState
-        });
-
         if (this.menuBtn && this.menu) {
             this.bindEvents();
             this.isInitialized = true;
-            console.log('HeaderMenuManager initialized successfully');
         } else {
-            console.error('HeaderMenuManager failed to find required elements');
-            
             // If elements not found and haven't exceeded max retries, try again
             if (this.retryCount < this.maxRetries) {
                 this.retryCount++;
-                setTimeout(() => {
-                    console.log('Retrying HeaderMenuManager initialization...');
-                    this.init();
-                }, 100);
-            } else {
-                console.error('HeaderMenuManager failed to initialize after', this.maxRetries, 'retries');
+                setTimeout(() => this.init(), 100);
             }
         }
     }
@@ -66,7 +43,6 @@ class HeaderMenuManager {
     bindEvents() {
         // Toggle menu on button click (supports both mouse and touch)
         this.menuBtn.addEventListener('click', (e) => {
-            console.log('Header menu button clicked');
             e.stopPropagation();
             this.toggleMenu();
         });
@@ -117,7 +93,6 @@ class HeaderMenuManager {
     }
 
     toggleMenu() {
-        console.log('Toggle menu called, current state:', this.isMenuOpen);
         if (this.isMenuOpen) {
             this.closeMenu();
         } else {
@@ -126,7 +101,6 @@ class HeaderMenuManager {
     }
 
     openMenu() {
-        console.log('Opening menu...');
         this.menu.style.display = 'block';
         this.menu.style.visibility = 'visible';
         this.isMenuOpen = true;
@@ -135,7 +109,6 @@ class HeaderMenuManager {
         // Add animation class
         setTimeout(() => {
             this.menu.classList.add('menu-open');
-            console.log('Menu opened');
         }, 10);
     }
 

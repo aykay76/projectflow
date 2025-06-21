@@ -21,10 +21,7 @@ import HeaderMenuManager from './header-menu-manager.js';
  */
 class ProjectFlowApp {
     constructor() {
-        console.log('ProjectFlow app initializing...', {
-            readyState: document.readyState,
-            timestamp: new Date().toISOString()
-        });
+        console.log('ProjectFlow app initializing...');
         
         // Initialize core modules
         this.apiClient = new ApiClient();
@@ -57,7 +54,6 @@ class ProjectFlowApp {
         const setupHeaderMenu = () => {
             this.headerMenuManager = new HeaderMenuManager();
             window.headerMenuManager = this.headerMenuManager;
-            console.log('HeaderMenuManager created:', this.headerMenuManager);
         };
 
         if (document.readyState === 'loading') {
