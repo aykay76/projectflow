@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Functionality Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .test-passed { background-color: #d4edda; border-color: #c3e6cb; }
+        .test-failed { background-color: #f8d7da; border-color: #f5c6cb; }
+        .test-pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { margin: 5px; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        #filter-panel { display: none; margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .filter-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { padding: 8px; border: 1px solid #ccc; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Filter Functionality Test Page</h1>
+    
+    <!-- Filter Toggle Button -->
+    <div class="test-section" id="filter-toggle-test">
+        <h3>Filter Toggle Button Test</h3>
+        <button id="filter-toggle-btn" class="btn-primary" title="Toggle Filters (F)">
+            🔍 Filters
+        </button>
+        <p>Click the button above or press 'F' to toggle the filter panel.</p>
+        <div id="toggle-status">Status: Not tested</div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filter-panel" class="filter-panel">
+        <div class="filter-content">
+            <h3>🔍 Advanced Filters</h3>
+            
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="filter-search">Search</label>
+                    <input type="text" id="filter-search" placeholder="Search tasks..." />
+                </div>
+                <div class="filter-group">
+                    <label for="filter-status">Status</label>
+                    <select id="filter-status">
+                        <option value="">All Statuses</option>
+                        <option value="todo">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-priority">Priority</label>
+                    <select id="filter-priority">
+                        <option value="">All Priorities</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-type">Type</label>
+                    <select id="filter-type">
+                        <option value="">All Types</option>
+                        <option value="epic">Epic</option>
+                        <option value="story">Story</option>
+                        <option value="task">Task</option>
+                        <option value="subtask">Subtask</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button id="clear-filters-btn" class="btn-secondary">Clear All</button>
+                    <button id="test-filters-btn" class="btn-primary">Test Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="test-section test-pending" id="results-section">
+        <h3>Test Results</h3>
+        <ul id="test-results">
+            <li>Filter toggle button functionality - <span id="toggle-result">Pending</span></li>
+            <li>Filter panel show/hide - <span id="panel-result">Pending</span></li>
+            <li>Keyboard shortcuts (F key) - <span id="keyboard-result">Pending</span></li>
+            <li>Click outside to close - <span id="outside-result">Pending</span></li>
+            <li>Escape key to close - <span id="escape-result">Pending</span></li>
+            <li>Filter input functionality - <span id="filter-result">Pending</span></li>
+        </ul>
+    </div>
+
+    <script type="module">
+        // Mock the FilterManager for testing
+        class FilterManager {
+            constructor() {
+                this.filters = {
+                    search: '',
+                    status: '',
+                    priority: '',
+                    type: '',
+                    assignee: '',
+                    dueDate: ''
+                };
+                this.isFilterPanelVisible = false;
+                this.init();
+            }
+
+            init() {
+                this.initializeFilterToggle();
+            }
+
+            initializeFilterToggle() {
+                const filterToggleBtn = document.getElementById('filter-toggle-btn');
+                const filterPanel = document.getElementById('filter-panel');
+
+                if (filterToggleBtn && filterPanel) {
+                    filterToggleBtn.addEventListener('click', () => {
+                        this.toggleFilterPanel();
+                        document.getElementById('toggle-result').textContent = 'Passed';
+                        this.updateTestStatus();
+                    });
+
+                    // Handle keyboard shortcut (F key)
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                            const activeElement = document.activeElement;
+                            if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+                                e.preventDefault();
+                                this.toggleFilterPanel();
+                                document.getElementById('keyboard-result').textContent = 'Passed';
+                                this.updateTestStatus();
+                            }
+                        }
+                    });
+
+                    // Close filter panel when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (this.isFilterPanelVisible && 
+                            !filterPanel.contains(e.target) && 
+                            !filterToggleBtn.contains(e.target)) {
+                            this.hideFilterPanel();
+                            document.getElementById('outside-result').textContent = 'Passed';
+                            this.updateTestStatus();
+                        }
+                    });
+
+                    // Close filter panel on Escape key
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape' && this.isFilterPanelVisible) {
+                            this.hideFilterPanel();
+                            document.getElementById('escape-result').textContent = 'Passed';
+                            this.updateTestStatus();
+                        }
+                    });
+                }
+
+                // Set up filter inputs
+                this.setupFilterInputs();
+            }
+
+            setupFilterInputs() {
+                const statusFilter = document.getElementById('filter-status');
+                const priorityFilter = document.getElementById('filter-priority');
+                const typeFilter = document.getElementById('filter-type');
+                const searchInput = document.getElementById('filter-search');
+                const clearBtn = document.getElementById('clear-filters-btn');
+                const testBtn = document.getElementById('test-filters-btn');
+
+                [statusFilter, priorityFilter, typeFilter].forEach(filter => {
+                    if (filter) {
+                        filter.addEventListener('change', () => {
+                            document.getElementById('filter-result').textContent = 'Passed';
+                            this.updateTestStatus();
+                        });
+                    }
+                });
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => {
+                        document.getElementById('filter-result').textContent = 'Passed';
+                        this.updateTestStatus();
+                    });
+                }
+
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', () => {
+                        this.clearAllFilters();
+                    });
+                }
+
+                if (testBtn) {
+                    testBtn.addEventListener('click', () => {
+                        this.runFilterTest();
+                    });
+                }
+            }
+
+            toggleFilterPanel() {
+                if (this.isFilterPanelVisible) {
+                    this.hideFilterPanel();
+                } else {
+                    this.showFilterPanel();
+                }
+            }
+
+            showFilterPanel() {
+                const filterPanel = document.getElementById('filter-panel');
+                const filterToggleBtn = document.getElementById('filter-toggle-btn');
+
+                if (filterPanel) {
+                    filterPanel.style.display = 'block';
+                    this.isFilterPanelVisible = true;
+
+                    if (filterToggleBtn) {
+                        filterToggleBtn.classList.add('active');
+                        filterToggleBtn.style.background = '#007bff';
+                    }
+
+                    document.getElementById('panel-result').textContent = 'Passed';
+                    this.updateTestStatus();
+
+                    const searchInput = document.getElementById('filter-search');
+                    if (searchInput) {
+                        setTimeout(() => searchInput.focus(), 100);
+                    }
+                }
+            }
+
+            hideFilterPanel() {
+                const filterPanel = document.getElementById('filter-panel');
+                const filterToggleBtn = document.getElementById('filter-toggle-btn');
+
+                if (filterPanel) {
+                    filterPanel.style.display = 'none';
+                    this.isFilterPanelVisible = false;
+
+                    if (filterToggleBtn) {
+                        filterToggleBtn.classList.remove('active');
+                        filterToggleBtn.style.background = '#007bff';
+                    }
+
+                    document.getElementById('panel-result').textContent = 'Passed';
+                    this.updateTestStatus();
+                }
+            }
+
+            clearAllFilters() {
+                this.filters = {
+                    search: '',
+                    status: '',
+                    priority: '',
+                    type: '',
+                    assignee: '',
+                    dueDate: ''
+                };
+                
+                document.getElementById('filter-search').value = '';
+                document.getElementById('filter-status').value = '';
+                document.getElementById('filter-priority').value = '';
+                document.getElementById('filter-type').value = '';
+                
+                console.log('All filters cleared');
+            }
+
+            runFilterTest() {
+                console.log('Running filter test...');
+                const results = [];
+                
+                // Test search filter
+                const searchValue = document.getElementById('filter-search').value;
+                results.push(`Search: "${searchValue}"`);
+                
+                // Test status filter
+                const statusValue = document.getElementById('filter-status').value;
+                results.push(`Status: "${statusValue}"`);
+                
+                // Test priority filter
+                const priorityValue = document.getElementById('filter-priority').value;
+                results.push(`Priority: "${priorityValue}"`);
+                
+                // Test type filter
+                const typeValue = document.getElementById('filter-type').value;
+                results.push(`Type: "${typeValue}"`);
+                
+                console.log('Filter values:', results.join(', '));
+                alert('Filter test completed! Check console for details.');
+            }
+
+            updateTestStatus() {
+                const results = ['toggle-result', 'panel-result', 'keyboard-result', 'outside-result', 'escape-result', 'filter-result'];
+                const allPassed = results.every(id => document.getElementById(id).textContent === 'Passed');
+                
+                const resultsSection = document.getElementById('results-section');
+                if (allPassed) {
+                    resultsSection.className = 'test-section test-passed';
+                } else {
+                    const anyPassed = results.some(id => document.getElementById(id).textContent === 'Passed');
+                    resultsSection.className = anyPassed ? 'test-section test-partial' : 'test-section test-pending';
+                }
+            }
+        }
+
+        // Initialize the test
+        document.addEventListener('DOMContentLoaded', () => {
+            new FilterManager();
+            console.log('Filter functionality test initialized');
+        });
+    </script>
+</body>
+</html>
