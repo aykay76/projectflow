@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Selector Debug</title>
+    <style>
+        .debug { margin: 10px; padding: 10px; border: 1px solid #ccc; }
+        .log { font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 5px; margin: 2px 0; }
+    </style>
+</head>
+<body>
+    <h1>Project Selector Debug</h1>
+    
+    <div class="debug">
+        <h3>DOM Elements Check</h3>
+        <button onclick="checkElements()">Check DOM Elements</button>
+        <div id="dom-check-result"></div>
+    </div>
+    
+    <div class="debug">
+        <h3>Event Listeners Test</h3>
+        <button onclick="testEventListeners()">Test Event Listeners</button>
+        <div id="event-test-result"></div>
+    </div>
+    
+    <div class="debug">
+        <h3>Projects API Test</h3>
+        <button onclick="testProjectsAPI()">Test Projects API</button>
+        <div id="api-test-result"></div>
+    </div>
+    
+    <div class="debug">
+        <h3>Console Logs</h3>
+        <div id="console-logs"></div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addLogEntry(type, message) {
+            const logsDiv = document.getElementById('console-logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log';
+            logEntry.innerHTML = `<strong>[${type}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addLogEntry('LOG', args.join(' '));
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLogEntry('ERROR', args.join(' '));
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addLogEntry('WARN', args.join(' '));
+            originalWarn.apply(console, args);
+        };
+
+        function checkElements() {
+            const result = document.getElementById('dom-check-result');
+            let html = '<h4>DOM Elements:</h4>';
+            
+            const elements = [
+                'header-menu-btn',
+                'header-menu',
+                'project-selector-btn',
+                'project-dropdown',
+                'project-list',
+                'current-project-display',
+                'project-selector-text'
+            ];
+            
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                html += `<div><strong>${id}:</strong> ${element ? 'Found' : 'NOT FOUND'}</div>`;
+                if (element) {
+                    html += `<div style="margin-left: 20px;">Tag: ${element.tagName}, Style: display=${element.style.display}</div>`;
+                }
+            });
+            
+            result.innerHTML = html;
+        }
+        
+        function testEventListeners() {
+            const result = document.getElementById('event-test-result');
+            let html = '<h4>Event Listener Tests:</h4>';
+            
+            // Test header menu button
+            const headerMenuBtn = document.getElementById('header-menu-btn');
+            if (headerMenuBtn) {
+                html += '<div>Header menu button found, adding test listener...</div>';
+                headerMenuBtn.addEventListener('click', function() {
+                    html += '<div style="color: green;">✓ Header menu button click detected!</div>';
+                    result.innerHTML = html;
+                });
+            } else {
+                html += '<div style="color: red;">✗ Header menu button not found</div>';
+            }
+            
+            // Test project selector button
+            const projectSelectorBtn = document.getElementById('project-selector-btn');
+            if (projectSelectorBtn) {
+                html += '<div>Project selector button found, adding test listener...</div>';
+                projectSelectorBtn.addEventListener('click', function() {
+                    html += '<div style="color: green;">✓ Project selector button click detected!</div>';
+                    result.innerHTML = html;
+                });
+            } else {
+                html += '<div style="color: red;">✗ Project selector button not found</div>';
+            }
+            
+            result.innerHTML = html;
+        }
+        
+        async function testProjectsAPI() {
+            const result = document.getElementById('api-test-result');
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                result.innerHTML = `<h4>Projects API Response:</h4><pre>${JSON.stringify(projects, null, 2)}</pre>`;
+            } catch (error) {
+                result.innerHTML = `<h4>API Error:</h4><div style="color: red;">${error.message}</div>`;
+            }
+        }
+        
+        // Auto-run checks on load
+        window.addEventListener('load', function() {
+            console.log('Debug page loaded');
+            setTimeout(() => {
+                checkElements();
+                testEventListeners();
+                testProjectsAPI();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

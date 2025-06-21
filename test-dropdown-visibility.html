@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Dropdown CSS Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        
+        /* Simulate the CSS structure */
+        .project-selector-wrapper {
+            position: relative;
+            width: 200px;
+            border: 1px solid #ccc;
+            margin: 20px;
+        }
+        
+        .project-selector-btn {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .project-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 2px solid #007acc;
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 10000;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .project-dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            background: #f9f9f9;
+        }
+        
+        .project-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .project-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .project-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .project-item.selected {
+            background: #007acc;
+            color: white;
+        }
+        
+        .project-item-name {
+            font-weight: 600;
+        }
+        
+        .project-item-description {
+            font-size: 0.85rem;
+            color: #666;
+            opacity: 0.8;
+        }
+        
+        .visible {
+            display: block !important;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Project Dropdown CSS Test</h1>
+    
+    <p>This simulates the project dropdown structure to test visibility.</p>
+    
+    <div class="project-selector-wrapper">
+        <button class="project-selector-btn" onclick="toggleDropdown()">
+            📂 Select Project ▼
+        </button>
+        <div id="test-dropdown" class="project-dropdown visible">
+            <div class="project-dropdown-header">
+                <h4>Switch Project</h4>
+            </div>
+            <div class="project-list">
+                <div class="project-item selected">
+                    <div class="project-item-name">Default Project</div>
+                    <div class="project-item-description">Default project for tasks without explicit project assignment</div>
+                </div>
+                <div class="project-item">
+                    <div class="project-item-name">ABC</div>
+                    <div class="project-item-description">ABC - Authentication, Blockchain, and Compliance platform</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="toggleDropdown()">Toggle Dropdown</button>
+        <button onclick="forceVisible()">Force Visible</button>
+        <button onclick="checkStyles()">Check Styles</button>
+    </div>
+    
+    <div id="debug-info" style="margin-top: 20px; padding: 10px; background: #f5f5f5;"></div>
+
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('test-dropdown');
+            dropdown.classList.toggle('visible');
+            dropdown.classList.toggle('hidden');
+            updateDebugInfo();
+        }
+        
+        function forceVisible() {
+            const dropdown = document.getElementById('test-dropdown');
+            dropdown.style.display = 'block';
+            dropdown.style.opacity = '1';
+            dropdown.style.visibility = 'visible';
+            dropdown.style.zIndex = '10000';
+            updateDebugInfo();
+        }
+        
+        function checkStyles() {
+            const dropdown = document.getElementById('test-dropdown');
+            const computedStyle = window.getComputedStyle(dropdown);
+            updateDebugInfo();
+        }
+        
+        function updateDebugInfo() {
+            const dropdown = document.getElementById('test-dropdown');
+            const computedStyle = window.getComputedStyle(dropdown);
+            const debugInfo = document.getElementById('debug-info');
+            
+            debugInfo.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                Display: ${computedStyle.display}<br>
+                Visibility: ${computedStyle.visibility}<br>
+                Opacity: ${computedStyle.opacity}<br>
+                Z-index: ${computedStyle.zIndex}<br>
+                Position: ${computedStyle.position}<br>
+                Top: ${computedStyle.top}<br>
+                Left: ${computedStyle.left}<br>
+                Right: ${computedStyle.right}<br>
+                Background: ${computedStyle.backgroundColor}<br>
+                Border: ${computedStyle.border}<br>
+                Classes: ${dropdown.className}
+            `;
+        }
+        
+        // Initialize
+        updateDebugInfo();
+    </script>
+</body>
+</html>

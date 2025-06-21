@@ -7,6 +7,7 @@ import { showMessage } from './utils.js';
 
 class ProjectManager {
     constructor() {
+        this.isToggling = false; // Add flag to prevent rapid toggling
         this.initializeEventListeners();
         this.setupDOMEventListeners();
     }
@@ -23,27 +24,58 @@ class ProjectManager {
     }
 
     setupDOMEventListeners() {
+        console.log('ProjectManager: setupDOMEventListeners called, document.readyState:', document.readyState);
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                this.attachProjectDropdownListeners();
+                console.log('ProjectManager: DOMContentLoaded event fired');
+                // Add additional delay to ensure header menu is initialized
+                setTimeout(() => {
+                    this.attachProjectDropdownListeners();
+                }, 100);
             });
         } else {
-            this.attachProjectDropdownListeners();
+            console.log('ProjectManager: DOM already ready, attaching listeners');
+            // Add delay to ensure other components are initialized
+            setTimeout(() => {
+                this.attachProjectDropdownListeners();
+            }, 100);
         }
     }
 
     attachProjectDropdownListeners() {
+        console.log('attachProjectDropdownListeners called');
         const projectSelectorBtn = document.getElementById('project-selector-btn');
+        console.log('Project selector button element:', projectSelectorBtn);
+        
         if (projectSelectorBtn) {
-            projectSelectorBtn.addEventListener('click', (e) => {
+            // Remove any existing listeners to prevent duplicates
+            const newBtn = projectSelectorBtn.cloneNode(true);
+            projectSelectorBtn.parentNode.replaceChild(newBtn, projectSelectorBtn);
+            
+            // Add the event listener to the new element
+            newBtn.addEventListener('click', (e) => {
+                console.log('Project selector button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // Prevent rapid double-clicks
+                if (this.isToggling) {
+                    console.log('Already toggling, ignoring click');
+                    return;
+                }
+                
+                this.isToggling = true;
+                setTimeout(() => {
+                    this.isToggling = false;
+                }, 300);
+                
                 this.toggleProjectDropdown();
             });
             console.log('Project selector button event listener attached');
         } else {
-            console.warn('Project selector button not found in DOM');
+            console.error('Project selector button not found in DOM');
         }
 
         // Close dropdown when clicking outside
@@ -97,6 +129,13 @@ class ProjectManager {
             
             // Restore saved project if available
             stateManager.restoreSavedProject(projects);
+            
+            // If no current project is set after restoration, set the first available project
+            const currentProject = stateManager.getCurrentProject();
+            if (!currentProject && projects.length > 0) {
+                console.log('No current project set, using first available project');
+                stateManager.setCurrentProject(projects[0]);
+            }
             
             return projects;
         } catch (error) {
@@ -209,12 +248,20 @@ class ProjectManager {
     }
 
     updateProjectDropdown() {
+        console.log('updateProjectDropdown called');
         const projectList = document.getElementById('project-list');
-        if (!projectList) return;
+        if (!projectList) {
+            console.error('project-list element not found');
+            return;
+        }
         
         const projects = stateManager.getAvailableProjects();
         const currentProject = stateManager.getCurrentProject();
         const isLoading = stateManager.state.isLoadingProjects;
+        
+        console.log('Available projects:', projects);
+        console.log('Current project:', currentProject);
+        console.log('Is loading:', isLoading);
         
         if (isLoading) {
             projectList.innerHTML = '<div class="project-loading">Loading projects...</div>';
@@ -222,6 +269,7 @@ class ProjectManager {
         }
         
         if (projects.length === 0) {
+            console.log('No projects available');
             projectList.innerHTML = `
                 <div class="project-empty">
                     <p>No projects found</p>
@@ -231,6 +279,7 @@ class ProjectManager {
             return;
         }
         
+        console.log('Rendering project list with', projects.length, 'projects');
         projectList.innerHTML = projects.map(project => `
             <div class="project-item ${currentProject && currentProject.id === project.id ? 'selected' : ''}" 
                  data-project-id="${project.id}">
@@ -239,10 +288,15 @@ class ProjectManager {
             </div>
         `).join('');
         
+        console.log('Project list HTML updated');
+        
         // Add click handlers for project items
-        projectList.querySelectorAll('.project-item').forEach(item => {
+        const projectItems = projectList.querySelectorAll('.project-item');
+        console.log('Adding click handlers to', projectItems.length, 'project items');
+        projectItems.forEach(item => {
             item.addEventListener('click', () => {
                 const projectId = item.dataset.projectId;
+                console.log('Project item clicked, projectId:', projectId);
                 this.switchToProject(projectId);
                 this.closeProjectDropdown();
             });
@@ -276,31 +330,50 @@ class ProjectManager {
     }
 
     toggleProjectDropdown() {
+        console.log('toggleProjectDropdown called');
         const projectDropdown = document.getElementById('project-dropdown');
         const projectSelector = document.getElementById('project-selector-btn');
         
-        if (!projectDropdown || !projectSelector) return;
+        console.log('Project dropdown element:', projectDropdown);
+        console.log('Project selector element:', projectSelector);
         
-        const isOpen = projectDropdown.style.display !== 'none';
-        if (isOpen) {
+        if (!projectDropdown || !projectSelector) {
+            console.error('Required elements not found for project dropdown');
+            return;
+        }
+        
+        // Check current state more reliably
+        const isCurrentlyVisible = projectDropdown.style.display === 'block';
+        console.log('Dropdown is currently visible:', isCurrentlyVisible);
+        
+        if (isCurrentlyVisible) {
+            console.log('Closing dropdown');
             this.closeProjectDropdown();
         } else {
+            console.log('Opening dropdown');
             this.openProjectDropdown();
         }
     }
 
     openProjectDropdown() {
+        console.log('openProjectDropdown called');
         const projectDropdown = document.getElementById('project-dropdown');
         const projectSelector = document.getElementById('project-selector-btn');
         
-        if (!projectDropdown || !projectSelector) return;
+        if (!projectDropdown || !projectSelector) {
+            console.error('Cannot open dropdown - elements not found');
+            return;
+        }
         
+        console.log('Setting dropdown display to block');
         projectDropdown.style.display = 'block';
         projectSelector.classList.add('open');
         this.updateProjectDropdown();
+        console.log('Dropdown opened successfully');
     }
 
     closeProjectDropdown() {
+        console.log('closeProjectDropdown called');
         const projectDropdown = document.getElementById('project-dropdown');
         const projectSelector = document.getElementById('project-selector-btn');
         
@@ -308,6 +381,7 @@ class ProjectManager {
         
         projectDropdown.style.display = 'none';
         projectSelector.classList.remove('open');
+        console.log('Dropdown closed');
     }
 
     // Dialog methods

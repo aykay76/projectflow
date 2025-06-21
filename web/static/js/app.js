@@ -29,7 +29,7 @@ class ProjectFlowApp {
         this.notificationManager = new NotificationManager();
         
         // Initialize feature modules
-        this.projectManager = new ProjectManager(this.apiClient, this.stateManager);
+        this.projectManager = new ProjectManager();
         this.taskManager = new TaskManager(this.apiClient, this.stateManager, this.notificationManager);
         this.taskDetailManager = new TaskDetailManager(this.apiClient, this.stateManager);
         this.dragDropManager = new DragDropManager(this.apiClient, this.stateManager);
