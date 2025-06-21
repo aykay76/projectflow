@@ -7,6 +7,7 @@ import { showMessage } from './utils.js';
 
 class ProjectManager {
     constructor() {
+        console.log('ProjectManager constructor called');
         this.initializeEventListeners();
         this.setupDOMEventListeners();
     }
@@ -83,6 +84,7 @@ class ProjectManager {
     }
 
     async loadAvailableProjects() {
+        console.log('loadAvailableProjects called, loading state:', stateManager.state.isLoadingProjects);
         if (stateManager.state.isLoadingProjects) return;
         
         stateManager.setProjectsLoading(true);
@@ -209,12 +211,20 @@ class ProjectManager {
     }
 
     updateProjectDropdown() {
+        console.log('updateProjectDropdown called');
         const projectList = document.getElementById('project-list');
-        if (!projectList) return;
+        if (!projectList) {
+            console.warn('project-list element not found');
+            return;
+        }
         
         const projects = stateManager.getAvailableProjects();
         const currentProject = stateManager.getCurrentProject();
         const isLoading = stateManager.state.isLoadingProjects;
+        
+        console.log('Updating dropdown with projects:', projects);
+        console.log('Current project:', currentProject);
+        console.log('Is loading:', isLoading);
         
         if (isLoading) {
             projectList.innerHTML = '<div class="project-loading">Loading projects...</div>';
