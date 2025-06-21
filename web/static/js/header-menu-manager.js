@@ -20,14 +20,23 @@ class HeaderMenuManager {
         this.menuBtn = document.getElementById('header-menu-btn');
         this.menu = document.getElementById('header-menu');
 
+        console.log('HeaderMenuManager initializing...', {
+            menuBtn: this.menuBtn,
+            menu: this.menu
+        });
+
         if (this.menuBtn && this.menu) {
             this.bindEvents();
+            console.log('HeaderMenuManager initialized successfully');
+        } else {
+            console.error('HeaderMenuManager failed to find required elements');
         }
     }
 
     bindEvents() {
         // Toggle menu on button click (supports both mouse and touch)
         this.menuBtn.addEventListener('click', (e) => {
+            console.log('Header menu button clicked');
             e.stopPropagation();
             this.toggleMenu();
         });
@@ -78,6 +87,7 @@ class HeaderMenuManager {
     }
 
     toggleMenu() {
+        console.log('Toggle menu called, current state:', this.isMenuOpen);
         if (this.isMenuOpen) {
             this.closeMenu();
         } else {
@@ -86,6 +96,7 @@ class HeaderMenuManager {
     }
 
     openMenu() {
+        console.log('Opening menu...');
         this.menu.style.display = 'block';
         this.menu.style.visibility = 'visible';
         this.isMenuOpen = true;
@@ -94,6 +105,7 @@ class HeaderMenuManager {
         // Add animation class
         setTimeout(() => {
             this.menu.classList.add('menu-open');
+            console.log('Menu opened');
         }, 10);
     }
 

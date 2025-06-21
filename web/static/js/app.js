@@ -38,6 +38,11 @@ class ProjectFlowApp {
         this.viewManager = new ViewManager();
         this.headerMenuManager = new HeaderMenuManager();
         
+        // Store header menu manager globally for debugging
+        window.headerMenuManager = this.headerMenuManager;
+        
+        console.log('HeaderMenuManager created:', this.headerMenuManager);
+        
         // Store references globally for compatibility
         window.projectFlowApp = this;
         this.setupGlobalReferences();
