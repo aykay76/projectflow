@@ -23,27 +23,40 @@ class ProjectManager {
     }
 
     setupDOMEventListeners() {
+        console.log('ProjectManager: setupDOMEventListeners called, document.readyState:', document.readyState);
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                this.attachProjectDropdownListeners();
+                console.log('ProjectManager: DOMContentLoaded event fired');
+                // Add additional delay to ensure header menu is initialized
+                setTimeout(() => {
+                    this.attachProjectDropdownListeners();
+                }, 100);
             });
         } else {
-            this.attachProjectDropdownListeners();
+            console.log('ProjectManager: DOM already ready, attaching listeners');
+            // Add delay to ensure other components are initialized
+            setTimeout(() => {
+                this.attachProjectDropdownListeners();
+            }, 100);
         }
     }
 
     attachProjectDropdownListeners() {
+        console.log('attachProjectDropdownListeners called');
         const projectSelectorBtn = document.getElementById('project-selector-btn');
+        console.log('Project selector button element:', projectSelectorBtn);
+        
         if (projectSelectorBtn) {
             projectSelectorBtn.addEventListener('click', (e) => {
+                console.log('Project selector button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleProjectDropdown();
             });
             console.log('Project selector button event listener attached');
         } else {
-            console.warn('Project selector button not found in DOM');
+            console.error('Project selector button not found in DOM');
         }
 
         // Close dropdown when clicking outside
@@ -283,12 +296,21 @@ class ProjectManager {
     }
 
     toggleProjectDropdown() {
+        console.log('toggleProjectDropdown called');
         const projectDropdown = document.getElementById('project-dropdown');
         const projectSelector = document.getElementById('project-selector-btn');
         
-        if (!projectDropdown || !projectSelector) return;
+        console.log('Project dropdown element:', projectDropdown);
+        console.log('Project selector element:', projectSelector);
+        
+        if (!projectDropdown || !projectSelector) {
+            console.error('Required elements not found for project dropdown');
+            return;
+        }
         
         const isOpen = projectDropdown.style.display !== 'none';
+        console.log('Dropdown is currently open:', isOpen);
+        
         if (isOpen) {
             this.closeProjectDropdown();
         } else {
@@ -297,14 +319,20 @@ class ProjectManager {
     }
 
     openProjectDropdown() {
+        console.log('openProjectDropdown called');
         const projectDropdown = document.getElementById('project-dropdown');
         const projectSelector = document.getElementById('project-selector-btn');
         
-        if (!projectDropdown || !projectSelector) return;
+        if (!projectDropdown || !projectSelector) {
+            console.error('Cannot open dropdown - elements not found');
+            return;
+        }
         
+        console.log('Setting dropdown display to block');
         projectDropdown.style.display = 'block';
         projectSelector.classList.add('open');
         this.updateProjectDropdown();
+        console.log('Dropdown opened successfully');
     }
 
     closeProjectDropdown() {
