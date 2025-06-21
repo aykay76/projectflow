@@ -65,10 +65,17 @@ class HeaderMenuManager {
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
             if (this.isMenuOpen && !this.menu.contains(e.target) && !this.menuBtn.contains(e.target)) {
-                // Don't close if clicking on project dropdown
+                // Don't close if clicking on project dropdown or project selector
                 const projectDropdown = document.getElementById('project-dropdown');
-                if (!projectDropdown || !projectDropdown.contains(e.target)) {
+                const projectSelector = document.getElementById('project-selector-btn');
+                const isProjectDropdownClick = projectDropdown && projectDropdown.contains(e.target);
+                const isProjectSelectorClick = projectSelector && projectSelector.contains(e.target);
+                
+                if (!isProjectDropdownClick && !isProjectSelectorClick) {
+                    console.log('HeaderMenuManager: Closing menu due to outside click');
                     this.closeMenu();
+                } else {
+                    console.log('HeaderMenuManager: Ignoring click on project selector/dropdown');
                 }
             }
         });
