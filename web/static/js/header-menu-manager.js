@@ -56,6 +56,7 @@ class HeaderMenuManager {
 
     openMenu() {
         this.menu.style.display = 'block';
+        this.menu.style.visibility = 'visible';
         this.isMenuOpen = true;
         this.menuBtn.setAttribute('aria-expanded', 'true');
         
@@ -74,6 +75,7 @@ class HeaderMenuManager {
         setTimeout(() => {
             if (!this.isMenuOpen) {
                 this.menu.style.display = 'none';
+                this.menu.style.visibility = 'hidden';
             }
         }, 200);
     }
