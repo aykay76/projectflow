@@ -8,6 +8,7 @@ import { ApiClient } from './api-client.js';
 import { stateManager } from './state-manager.js';
 import { ProjectManager } from './project-manager.js';
 import { TaskManager } from './task-manager.js';
+import { TaskDetailManager } from './task-detail-manager.js';
 import { DragDropManager } from './drag-drop-manager.js';
 import { UIManager } from './ui-manager.js';
 import { FilterManager } from './filter-manager.js';
@@ -29,6 +30,7 @@ class ProjectFlowApp {
         // Initialize feature modules
         this.projectManager = new ProjectManager(this.apiClient, this.stateManager);
         this.taskManager = new TaskManager(this.apiClient, this.stateManager, this.notificationManager);
+        this.taskDetailManager = new TaskDetailManager(this.apiClient, this.stateManager);
         this.dragDropManager = new DragDropManager(this.apiClient, this.stateManager);
         this.uiManager = new UIManager(this.stateManager, this.taskManager);
         this.filterManager = new FilterManager(this.stateManager);
