@@ -58,8 +58,8 @@ func (h *Handler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default to showing tasks from the "PF" project
-	tasks, err := h.storage.ListTasks("PF")
+	// Default to showing tasks from the "ABC" project
+	tasks, err := h.storage.ListTasks("ABC")
 	if err != nil {
 		http.Error(w, "Failed to load tasks", http.StatusInternalServerError)
 		return
@@ -140,10 +140,10 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	requestID := middleware.GetRequestID(ctx)
 
-	// Get project_id from query parameters, default to "PF"
+	// Get project_id from query parameters, default to "ABC"
 	projectID := r.URL.Query().Get("project_id")
 	if projectID == "" {
-		projectID = "PF"
+		projectID = "ABC"
 	}
 
 	logger.InfoContext(ctx, "Listing tasks", "project_id", projectID, "request_id", requestID)
@@ -173,7 +173,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 		Priority    string `json:"priority"`
 		Type        string `json:"type"`
 		ParentID    string `json:"parent_id"`
-		ProjectID   string `json:"project_id"`  // Add project_id field
+		ProjectID   string `json:"project_id"` // Add project_id field
 		DueDate     string `json:"due_date"`
 		StartedAt   string `json:"started_at"`
 	}
@@ -189,7 +189,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 	task.Title = taskCreate.Title
 	task.Description = taskCreate.Description
 	task.ParentID = taskCreate.ParentID
-	task.ProjectID = taskCreate.ProjectID  // Set project_id from request
+	task.ProjectID = taskCreate.ProjectID // Set project_id from request
 
 	// Handle due_date
 	if taskCreate.DueDate != "" {
