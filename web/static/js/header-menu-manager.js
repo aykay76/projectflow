@@ -4,32 +4,62 @@
  */
 class HeaderMenuManager {
     constructor() {
+        console.log('HeaderMenuManager constructor called');
         this.menuBtn = null;
         this.menu = null;
         this.isMenuOpen = false;
+        this.isInitialized = false;
+        this.retryCount = 0;
+        this.maxRetries = 5;
         
         // Defer initialization to ensure DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
+            console.log('DOM is loading, waiting for DOMContentLoaded...');
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded, initializing HeaderMenuManager...');
+                this.init();
+            });
         } else {
+            console.log('DOM is ready, initializing HeaderMenuManager immediately...');
             this.init();
         }
     }
 
     init() {
+        if (this.isInitialized) {
+            console.log('HeaderMenuManager already initialized, skipping...');
+            return;
+        }
+        
+        console.log('HeaderMenuManager init() called, retry count:', this.retryCount);
+        
+        // Try to find elements
         this.menuBtn = document.getElementById('header-menu-btn');
         this.menu = document.getElementById('header-menu');
 
         console.log('HeaderMenuManager initializing...', {
             menuBtn: this.menuBtn,
-            menu: this.menu
+            menu: this.menu,
+            readyState: document.readyState
         });
 
         if (this.menuBtn && this.menu) {
             this.bindEvents();
+            this.isInitialized = true;
             console.log('HeaderMenuManager initialized successfully');
         } else {
             console.error('HeaderMenuManager failed to find required elements');
+            
+            // If elements not found and haven't exceeded max retries, try again
+            if (this.retryCount < this.maxRetries) {
+                this.retryCount++;
+                setTimeout(() => {
+                    console.log('Retrying HeaderMenuManager initialization...');
+                    this.init();
+                }, 100);
+            } else {
+                console.error('HeaderMenuManager failed to initialize after', this.maxRetries, 'retries');
+            }
         }
     }
 
