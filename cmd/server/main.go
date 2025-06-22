@@ -114,6 +114,11 @@ func main() {
 	mux.HandleFunc("/api/chat", chatHandler.HandleChat)
 	mux.HandleFunc("/api/chat/history", chatHandler.HandleChatHistory)
 
+	// Documentation API routes
+	docsHandler := handlers.NewDocsHandler("docs")
+	mux.HandleFunc("/api/docs/list", docsHandler.HandleDocsList)
+	mux.HandleFunc("/api/docs/", docsHandler.HandleDocsGet)
+
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static/"))))
 
