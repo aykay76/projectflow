@@ -282,11 +282,14 @@ func (ch *ChatHandler) executeMCPCommands(commands []translator.MCPCommand) ([]s
 			taskIDs = append(taskIDs, taskID)
 
 		case "list_tasks":
-			projectID, err := ch.executeListTasks(cmd.Parameters)
+			tasks, projectID, err := ch.executeListTasks(cmd.Parameters)
 			if err != nil {
 				return actionsTaken, taskIDs, projectIDs, fmt.Errorf("failed to list tasks: %w", err)
 			}
 			actionsTaken = append(actionsTaken, "list_tasks")
+			for _, task := range tasks {
+				taskIDs = append(taskIDs, task.DisplayID)
+			}
 			if projectID != "" {
 				projectIDs = append(projectIDs, projectID)
 			}
@@ -556,7 +559,7 @@ func (ch *ChatHandler) executeDeleteTask(params map[string]interface{}) (string,
 }
 
 // executeListTasks handles task listing
-func (ch *ChatHandler) executeListTasks(params map[string]interface{}) (string, error) {
+func (ch *ChatHandler) executeListTasks(params map[string]interface{}) ([]*models.Task, string, error) {
 	projectID := ""
 	if p, ok := params["project_id"].(string); ok && p != "" {
 		// Try to get project by display prefix first
@@ -565,19 +568,19 @@ func (ch *ChatHandler) executeListTasks(params map[string]interface{}) (string, 
 			// Try by UUID
 			project, err = ch.storage.GetProject(p)
 			if err != nil {
-				return "", fmt.Errorf("project not found: %s", p)
+				return nil, "", fmt.Errorf("project not found: %s", p)
 			}
 		}
 		projectID = project.ID
 	}
 
-	_, err := ch.storage.ListTasks(projectID)
+	tasks, err := ch.storage.ListTasks(projectID)
 	if err != nil {
-		return "", fmt.Errorf("failed to list tasks: %w", err)
+		return nil, "", fmt.Errorf("failed to list tasks: %w", err)
 	}
 
-	ch.logger.Debug("Tasks listed via chat", "project_id", projectID)
-	return projectID, nil
+	ch.logger.Debug("Tasks listed via chat", "project_id", projectID, "count", len(tasks))
+	return tasks, projectID, nil
 }
 
 // executeCreateProject handles project creation
@@ -753,8 +756,51 @@ func (ch *ChatHandler) enhanceResponseWithData(response string, actionsTaken, ta
 		}
 
 		if action == "list_tasks" && len(taskIDs) > 0 {
-			// Could enhance task listing as well in the future
-			// For now, just return the original response
+			// Get task details for the listed task IDs
+			var taskList []string
+			for _, taskID := range taskIDs {
+				task, err := ch.storage.GetTaskByDisplayID(taskID)
+				if err == nil {
+					// Format task info
+					statusEmoji := "📋"
+					switch task.Status {
+					case "todo":
+						statusEmoji = "📋"
+					case "in_progress":
+						statusEmoji = "🔄"
+					case "done":
+						statusEmoji = "✅"
+					case "blocked":
+						statusEmoji = "🚫"
+					}
+
+					priorityInfo := ""
+					switch task.Priority {
+					case "critical":
+						priorityInfo = " 🔴"
+					case "high":
+						priorityInfo = " 🟡"
+					case "low":
+						priorityInfo = " 🔵"
+					}
+
+					dueDateInfo := ""
+					if task.DueDate != nil {
+						dueDateInfo = fmt.Sprintf(" (due %s)", task.DueDate.Format("2006-01-02"))
+					}
+
+					taskList = append(taskList, fmt.Sprintf("• %s **%s**%s%s: %s",
+						statusEmoji, task.DisplayID, priorityInfo, dueDateInfo, task.Title))
+				}
+			}
+
+			if len(taskList) > 0 {
+				enhancedResponse := "Here are your tasks:\n\n" + strings.Join(taskList, "\n")
+				if len(taskList) == 1 {
+					enhancedResponse = "Here is your task:\n\n" + strings.Join(taskList, "\n")
+				}
+				return enhancedResponse
+			}
 		}
 	}
 
