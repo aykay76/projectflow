@@ -150,6 +150,36 @@ class ApiClient {
             throw error;
         }
     }
+
+    // Chat operations
+    async sendChatMessage(message, conversationId = null) {
+        try {
+            const requestBody = {
+                message: message
+            };
+            
+            if (conversationId) {
+                requestBody.conversation_id = conversationId;
+            }
+
+            return await this.request('/chat', {
+                method: 'POST',
+                body: JSON.stringify(requestBody)
+            });
+        } catch (error) {
+            console.error('Failed to send chat message:', error);
+            throw new Error(error.message || 'Failed to send message');
+        }
+    }
+
+    async getChatHistory(conversationId) {
+        try {
+            return await this.request(`/chat/history?conversation_id=${encodeURIComponent(conversationId)}`);
+        } catch (error) {
+            console.error('Failed to get chat history:', error);
+            throw new Error(error.message || 'Failed to get conversation history');
+        }
+    }
 }
 
 // Export both the class and singleton instance

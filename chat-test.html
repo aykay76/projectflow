@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface Test</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-secondary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-primary);
+            padding: 20px;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+        }
+        h1, h2 {
+            color: var(--text-primary);
+            margin-top: 0;
+        }
+        p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .instructions {
+            background: rgba(var(--accent-primary-rgb), 0.1);
+            border-left: 4px solid var(--accent-primary);
+            padding: 16px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🚀 ProjectFlow Chat Interface Test</h1>
+        
+        <div class="instructions">
+            <h2>📋 Test Instructions</h2>
+            <p><strong>The chat interface should now be available!</strong></p>
+            <ol>
+                <li>Look for a blue chat button (💬) in the bottom-right corner</li>
+                <li>Click it to open the chat panel</li>
+                <li>Try sending a message like "Create a task to test the chat interface"</li>
+                <li>The chat should work even if LLM is disabled (you'll see an error message)</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Expected Behavior</h2>
+            <ul>
+                <li><strong>Chat Toggle:</strong> Smooth toggle animation with floating button</li>
+                <li><strong>Chat Panel:</strong> Clean, modern interface with header and input area</li>
+                <li><strong>Welcome Message:</strong> Helpful greeting with examples</li>
+                <li><strong>Message Input:</strong> Auto-resize textarea with Enter to send</li>
+                <li><strong>Loading States:</strong> Typing indicators and disabled states</li>
+                <li><strong>Mobile Responsive:</strong> Full-screen on mobile devices</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Cases</h2>
+            <p>Try these chat messages to test different features:</p>
+            <ul>
+                <li>"Create a high priority task to fix the login bug"</li>
+                <li>"List all tasks in the PF project"</li>
+                <li>"Show me task PF-123"</li>
+                <li>"Help me understand what I can do"</li>
+                <li>"Create a new project called Testing"</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Debug Information</h2>
+            <p>Check the browser console for:</p>
+            <ul>
+                <li>ChatManager initialization messages</li>
+                <li>API request/response logs</li>
+                <li>Any error messages</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load the app with chat functionality -->
+    <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

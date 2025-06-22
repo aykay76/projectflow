@@ -12,12 +12,14 @@ var ErrTaskNotFound = errors.New("task not found")
 
 // mockStorage implements a simple in-memory storage for testing
 type mockStorage struct {
-	tasks map[string]*models.Task
+	tasks    map[string]*models.Task
+	projects map[string]*models.Project
 }
 
 func newMockStorage() *mockStorage {
 	return &mockStorage{
-		tasks: make(map[string]*models.Task),
+		tasks:    make(map[string]*models.Task),
+		projects: make(map[string]*models.Project),
 	}
 }
 
@@ -96,8 +98,86 @@ func (m *mockStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
 	return rootTasks, nil
 }
 
+// Project operations
+func (m *mockStorage) CreateProject(project *models.Project) error {
+	m.projects[project.ID] = project
+	return nil
+}
+
+func (m *mockStorage) GetProject(id string) (*models.Project, error) {
+	project, exists := m.projects[id]
+	if !exists {
+		return nil, errors.New("project not found")
+	}
+	return project, nil
+}
+
+func (m *mockStorage) UpdateProject(project *models.Project) error {
+	if _, exists := m.projects[project.ID]; !exists {
+		return errors.New("project not found")
+	}
+	m.projects[project.ID] = project
+	return nil
+}
+
+func (m *mockStorage) DeleteProject(id string) error {
+	if _, exists := m.projects[id]; !exists {
+		return errors.New("project not found")
+	}
+	delete(m.projects, id)
+	return nil
+}
+
+func (m *mockStorage) ListProjects() ([]*models.Project, error) {
+	projects := make([]*models.Project, 0, len(m.projects))
+	for _, project := range m.projects {
+		projects = append(projects, project)
+	}
+	return projects, nil
+}
+
+func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
+	for _, project := range m.projects {
+		if project.Name == name {
+			return project, nil
+		}
+	}
+	return nil, errors.New("project not found")
+}
+
+func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
+	project, exists := m.projects[projectID]
+	if !exists {
+		return "", errors.New("project not found")
+	}
+	return project.DisplayPrefix + "-1", nil
+}
+
+func (m *mockStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+	for _, project := range m.projects {
+		if project.DisplayPrefix == displayPrefix {
+			return project, nil
+		}
+	}
+	return nil, errors.New("project not found")
+}
+
+func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	for _, task := range m.tasks {
+		if task.DisplayID == displayID {
+			return task, nil
+		}
+	}
+	return nil, errors.New("task not found")
+}
+
 func (m *mockStorage) TaskExists(id string) bool {
 	_, exists := m.tasks[id]
+	return exists
+}
+
+func (m *mockStorage) ProjectExists(id string) bool {
+	_, exists := m.projects[id]
 	return exists
 }
 

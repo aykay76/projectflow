@@ -14,6 +14,7 @@ import { UIManager } from './ui-manager.js';
 import { FilterManager } from './filter-manager.js';
 import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
+import { ChatManager } from './chat-manager.js';
 import HeaderMenuManager from './header-menu-manager.js';
 
 /**
@@ -36,6 +37,9 @@ class ProjectFlowApp {
         this.uiManager = new UIManager(this.stateManager, this.taskManager);
         this.filterManager = new FilterManager(this.stateManager);
         this.viewManager = new ViewManager();
+        
+        // Initialize chat manager
+        this.chatManager = new ChatManager(this.apiClient, this.notificationManager);
         
         // Initialize HeaderMenuManager after DOM is ready
         this.initializeHeaderMenu();
@@ -171,6 +175,12 @@ class ProjectFlowApp {
             });
         }
         
+        // Chat data change events
+        window.addEventListener('chat:dataChanged', (event) => {
+            console.log('Chat triggered data change, refreshing UI...', event.detail);
+            this.refreshDataFromChat();
+        });
+        
         // Window events
         window.addEventListener('resize', () => {
             if (this.viewManager.handleResize) this.viewManager.handleResize();
@@ -203,6 +213,35 @@ class ProjectFlowApp {
         } catch (error) {
             console.error('Failed to load initial data:', error);
             showMessage('Failed to load data: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Refresh data after chat actions
+     */
+    async refreshDataFromChat() {
+        try {
+            // Refresh projects if available
+            if (this.projectManager.loadAvailableProjects) {
+                await this.projectManager.loadAvailableProjects();
+            }
+            
+            // Refresh tasks if available
+            if (this.taskManager.loadTasks) {
+                await this.taskManager.loadTasks();
+            }
+            
+            // Refresh drag and drop if available
+            if (this.dragDropManager.refreshDraggableCards) {
+                this.dragDropManager.refreshDraggableCards();
+            }
+            
+            // Refresh the current view
+            if (this.viewManager.refresh) {
+                this.viewManager.refresh();
+            }
+        } catch (error) {
+            console.error('Failed to refresh data after chat action:', error);
         }
     }
 
@@ -240,6 +279,7 @@ class ProjectFlowApp {
         if (this.viewManager.destroy) this.viewManager.destroy();
         if (this.dragDropManager.destroy) this.dragDropManager.destroy();
         if (this.filterManager.destroy) this.filterManager.destroy();
+        if (this.chatManager.destroy) this.chatManager.destroy();
         
         // Clear global references
         delete window.projectFlowApp;

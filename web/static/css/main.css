@@ -6,6 +6,7 @@
 @import './components/modals.css';
 @import './components/toasts.css';
 @import './components/context-menu.css';
+@import './components/chat.css';
 @import './views/task-board.css';
 @import './views/timeline.css';
 @import './views/hierarchy.css';
