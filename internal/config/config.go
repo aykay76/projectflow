@@ -29,6 +29,14 @@ type Config struct {
 	// Logging configuration
 	LogLevel  string `env:"LOG_LEVEL" default:"INFO"`
 	LogFormat string `env:"LOG_FORMAT" default:"text"`
+
+	// LLM configuration
+	LLMProvider   string `env:"LLM_PROVIDER" default:"groq"`
+	LLMAPIKey     string `env:"LLM_API_KEY" default:""`
+	LLMBaseURL    string `env:"LLM_BASE_URL" default:""`
+	LLMModel      string `env:"LLM_MODEL" default:"llama-3.1-8b-instant"`
+	LLMTimeout    int    `env:"LLM_TIMEOUT" default:"30"`
+	LLMMaxTokens  int    `env:"LLM_MAX_TOKENS" default:"1000"`
 }
 
 // Load loads configuration from environment variables with validation
@@ -46,6 +54,12 @@ func Load() (*Config, error) {
 		DatabaseSSLMode:  getEnv("DB_SSL_MODE", "prefer"),
 		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
 		LogFormat:        getEnv("LOG_FORMAT", "text"),
+		LLMProvider:      getEnv("LLM_PROVIDER", "groq"),
+		LLMAPIKey:        getEnv("LLM_API_KEY", ""),
+		LLMBaseURL:       getEnv("LLM_BASE_URL", ""),
+		LLMModel:         getEnv("LLM_MODEL", "llama-3.1-8b-instant"),
+		LLMTimeout:       getEnvInt("LLM_TIMEOUT", 30),
+		LLMMaxTokens:     getEnvInt("LLM_MAX_TOKENS", 1000),
 	}
 
 	if err := config.Validate(); err != nil {
@@ -151,6 +165,35 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("LOG_FORMAT must be one of %v, got: %s", validLogFormats, c.LogFormat)
 	}
 
+	// Validate LLM configuration
+	validLLMProviders := []string{"groq", "ollama", "openai", "disabled"}
+	llmProvider := strings.ToLower(c.LLMProvider)
+	var validProvider bool
+	for _, provider := range validLLMProviders {
+		if llmProvider == provider {
+			validProvider = true
+			break
+		}
+	}
+	if !validProvider {
+		return fmt.Errorf("LLM_PROVIDER must be one of %v, got: %s", validLLMProviders, c.LLMProvider)
+	}
+
+	// Validate LLM API key requirement (except for disabled)
+	if llmProvider != "disabled" && llmProvider != "ollama" && c.LLMAPIKey == "" {
+		return fmt.Errorf("LLM_API_KEY is required when LLM_PROVIDER is %s", c.LLMProvider)
+	}
+
+	// Validate LLM timeout
+	if c.LLMTimeout < 1 || c.LLMTimeout > 300 {
+		return fmt.Errorf("LLM_TIMEOUT must be between 1 and 300 seconds, got: %d", c.LLMTimeout)
+	}
+
+	// Validate LLM max tokens
+	if c.LLMMaxTokens < 1 || c.LLMMaxTokens > 10000 {
+		return fmt.Errorf("LLM_MAX_TOKENS must be between 1 and 10000, got: %d", c.LLMMaxTokens)
+	}
+
 	return nil
 }
 
@@ -168,6 +211,11 @@ func (c *Config) LogConfiguration() {
 		"db_ssl_mode", c.DatabaseSSLMode,
 		"log_level", c.LogLevel,
 		"log_format", c.LogFormat,
+		"llm_provider", c.LLMProvider,
+		"llm_model", c.LLMModel,
+		"llm_timeout", c.LLMTimeout,
+		"llm_max_tokens", c.LLMMaxTokens,
+		"llm_api_key_configured", c.LLMAPIKey != "",
 	)
 }
 
@@ -229,6 +277,21 @@ func (c *Config) GetDatabaseConnectionString() string {
 	parts = append(parts, fmt.Sprintf("sslmode=%s", c.DatabaseSSLMode))
 
 	return strings.Join(parts, " ")
+}
+
+// GetLLMProvider returns the normalized LLM provider name
+func (c *Config) GetLLMProvider() string {
+	return strings.ToLower(c.LLMProvider)
+}
+
+// IsLLMEnabled returns true if LLM integration is enabled
+func (c *Config) IsLLMEnabled() bool {
+	return c.GetLLMProvider() != "disabled"
+}
+
+// GetLLMTimeout returns the LLM timeout as a time.Duration
+func (c *Config) GetLLMTimeoutDuration() int {
+	return c.LLMTimeout
 }
 
 // getEnv returns environment variable value or default

@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -23,18 +24,31 @@ type Check struct {
 	Error  string `json:"error,omitempty"`
 }
 
+// LLMService interface for health checking
+type LLMService interface {
+	HealthCheck(ctx context.Context) error
+	IsEnabled() bool
+}
+
 // HealthChecker provides health check functionality
 type HealthChecker struct {
-	storage storage.Storage
-	version string
+	storage    storage.Storage
+	llmService LLMService
+	version    string
 }
 
 // NewHealthChecker creates a new health checker instance
 func NewHealthChecker(storage storage.Storage, version string) *HealthChecker {
 	return &HealthChecker{
-		storage: storage,
-		version: version,
+		storage:    storage,
+		llmService: nil,
+		version:    version,
 	}
+}
+
+// SetLLMService sets the LLM service for health checking
+func (h *HealthChecker) SetLLMService(llmService LLMService) {
+	h.llmService = llmService
 }
 
 // HandleHealth provides basic health status
@@ -75,6 +89,17 @@ func (h *HealthChecker) HandleReady(w http.ResponseWriter, r *http.Request) {
 		statusCode = http.StatusServiceUnavailable
 	}
 
+	// Check LLM service if enabled
+	if h.llmService != nil && h.llmService.IsEnabled() {
+		llmCheck := h.checkLLM()
+		checks = append(checks, llmCheck)
+
+		if llmCheck.Status != "healthy" {
+			overallStatus = "not ready"
+			statusCode = http.StatusServiceUnavailable
+		}
+	}
+
 	response := HealthResponse{
 		Status:    overallStatus,
 		Timestamp: time.Now().UTC(),
@@ -95,6 +120,31 @@ func (h *HealthChecker) checkStorage() Check {
 
 	// Try to list tasks to verify storage is working (use default project "ABC")
 	_, err := h.storage.ListTasks("ABC")
+	if err != nil {
+		check.Status = "unhealthy"
+		check.Error = err.Error()
+	} else {
+		check.Status = "healthy"
+	}
+
+	return check
+}
+
+// checkLLM verifies LLM service connectivity
+func (h *HealthChecker) checkLLM() Check {
+	check := Check{
+		Name: "llm",
+	}
+
+	if h.llmService == nil || !h.llmService.IsEnabled() {
+		check.Status = "disabled"
+		return check
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := h.llmService.HealthCheck(ctx)
 	if err != nil {
 		check.Status = "unhealthy"
 		check.Error = err.Error()
