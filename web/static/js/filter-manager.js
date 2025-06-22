@@ -1,6 +1,8 @@
 /**
  * Filter Manager - Handles search, filtering, and task organization
  */
+import { sortTasksByNumber } from './utils.js';
+
 class FilterManager {
     constructor() {
         this.filters = {
@@ -407,16 +409,40 @@ class FilterManager {
      * Update kanban board display
      */
     updateKanbanDisplay(filteredTasks) {
-        const taskCards = document.querySelectorAll('.task-card');
-        const filteredTaskIds = new Set(filteredTasks.map(t => t.id));
+        // Group tasks by status and sort each group numerically
+        const tasksByStatus = {
+            todo: [],
+            in_progress: [],
+            done: [],
+            blocked: []
+        };
         
-        taskCards.forEach(card => {
-            const taskId = card.dataset.id;
-            if (filteredTaskIds.has(taskId)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
+        // Group filtered tasks by status
+        filteredTasks.forEach(task => {
+            if (tasksByStatus.hasOwnProperty(task.status)) {
+                tasksByStatus[task.status].push(task);
             }
+        });
+        
+        // Update each status column with sorted tasks
+        Object.keys(tasksByStatus).forEach(status => {
+            const taskList = document.getElementById(`${status.replace('_', '-')}-tasks`);
+            if (!taskList) {
+                console.warn(`Task list not found for status: ${status}`);
+                return;
+            }
+            
+            // Sort tasks numerically
+            const sortedTasks = sortTasksByNumber(tasksByStatus[status]);
+            
+            // Clear and rebuild the column
+            taskList.innerHTML = '';
+            
+            // Add sorted tasks to column
+            sortedTasks.forEach(task => {
+                const taskCard = window.taskManager.createTaskCard(task);
+                taskList.appendChild(taskCard);
+            });
         });
     }
 
