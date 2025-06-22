@@ -289,6 +289,59 @@ func (m *mockStorage) Close() error {
 	return nil
 }
 
+// GetTaskByDisplayID retrieves a task by its display ID
+func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+	if m.failNext {
+		m.failNext = false
+		return nil, fmt.Errorf("storage error")
+	}
+
+	for _, task := range m.tasks {
+		if task.DisplayID == displayID {
+			taskCopy := *task
+			return &taskCopy, nil
+		}
+	}
+	return nil, fmt.Errorf("task not found: %s", displayID)
+}
+
+// GetNextDisplayID generates the next display ID for a project
+func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
+	if m.failNext {
+		m.failNext = false
+		return "", fmt.Errorf("storage error")
+	}
+
+	// Find the project to get its prefix
+	// For testing, we'll assume PF is the default prefix
+	prefix := "PF"
+	
+	// Count existing tasks for this project to determine next ID
+	count := 0
+	for _, task := range m.tasks {
+		if task.ProjectID == projectID {
+			count++
+		}
+	}
+	
+	return fmt.Sprintf("%s-%d", prefix, count+1), nil
+}
+
+// GetProjectByDisplayPrefix retrieves a project by its display prefix
+func (m *mockStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+	if m.failNext {
+		m.failNext = false
+		return nil, fmt.Errorf("storage error")
+	}
+
+	// For testing, create a mock project
+	return &models.Project{
+		ID:            "project-1",
+		Name:          "Test Project",
+		DisplayPrefix: displayPrefix,
+	}, nil
+}
+
 // Helper function to create a handler with mock storage
 func setupHandler() (*Handler, *mockStorage) {
 	storage := newMockStorage()

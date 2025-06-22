@@ -13,6 +13,7 @@ import (
 	"github.com/aykay76/projectflow/internal/config"
 	"github.com/aykay76/projectflow/internal/handlers"
 	"github.com/aykay76/projectflow/internal/health"
+	"github.com/aykay76/projectflow/internal/llm"
 	"github.com/aykay76/projectflow/internal/logger"
 	"github.com/aykay76/projectflow/internal/metrics"
 	"github.com/aykay76/projectflow/internal/middleware"
@@ -44,15 +45,28 @@ func main() {
 
 	slog.Info("Storage initialized", "type", cfg.GetStorageType())
 
+	// Initialize LLM service
+	llmService, err := llm.NewService(cfg, slog.Default())
+	if err != nil {
+		slog.Error("Failed to initialize LLM service", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("LLM service initialized", "enabled", llmService.IsEnabled())
+
 	// Initialize metrics
 	appMetrics := metrics.NewMetrics()
 	slog.Info("Metrics initialized")
 
 	// Initialize handlers
 	handler := handlers.NewHandler(store)
+	
+	// Initialize chat handler
+	chatHandler := handlers.NewChatHandler(store, llmService, slog.Default())
 
 	// Initialize health checker
 	healthChecker := health.NewHealthChecker(store, "1.0.0")
+	healthChecker.SetLLMService(llmService)
 
 	// Setup routes
 	mux := http.NewServeMux()
@@ -95,6 +109,10 @@ func main() {
 	// Project API routes
 	mux.HandleFunc("/api/projects", handler.HandleProjects)
 	mux.HandleFunc("/api/projects/", handler.HandleProject)
+
+	// Chat API routes
+	mux.HandleFunc("/api/chat", chatHandler.HandleChat)
+	mux.HandleFunc("/api/chat/history", chatHandler.HandleChatHistory)
 
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static/"))))
