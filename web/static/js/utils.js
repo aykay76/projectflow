@@ -117,6 +117,53 @@ export function getTaskTypeIcon(type) {
     return icons[type] || '📋';
 }
 
+// Task sorting utilities
+/**
+ * Extract numeric suffix from task display ID
+ * @param {string} displayId - Task display ID (e.g., "PF-123", "ABC-456")
+ * @returns {number} - Numeric suffix or 0 if not found
+ */
+export function extractTaskNumber(displayId) {
+    if (!displayId || typeof displayId !== 'string') {
+        return 0;
+    }
+    
+    // Match pattern: prefix-number (e.g., PF-123, ABC-456)
+    const match = displayId.match(/^[A-Z]+-(\d+)$/);
+    if (match && match[1]) {
+        return parseInt(match[1], 10);
+    }
+    
+    return 0;
+}
+
+/**
+ * Compare two tasks by their display ID numeric suffix
+ * @param {Object} taskA - First task object
+ * @param {Object} taskB - Second task object
+ * @returns {number} - Comparison result (-1, 0, 1)
+ */
+export function compareTasksByNumber(taskA, taskB) {
+    const numberA = extractTaskNumber(taskA.display_id);
+    const numberB = extractTaskNumber(taskB.display_id);
+    
+    // Sort in ascending order (lowest numbers first)
+    return numberA - numberB;
+}
+
+/**
+ * Sort an array of tasks by their display ID numeric suffix
+ * @param {Array} tasks - Array of task objects
+ * @returns {Array} - Sorted array of tasks
+ */
+export function sortTasksByNumber(tasks) {
+    if (!Array.isArray(tasks)) {
+        return [];
+    }
+    
+    return [...tasks].sort(compareTasksByNumber);
+}
+
 // Button state management
 export function setButtonLoading(button, loading) {
     if (!button) return;

@@ -3,7 +3,7 @@
  */
 import { stateManager } from './state-manager.js';
 import { taskManager } from './task-manager.js';
-import { showMessage } from './utils.js';
+import { showMessage, sortTasksByNumber } from './utils.js';
 
 class ViewManager {
     constructor() {
@@ -167,11 +167,15 @@ class ViewManager {
             const statusTasks = tasks.filter(task => task.status === status);
             console.log(`Found ${statusTasks.length} tasks with status: ${status}`);
             
+            // Sort tasks numerically by display ID
+            const sortedTasks = sortTasksByNumber(statusTasks);
+            console.log(`Sorted ${sortedTasks.length} tasks for ${status} column`);
+            
             // Clear existing tasks
             taskList.innerHTML = '';
             
-            // Add tasks to column
-            statusTasks.forEach(task => {
+            // Add tasks to column in sorted order
+            sortedTasks.forEach(task => {
                 const taskCard = taskManager.createTaskCard(task);
                 taskList.appendChild(taskCard);
             });

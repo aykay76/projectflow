@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Numeric Task Sorting</title>
+</head>
+<body>
+    <h1>Test Numeric Task Sorting</h1>
+    <div id="test-results"></div>
+    
+    <script type="module">
+        // Import the sorting functions
+        import { extractTaskNumber, sortTasksByNumber, compareTasksByNumber } from './static/js/utils.js';
+        
+        // Test data
+        const testTasks = [
+            { id: '1', display_id: 'PF-5', title: 'Task 5', status: 'todo' },
+            { id: '2', display_id: 'PF-123', title: 'Task 123', status: 'todo' },
+            { id: '3', display_id: 'PF-1', title: 'Task 1', status: 'todo' },
+            { id: '4', display_id: 'PF-45', title: 'Task 45', status: 'in_progress' },
+            { id: '5', display_id: 'ABC-2', title: 'ABC Task 2', status: 'in_progress' },
+            { id: '6', display_id: 'ABC-100', title: 'ABC Task 100', status: 'done' },
+            { id: '7', display_id: 'PF-10', title: 'Task 10', status: 'done' },
+            { id: '8', display_id: null, title: 'Task without ID', status: 'blocked' },
+            { id: '9', display_id: 'INVALID', title: 'Invalid ID format', status: 'blocked' }
+        ];
+
+        function runTests() {
+            let results = '<h2>Test Results</h2>';
+            
+            // Test extractTaskNumber function
+            results += '<h3>extractTaskNumber() tests:</h3>';
+            results += `<p>PF-123 → ${extractTaskNumber('PF-123')} (expected: 123)</p>`;
+            results += `<p>ABC-456 → ${extractTaskNumber('ABC-456')} (expected: 456)</p>`;
+            results += `<p>PF-1 → ${extractTaskNumber('PF-1')} (expected: 1)</p>`;
+            results += `<p>null → ${extractTaskNumber(null)} (expected: 0)</p>`;
+            results += `<p>INVALID → ${extractTaskNumber('INVALID')} (expected: 0)</p>`;
+            
+            // Test sorting
+            results += '<h3>Task Sorting Test:</h3>';
+            results += '<h4>Original Order:</h4>';
+            testTasks.forEach(task => {
+                results += `<p>${task.display_id || 'NO_ID'}: ${task.title}</p>`;
+            });
+            
+            results += '<h4>Sorted Order:</h4>';
+            const sorted = sortTasksByNumber(testTasks);
+            sorted.forEach(task => {
+                results += `<p>${task.display_id || 'NO_ID'}: ${task.title}</p>`;
+            });
+            
+            // Group by status and sort each group
+            results += '<h3>Grouped by Status (sorted within each group):</h3>';
+            const tasksByStatus = {
+                todo: [],
+                in_progress: [],
+                done: [],
+                blocked: []
+            };
+            
+            testTasks.forEach(task => {
+                if (tasksByStatus.hasOwnProperty(task.status)) {
+                    tasksByStatus[task.status].push(task);
+                }
+            });
+            
+            Object.keys(tasksByStatus).forEach(status => {
+                if (tasksByStatus[status].length > 0) {
+                    results += `<h4>${status.replace('_', ' ').toUpperCase()}:</h4>`;
+                    const sortedStatus = sortTasksByNumber(tasksByStatus[status]);
+                    sortedStatus.forEach(task => {
+                        results += `<p>${task.display_id || 'NO_ID'}: ${task.title}</p>`;
+                    });
+                }
+            });
+            
+            document.getElementById('test-results').innerHTML = results;
+        }
+        
+        // Run tests when page loads
+        runTests();
+    </script>
+</body>
+</html>
