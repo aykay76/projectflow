@@ -87,6 +87,12 @@ export class ChatManager {
         this.toggleBtn.addEventListener('click', () => this.toggleChat());
         this.closeBtn.addEventListener('click', () => this.closeChat());
 
+        // Also bind to header chat toggle button if it exists
+        const headerChatBtn = document.getElementById('chat-toggle-btn');
+        if (headerChatBtn) {
+            headerChatBtn.addEventListener('click', () => this.toggleChat());
+        }
+
         // Send message
         this.sendBtn.addEventListener('click', () => this.sendMessage());
         
@@ -114,7 +120,10 @@ export class ChatManager {
         });
         
         document.addEventListener('click', (e) => {
-            if (this.isOpen && !this.chatPanel.contains(e.target) && !this.toggleBtn.contains(e.target)) {
+            const headerChatBtn = document.getElementById('chat-toggle-btn');
+            const isToggleBtn = this.toggleBtn.contains(e.target) || (headerChatBtn && headerChatBtn.contains(e.target));
+            
+            if (this.isOpen && !this.chatPanel.contains(e.target) && !isToggleBtn) {
                 // Only auto-close on mobile
                 if (window.innerWidth <= 768) {
                     this.closeChat();
@@ -144,6 +153,12 @@ export class ChatManager {
         this.toggleBtn.innerHTML = '×';
         this.toggleBtn.title = 'Close Chat Assistant';
         
+        // Update header button if it exists
+        const headerChatBtn = document.getElementById('chat-toggle-btn');
+        if (headerChatBtn) {
+            headerChatBtn.classList.add('chat-active');
+        }
+        
         // Focus input
         setTimeout(() => {
             this.inputElement.focus();
@@ -164,6 +179,12 @@ export class ChatManager {
         this.toggleBtn.classList.remove('active');
         this.toggleBtn.innerHTML = '💬';
         this.toggleBtn.title = 'Open Chat Assistant';
+        
+        // Update header button if it exists
+        const headerChatBtn = document.getElementById('chat-toggle-btn');
+        if (headerChatBtn) {
+            headerChatBtn.classList.remove('chat-active');
+        }
     }
 
     /**

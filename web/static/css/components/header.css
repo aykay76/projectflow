@@ -62,7 +62,8 @@ header p {
 }
 
 /* Header Menu Button */
-.header-menu-btn {
+.header-menu-btn,
+.chat-toggle-btn {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
@@ -79,13 +80,26 @@ header p {
     font-size: 1.1rem;
 }
 
-.header-menu-btn:hover {
+.header-menu-btn:hover,
+.chat-toggle-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
 }
 
-.header-menu-btn:active {
+.header-menu-btn:active,
+.chat-toggle-btn:active {
     transform: translateY(0);
+}
+
+.chat-toggle-btn.chat-active {
+    background: rgba(0, 123, 255, 0.8);
+    border-color: rgba(0, 123, 255, 0.9);
+}
+
+.header-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 /* Header Menu Popup */
