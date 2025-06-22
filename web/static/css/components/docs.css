@@ -351,6 +351,55 @@
     color: var(--color-text-muted);
 }
 
+/* Modal Help Section */
+.modal-help-section {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-left: 3px solid var(--color-primary);
+}
+
+.modal-help-section .help-text {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+}
+
+.modal-help-section .help-link {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.modal-help-section .help-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+/* Form Text Enhancements */
+.form-text {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Enhanced Label Styling */
+label .help-icon.inline {
+    margin-left: 0.25rem;
+    font-size: 10px;
+    width: 14px;
+    height: 14px;
+    vertical-align: baseline;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .modal-large {

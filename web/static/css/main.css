@@ -8,6 +8,7 @@
 @import './components/context-menu.css';
 @import './components/chat.css';
 @import './components/docs.css';
+@import './components/docs.css';
 @import './views/task-board.css';
 @import './views/timeline.css';
 @import './views/hierarchy.css';

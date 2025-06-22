@@ -88,7 +88,9 @@
         <!-- Advanced Filtering Panel -->
         <div id="filter-panel" class="filter-panel" style="display: none;">
             <div class="filter-content">
-                <h3>🔍 Advanced Filters</h3>
+                <h3>🔍 Advanced Filters
+                    <span class="help-icon inline" onclick="ProjectFlowHelp.openDoc('user-guide'); event.stopPropagation();" title="Learn about filtering and searching tasks effectively">?</span>
+                </h3>
                 
                 <!-- Active Filters Display -->
                 <div id="active-filters-container" class="active-filters" style="display: none;">
@@ -371,6 +373,12 @@
                 <h2 id="modal-title">New Task</h2>
                 <span class="close">&times;</span>
             </div>
+            <div class="modal-help-section">
+                <p class="help-text">💡 <strong>Creating effective tasks:</strong> Use clear, actionable titles and break large work into smaller tasks.</p>
+                <a href="#" class="help-link" onclick="ProjectFlowHelp.openDoc('user-guide'); return false;">
+                    📚 Learn about task management best practices
+                </a>
+            </div>
             <form id="task-form">
                 <div class="form-group">
                     <label for="task-title">Title *</label>
@@ -391,32 +399,44 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="task-type">Type</label>
+                        <label for="task-type">
+                            Type
+                            <span class="help-icon inline" onclick="ProjectFlowHelp.openDoc('user-guide'); event.stopPropagation();" title="Learn about task types: Epic, Story, Task, Subtask">?</span>
+                        </label>
                         <select id="task-type" name="type">
                             <option value="task">Task</option>
                             <option value="story">Story</option>
                             <option value="epic">Epic</option>
                             <option value="subtask">Subtask</option>
                         </select>
+                        <small class="form-text">Epic > Story > Task > Subtask</small>
                     </div>
                     <div class="form-group">
-                        <label for="task-priority">Priority</label>
+                        <label for="task-priority">
+                            Priority
+                            <span class="help-icon inline" onclick="ProjectFlowHelp.openDoc('user-guide'); event.stopPropagation();" title="Understand when to use each priority level">?</span>
+                        </label>
                         <select id="task-priority" name="priority">
                             <option value="low">Low</option>
                             <option value="medium" selected>Medium</option>
                             <option value="high">High</option>
                             <option value="critical">Critical</option>
                         </select>
+                        <small class="form-text">🔴 Critical, 🟡 High, 🔵 Medium, ⚪ Low</small>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="task-status">Status</label>
+                    <label for="task-status">
+                        Status
+                        <span class="help-icon inline" onclick="ProjectFlowHelp.openDoc('user-guide'); event.stopPropagation();" title="Learn about task workflow and status meanings">?</span>
+                    </label>
                     <select id="task-status" name="status">
-                        <option value="todo" selected>To Do</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="done">Done</option>
-                        <option value="blocked">Blocked</option>
+                        <option value="todo" selected>📋 To Do</option>
+                        <option value="in_progress">🔄 In Progress</option>
+                        <option value="done">✅ Done</option>
+                        <option value="blocked">🚫 Blocked</option>
                     </select>
+                    <small class="form-text">Tasks flow from To Do → In Progress → Done</small>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
@@ -432,6 +452,12 @@
             <div class="modal-header">
                 <h2>Project Management</h2>
                 <span class="close project-modal-close">&times;</span>
+            </div>
+            <div class="modal-help-section">
+                <p class="help-text">📁 <strong>Project Organization:</strong> Use projects to group related work and keep your tasks organized.</p>
+                <a href="#" class="help-link" onclick="ProjectFlowHelp.openDoc('user-guide'); return false;">
+                    📚 Learn about project best practices
+                </a>
             </div>
             <div class="modal-body">
                 <div class="tab-container">

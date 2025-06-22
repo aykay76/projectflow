@@ -16,6 +16,7 @@ import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
 import { ChatManager } from './chat-manager.js';
 import { DocsManager } from './docs-manager.js';
+import HelpIntegration from './help-integration.js';
 import HeaderMenuManager from './header-menu-manager.js';
 
 /**
@@ -43,6 +44,9 @@ class ProjectFlowApp {
         
         // Initialize documentation manager
         this.docsManager = new DocsManager(this.apiClient);
+        
+        // Initialize help integration
+        this.helpIntegration = new HelpIntegration(this.docsManager);
         
         // Initialize UI manager with dependencies (after chat manager)
         this.uiManager = new UIManager(this.stateManager, this.taskManager, this.chatManager);
@@ -215,6 +219,13 @@ class ProjectFlowApp {
             if (currentProject && this.taskManager.loadTasks) {
                 await this.taskManager.loadTasks(currentProject.id);
             }
+            
+            // Add contextual help after everything is loaded
+            setTimeout(() => {
+                if (this.helpIntegration && this.helpIntegration.addContextualHelp) {
+                    this.helpIntegration.addContextualHelp();
+                }
+            }, 500);
             
         } catch (error) {
             console.error('Failed to load initial data:', error);

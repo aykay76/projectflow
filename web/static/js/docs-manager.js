@@ -436,4 +436,27 @@ export class DocsManager {
             this.loadingDiv.style.display = 'none';
         }
     }
+
+    /**
+     * Public method to open documentation to a specific document
+     * Used for context-sensitive help throughout the application
+     */
+    openDocument(docName) {
+        this.showModal();
+        if (docName) {
+            this.loadDocument(docName);
+        }
+    }
+
+    /**
+     * Static method to open documentation from anywhere in the app
+     */
+    static openHelp(docName = null) {
+        if (window.projectFlowApp && window.projectFlowApp.docsManager) {
+            window.projectFlowApp.docsManager.openDocument(docName);
+        } else {
+            console.warn('DocsManager not available, falling back to alert');
+            alert('Documentation system not available. Please reload the page.');
+        }
+    }
 }

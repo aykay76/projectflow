@@ -291,11 +291,12 @@ What would you like me to help you with?`,
             const errorMessage = {
                 id: 'error-' + Date.now(),
                 role: 'assistant',
-                content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}`,
+                content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}\n\n💡 Need help? Check out the [Chat Interface Guide](chat-interface-guide) to learn about available commands and troubleshooting tips.`,
                 timestamp: new Date(),
                 metadata: {
                     intent: 'error',
-                    confidence: 0
+                    confidence: 0,
+                    hasHelpLink: true
                 }
             };
 
