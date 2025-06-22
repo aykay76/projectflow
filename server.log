@@ -1,27 +1,335 @@
-time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Logger configured" level=INFO format=text
-time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Application configuration loaded" port=8083 shutdown_timeout_seconds=30 storage_type=file data_dir=./data db_host=localhost db_port=5432 db_name=projectflow db_user=projectflow db_ssl_mode=prefer log_level=INFO log_format=text
-time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Initializing storage" type=file
-time=2025-06-14T19:57:48.662+01:00 level=INFO msg="Storage initialized" type=file
-time=2025-06-14T19:57:48.663+01:00 level=INFO msg="Metrics initialized"
-time=2025-06-14T19:57:48.663+01:00 level=INFO msg="Server starting" port=8083 shutdown_timeout_seconds=30
-time=2025-06-14T19:58:13.966+01:00 level=INFO msg="Request started" method=PUT path=/api/tasks/PF-3 request_id=51d7abb7a319c35b remote_addr=[::1]:51289 user_agent=curl/8.7.1
-time=2025-06-14T19:58:13.966+01:00 level=INFO msg="HTTP request started" method=PUT endpoint=/api/tasks request_id=51d7abb7a319c35b
-time=2025-06-14T19:58:13.975+01:00 level=INFO msg="HTTP request completed" method=PUT endpoint=/api/tasks status_code=200 duration_ms=8 response_size=353 request_id=51d7abb7a319c35b
-time=2025-06-14T19:58:13.975+01:00 level=INFO msg="Request completed" method=PUT path=/api/tasks/PF-3 request_id=51d7abb7a319c35b
-time=2025-06-14T19:58:21.181+01:00 level=INFO msg="Request started" method=PUT path=/api/tasks/PF-1 request_id=3422acb9ea22405c remote_addr=[::1]:51294 user_agent=curl/8.7.1
-time=2025-06-14T19:58:21.181+01:00 level=INFO msg="HTTP request started" method=PUT endpoint=/api/tasks request_id=3422acb9ea22405c
-time=2025-06-14T19:58:21.187+01:00 level=INFO msg="HTTP request completed" method=PUT endpoint=/api/tasks status_code=200 duration_ms=5 response_size=428 request_id=3422acb9ea22405c
-time=2025-06-14T19:58:21.187+01:00 level=INFO msg="Request completed" method=PUT path=/api/tasks/PF-1 request_id=3422acb9ea22405c
-time=2025-06-14T19:58:27.384+01:00 level=INFO msg="Request started" method=GET path=/api/tasks/by-display-id/PF-1 request_id=f7935c5470b33a0c remote_addr=[::1]:51300 user_agent=curl/8.7.1
-time=2025-06-14T19:58:27.384+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=f7935c5470b33a0c
-time=2025-06-14T19:58:27.387+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=3 response_size=428 request_id=f7935c5470b33a0c
-time=2025-06-14T19:58:27.387+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks/by-display-id/PF-1 request_id=f7935c5470b33a0c
-time=2025-06-14T19:58:33.474+01:00 level=INFO msg="Request started" method=DELETE path=/api/tasks/PF-3 request_id=5c3e530f9396152c remote_addr=[::1]:51305 user_agent=curl/8.7.1
-time=2025-06-14T19:58:33.475+01:00 level=INFO msg="HTTP request started" method=DELETE endpoint=/api/tasks request_id=5c3e530f9396152c
-time=2025-06-14T19:58:33.477+01:00 level=INFO msg="HTTP request completed" method=DELETE endpoint=/api/tasks status_code=204 duration_ms=2 response_size=0 request_id=5c3e530f9396152c
-time=2025-06-14T19:58:33.477+01:00 level=INFO msg="Request completed" method=DELETE path=/api/tasks/PF-3 request_id=5c3e530f9396152c
-time=2025-06-14T19:58:40.758+01:00 level=INFO msg="Request started" method=GET path=/api/tasks/PF-3 request_id=7ed9b5bd6b06b7a3 remote_addr=[::1]:51313 user_agent=curl/8.7.1
-time=2025-06-14T19:58:40.758+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=7ed9b5bd6b06b7a3
-time=2025-06-14T19:58:40.761+01:00 level=WARN msg="Task not found" request_id=7ed9b5bd6b06b7a3 task_id=PF-3
-time=2025-06-14T19:58:40.761+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=404 duration_ms=3 response_size=15 request_id=7ed9b5bd6b06b7a3
-time=2025-06-14T19:58:40.761+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks/PF-3 request_id=7ed9b5bd6b06b7a3
+time=2025-06-22T16:05:18.217+01:00 level=INFO msg="Logger configured" level=INFO format=text
+time=2025-06-22T16:05:18.217+01:00 level=INFO msg="Application configuration loaded" port=16191 shutdown_timeout_seconds=30 storage_type=file data_dir=./data db_host=localhost db_port=5432 db_name=projectflow db_user=projectflow db_ssl_mode=prefer log_level=INFO log_format=text llm_provider=disabled llm_model=llama-3.1-8b-instant llm_timeout=30 llm_max_tokens=1000 llm_api_key_configured=false
+time=2025-06-22T16:05:18.217+01:00 level=INFO msg="Initializing storage" type=file
+time=2025-06-22T16:05:18.218+01:00 level=INFO msg="Storage initialized" type=file
+time=2025-06-22T16:05:18.218+01:00 level=INFO msg="LLM service initialized" enabled=false
+time=2025-06-22T16:05:18.218+01:00 level=INFO msg="Metrics initialized"
+time=2025-06-22T16:05:18.218+01:00 level=INFO msg="Server starting" port=16191 shutdown_timeout_seconds=30
+time=2025-06-22T16:05:43.284+01:00 level=INFO msg="Request started" method=GET path=/ request_id=f69d0c443316040e remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.284+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/ request_id=f69d0c443316040e
+time=2025-06-22T16:05:43.293+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/ status_code=200 duration_ms=9 response_size=97622 request_id=f69d0c443316040e
+time=2025-06-22T16:05:43.293+01:00 level=INFO msg="Request completed" method=GET path=/ request_id=f69d0c443316040e
+time=2025-06-22T16:05:43.330+01:00 level=INFO msg="Request started" method=GET path=/static/js/app.js request_id=761cebd4ff6e4c85 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.330+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=761cebd4ff6e4c85
+time=2025-06-22T16:05:43.334+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=3 response_size=11253 request_id=761cebd4ff6e4c85
+time=2025-06-22T16:05:43.335+01:00 level=INFO msg="Request completed" method=GET path=/static/js/app.js request_id=761cebd4ff6e4c85
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request started" method=GET path=/static/css/components/header.css request_id=17bdf2474b980b97 remote_addr=[::1]:57368 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/css request_id=17bdf2474b980b97
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request started" method=GET path=/static/css/components/buttons.css request_id=ee00111b8a940d81 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/css request_id=ee00111b8a940d81
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request started" method=GET path=/static/css/components/modals.css request_id=0227a84a38e59f69 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/css request_id=0227a84a38e59f69
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/css status_code=304 duration_ms=0 response_size=0 request_id=ee00111b8a940d81
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request completed" method=GET path=/static/css/components/buttons.css request_id=ee00111b8a940d81
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/css status_code=304 duration_ms=0 response_size=0 request_id=17bdf2474b980b97
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request completed" method=GET path=/static/css/components/header.css request_id=17bdf2474b980b97
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/css status_code=304 duration_ms=0 response_size=0 request_id=0227a84a38e59f69
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request completed" method=GET path=/static/css/components/modals.css request_id=0227a84a38e59f69
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="Request started" method=GET path=/static/css/views/task-board.css request_id=1d08030e52fc3e36 remote_addr=[::1]:57371 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.336+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/css request_id=1d08030e52fc3e36
+time=2025-06-22T16:05:43.337+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/css status_code=304 duration_ms=0 response_size=0 request_id=1d08030e52fc3e36
+time=2025-06-22T16:05:43.337+01:00 level=INFO msg="Request completed" method=GET path=/static/css/views/task-board.css request_id=1d08030e52fc3e36
+time=2025-06-22T16:05:43.339+01:00 level=INFO msg="Request started" method=GET path=/static/js/chat-manager.js request_id=7c5e46afad2374df remote_addr=[::1]:57371 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.339+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=7c5e46afad2374df
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/state-manager.js request_id=12c2259e0228fe8f remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=12c2259e0228fe8f
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/api-client.js request_id=7a88c62eba08cf78 remote_addr=[::1]:57368 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=7a88c62eba08cf78
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=12c2259e0228fe8f
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/state-manager.js request_id=12c2259e0228fe8f
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=16023 request_id=7c5e46afad2374df
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/chat-manager.js request_id=7c5e46afad2374df
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/project-manager.js request_id=27fed00d270f28b3 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=27fed00d270f28b3
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/utils.js request_id=9af37807d038f217 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=9af37807d038f217
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=5279 request_id=7a88c62eba08cf78
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/api-client.js request_id=7a88c62eba08cf78
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/task-manager.js request_id=05331d6b43c64aff remote_addr=[::1]:57372 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=05331d6b43c64aff
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request started" method=GET path=/static/js/task-detail-manager.js request_id=074bc61a2a6fa8fd remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=4976 request_id=9af37807d038f217
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/utils.js request_id=9af37807d038f217
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=05331d6b43c64aff
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/task-manager.js request_id=05331d6b43c64aff
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=074bc61a2a6fa8fd
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=27fed00d270f28b3
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/project-manager.js request_id=27fed00d270f28b3
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=074bc61a2a6fa8fd
+time=2025-06-22T16:05:43.340+01:00 level=INFO msg="Request completed" method=GET path=/static/js/task-detail-manager.js request_id=074bc61a2a6fa8fd
+time=2025-06-22T16:05:43.341+01:00 level=INFO msg="Request started" method=GET path=/static/js/ui-manager.js request_id=93ab7205c3597399 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.341+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=93ab7205c3597399
+time=2025-06-22T16:05:43.341+01:00 level=INFO msg="Request started" method=GET path=/static/js/drag-drop-manager.js request_id=aee78d0c1f962e71 remote_addr=[::1]:57372 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=aee78d0c1f962e71
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=93ab7205c3597399
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=aee78d0c1f962e71
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request completed" method=GET path=/static/js/ui-manager.js request_id=93ab7205c3597399
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request completed" method=GET path=/static/js/drag-drop-manager.js request_id=aee78d0c1f962e71
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request started" method=GET path=/static/js/filter-manager.js request_id=d8a1a00590e1b3b1 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=d8a1a00590e1b3b1
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request started" method=GET path=/static/js/notification-manager.js request_id=3394d92033f6f9d0 remote_addr=[::1]:57368 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=3394d92033f6f9d0
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=3394d92033f6f9d0
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request completed" method=GET path=/static/js/notification-manager.js request_id=3394d92033f6f9d0
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=23314 request_id=d8a1a00590e1b3b1
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request completed" method=GET path=/static/js/filter-manager.js request_id=d8a1a00590e1b3b1
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="Request started" method=GET path=/static/js/view-manager.js request_id=07c7efb0563f867c remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.342+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=07c7efb0563f867c
+time=2025-06-22T16:05:43.343+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=13011 request_id=07c7efb0563f867c
+time=2025-06-22T16:05:43.343+01:00 level=INFO msg="Request completed" method=GET path=/static/js/view-manager.js request_id=07c7efb0563f867c
+time=2025-06-22T16:05:43.343+01:00 level=INFO msg="Request started" method=GET path=/static/js/header-menu-manager.js request_id=070aa2503e0b9c54 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.343+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=070aa2503e0b9c54
+time=2025-06-22T16:05:43.344+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=070aa2503e0b9c54
+time=2025-06-22T16:05:43.344+01:00 level=INFO msg="Request completed" method=GET path=/static/js/header-menu-manager.js request_id=070aa2503e0b9c54
+time=2025-06-22T16:05:43.348+01:00 level=INFO msg="Request started" method=GET path=/api/projects request_id=95347768c2c82227 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.348+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/projects request_id=95347768c2c82227
+time=2025-06-22T16:05:43.349+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/projects status_code=200 duration_ms=0 response_size=610 request_id=95347768c2c82227
+time=2025-06-22T16:05:43.349+01:00 level=INFO msg="Request completed" method=GET path=/api/projects request_id=95347768c2c82227
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=47c61fdf65be3238 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=403bec4aae760c7c remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=403bec4aae760c7c
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="Listing tasks" project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=403bec4aae760c7c
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=47c61fdf65be3238
+time=2025-06-22T16:05:43.387+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=47c61fdf65be3238
+time=2025-06-22T16:05:43.388+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=403bec4aae760c7c
+time=2025-06-22T16:05:43.388+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=47c61fdf65be3238
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=403bec4aae760c7c
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=403bec4aae760c7c
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=47c61fdf65be3238
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=47c61fdf65be3238
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=856df3013842dff8 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=856df3013842dff8
+time=2025-06-22T16:05:43.389+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=856df3013842dff8
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=856df3013842dff8
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=856df3013842dff8
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=856df3013842dff8
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=913f5c804a8053ee remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=913f5c804a8053ee
+time=2025-06-22T16:05:43.390+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=913f5c804a8053ee
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=913f5c804a8053ee
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=913f5c804a8053ee
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=913f5c804a8053ee
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=2c58560cce66bab6 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=2c58560cce66bab6
+time=2025-06-22T16:05:43.391+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=2c58560cce66bab6
+time=2025-06-22T16:05:43.392+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=2c58560cce66bab6
+time=2025-06-22T16:05:43.392+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=2c58560cce66bab6
+time=2025-06-22T16:05:43.392+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=2c58560cce66bab6
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=afb4b761ab839b93 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=afb4b761ab839b93
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=afb4b761ab839b93
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=afb4b761ab839b93
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=afb4b761ab839b93
+time=2025-06-22T16:05:43.393+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=afb4b761ab839b93
+time=2025-06-22T16:05:43.394+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=086fed2517395137 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:05:43.394+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=086fed2517395137
+time=2025-06-22T16:05:43.394+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=086fed2517395137
+time=2025-06-22T16:05:43.395+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=086fed2517395137
+time=2025-06-22T16:05:43.395+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=086fed2517395137
+time=2025-06-22T16:05:43.395+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=086fed2517395137
+time=2025-06-22T16:06:04.867+01:00 level=INFO msg="Request started" method=GET path=/chat-test.html request_id=7c16d0109040616f remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:06:04.867+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/chat-test.html request_id=7c16d0109040616f
+time=2025-06-22T16:06:04.867+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/chat-test.html status_code=404 duration_ms=0 response_size=19 request_id=7c16d0109040616f
+time=2025-06-22T16:06:04.867+01:00 level=INFO msg="Request completed" method=GET path=/chat-test.html request_id=7c16d0109040616f
+time=2025-06-22T16:09:17.355+01:00 level=INFO msg="Request started" method=GET path=/ request_id=546529dd27763614 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.355+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/ request_id=546529dd27763614
+time=2025-06-22T16:09:17.365+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/ status_code=200 duration_ms=9 response_size=97622 request_id=546529dd27763614
+time=2025-06-22T16:09:17.365+01:00 level=INFO msg="Request completed" method=GET path=/ request_id=546529dd27763614
+time=2025-06-22T16:09:17.367+01:00 level=INFO msg="Request started" method=GET path=/static/js/app.js request_id=0e9e07fe14f587f1 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.367+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=0e9e07fe14f587f1
+time=2025-06-22T16:09:17.367+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=0e9e07fe14f587f1
+time=2025-06-22T16:09:17.367+01:00 level=INFO msg="Request completed" method=GET path=/static/js/app.js request_id=0e9e07fe14f587f1
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="Request started" method=GET path=/static/js/api-client.js request_id=044ad1d2e4bb0ca4 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=044ad1d2e4bb0ca4
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=044ad1d2e4bb0ca4
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="Request completed" method=GET path=/static/js/api-client.js request_id=044ad1d2e4bb0ca4
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="Request started" method=GET path=/static/js/chat-manager.js request_id=5268dbc21abef319 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.369+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=5268dbc21abef319
+time=2025-06-22T16:09:17.370+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=16918 request_id=5268dbc21abef319
+time=2025-06-22T16:09:17.370+01:00 level=INFO msg="Request completed" method=GET path=/static/js/chat-manager.js request_id=5268dbc21abef319
+time=2025-06-22T16:09:17.373+01:00 level=INFO msg="Request started" method=GET path=/api/projects request_id=3e6e7823b869f644 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.373+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/projects request_id=3e6e7823b869f644
+time=2025-06-22T16:09:17.373+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/projects status_code=200 duration_ms=0 response_size=610 request_id=3e6e7823b869f644
+time=2025-06-22T16:09:17.373+01:00 level=INFO msg="Request completed" method=GET path=/api/projects request_id=3e6e7823b869f644
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=08a63f08ff2764df remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=08a63f08ff2764df
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=08a63f08ff2764df
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=f5a461c3e9a5196c remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=f5a461c3e9a5196c
+time=2025-06-22T16:09:17.389+01:00 level=INFO msg="Listing tasks" project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=f5a461c3e9a5196c
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=08a63f08ff2764df
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=f5a461c3e9a5196c
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=f5a461c3e9a5196c
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=f5a461c3e9a5196c
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=08a63f08ff2764df
+time=2025-06-22T16:09:17.391+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=08a63f08ff2764df
+time=2025-06-22T16:09:17.392+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=508bbccdebc32087 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.392+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=508bbccdebc32087
+time=2025-06-22T16:09:17.392+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=508bbccdebc32087
+time=2025-06-22T16:09:17.394+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=508bbccdebc32087
+time=2025-06-22T16:09:17.395+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=508bbccdebc32087
+time=2025-06-22T16:09:17.395+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=508bbccdebc32087
+time=2025-06-22T16:09:17.397+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=848916674739a186 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.397+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=848916674739a186
+time=2025-06-22T16:09:17.397+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=848916674739a186
+time=2025-06-22T16:09:17.399+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=848916674739a186
+time=2025-06-22T16:09:17.399+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=848916674739a186
+time=2025-06-22T16:09:17.399+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=848916674739a186
+time=2025-06-22T16:09:17.400+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=c9cf550c6378ba7c remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.400+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=c9cf550c6378ba7c
+time=2025-06-22T16:09:17.400+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=c9cf550c6378ba7c
+time=2025-06-22T16:09:17.401+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=c9cf550c6378ba7c
+time=2025-06-22T16:09:17.401+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=c9cf550c6378ba7c
+time=2025-06-22T16:09:17.401+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=c9cf550c6378ba7c
+time=2025-06-22T16:09:17.402+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=3afb523fc4f2cf63 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.402+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=3afb523fc4f2cf63
+time=2025-06-22T16:09:17.402+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=3afb523fc4f2cf63
+time=2025-06-22T16:09:17.402+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=3afb523fc4f2cf63
+time=2025-06-22T16:09:17.403+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=3afb523fc4f2cf63
+time=2025-06-22T16:09:17.403+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=3afb523fc4f2cf63
+time=2025-06-22T16:09:17.403+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=bb9ff4b4806bfd98 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:09:17.403+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=bb9ff4b4806bfd98
+time=2025-06-22T16:09:17.403+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=bb9ff4b4806bfd98
+time=2025-06-22T16:09:17.404+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=bb9ff4b4806bfd98
+time=2025-06-22T16:09:17.404+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=bb9ff4b4806bfd98
+time=2025-06-22T16:09:17.404+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=bb9ff4b4806bfd98
+time=2025-06-22T16:11:53.387+01:00 level=INFO msg="Request started" method=GET path=/ request_id=d8dcef3b6b769303 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.388+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/ request_id=d8dcef3b6b769303
+time=2025-06-22T16:11:53.394+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/ status_code=200 duration_ms=6 response_size=97622 request_id=d8dcef3b6b769303
+time=2025-06-22T16:11:53.394+01:00 level=INFO msg="Request completed" method=GET path=/ request_id=d8dcef3b6b769303
+time=2025-06-22T16:11:53.397+01:00 level=INFO msg="Request started" method=GET path=/static/js/app.js request_id=e3200890965dc6c2 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.397+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=e3200890965dc6c2
+time=2025-06-22T16:11:53.397+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=200 duration_ms=0 response_size=11352 request_id=e3200890965dc6c2
+time=2025-06-22T16:11:53.397+01:00 level=INFO msg="Request completed" method=GET path=/static/js/app.js request_id=e3200890965dc6c2
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="Request started" method=GET path=/static/js/api-client.js request_id=e7498d982aa1e64d remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=e7498d982aa1e64d
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="Request started" method=GET path=/static/js/chat-manager.js request_id=6c3bfa84648df607 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=6c3bfa84648df607
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=e7498d982aa1e64d
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="Request completed" method=GET path=/static/js/api-client.js request_id=e7498d982aa1e64d
+time=2025-06-22T16:11:53.398+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=6c3bfa84648df607
+time=2025-06-22T16:11:53.399+01:00 level=INFO msg="Request completed" method=GET path=/static/js/chat-manager.js request_id=6c3bfa84648df607
+time=2025-06-22T16:11:53.401+01:00 level=INFO msg="Request started" method=GET path=/api/projects request_id=f1cdf9f132feb639 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.401+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/projects request_id=f1cdf9f132feb639
+time=2025-06-22T16:11:53.401+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/projects status_code=200 duration_ms=0 response_size=610 request_id=f1cdf9f132feb639
+time=2025-06-22T16:11:53.401+01:00 level=INFO msg="Request completed" method=GET path=/api/projects request_id=f1cdf9f132feb639
+time=2025-06-22T16:11:53.415+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=c4109f5ec1a60741 remote_addr=[::1]:57367 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.415+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=c4109f5ec1a60741
+time=2025-06-22T16:11:53.415+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=c4109f5ec1a60741
+time=2025-06-22T16:11:53.416+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=462ec54d6ae64389 remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.416+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=462ec54d6ae64389
+time=2025-06-22T16:11:53.416+01:00 level=INFO msg="Listing tasks" project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=462ec54d6ae64389
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=c4109f5ec1a60741
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=462ec54d6ae64389
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=462ec54d6ae64389
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=462ec54d6ae64389
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=c4109f5ec1a60741
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=c4109f5ec1a60741
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=3dd48eabdbc3235c remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=3dd48eabdbc3235c
+time=2025-06-22T16:11:53.417+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=3dd48eabdbc3235c
+time=2025-06-22T16:11:53.419+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=3dd48eabdbc3235c
+time=2025-06-22T16:11:53.420+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=3dd48eabdbc3235c
+time=2025-06-22T16:11:53.420+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=3dd48eabdbc3235c
+time=2025-06-22T16:11:53.420+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=a64f055545749cfd remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.420+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=a64f055545749cfd
+time=2025-06-22T16:11:53.420+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=a64f055545749cfd
+time=2025-06-22T16:11:53.421+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=a64f055545749cfd
+time=2025-06-22T16:11:53.421+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=a64f055545749cfd
+time=2025-06-22T16:11:53.421+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=a64f055545749cfd
+time=2025-06-22T16:11:53.422+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=7806fee96ac60b48 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.423+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=7806fee96ac60b48
+time=2025-06-22T16:11:53.423+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=7806fee96ac60b48
+time=2025-06-22T16:11:53.425+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=7806fee96ac60b48
+time=2025-06-22T16:11:53.425+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=7806fee96ac60b48
+time=2025-06-22T16:11:53.425+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=7806fee96ac60b48
+time=2025-06-22T16:11:53.426+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=5843cd00c9e4783b remote_addr=[::1]:57369 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.426+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=5843cd00c9e4783b
+time=2025-06-22T16:11:53.426+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=5843cd00c9e4783b
+time=2025-06-22T16:11:53.427+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=5843cd00c9e4783b
+time=2025-06-22T16:11:53.427+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=5843cd00c9e4783b
+time=2025-06-22T16:11:53.427+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=5843cd00c9e4783b
+time=2025-06-22T16:11:53.428+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=f79bcef5e22b4812 remote_addr=[::1]:57370 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:11:53.428+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=f79bcef5e22b4812
+time=2025-06-22T16:11:53.428+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=f79bcef5e22b4812
+time=2025-06-22T16:11:53.429+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=f79bcef5e22b4812
+time=2025-06-22T16:11:53.429+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=f79bcef5e22b4812
+time=2025-06-22T16:11:53.429+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=f79bcef5e22b4812
+time=2025-06-22T16:17:44.334+01:00 level=INFO msg="Request started" method=POST path=/api/chat request_id=50b04c2f53ea15aa remote_addr=[::1]:57993 user_agent=curl/8.7.1
+time=2025-06-22T16:17:44.334+01:00 level=INFO msg="HTTP request started" method=POST endpoint=/api/chat request_id=50b04c2f53ea15aa
+time=2025-06-22T16:17:44.334+01:00 level=INFO msg="Processing chat message" conversation_id=test-123 message_length=18
+time=2025-06-22T16:17:44.334+01:00 level=ERROR msg="Translation failed" error="LLM service is not enabled" conversation_id=test-123
+time=2025-06-22T16:17:44.334+01:00 level=INFO msg="HTTP request completed" method=POST endpoint=/api/chat status_code=200 duration_ms=0 response_size=181 request_id=50b04c2f53ea15aa
+time=2025-06-22T16:17:44.334+01:00 level=INFO msg="Request completed" method=POST path=/api/chat request_id=50b04c2f53ea15aa
+time=2025-06-22T16:17:56.227+01:00 level=INFO msg="Request started" method=GET path=/api/chat/history request_id=6f3edd5135048da7 remote_addr=[::1]:58002 user_agent=curl/8.7.1
+time=2025-06-22T16:17:56.227+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/chat request_id=6f3edd5135048da7
+time=2025-06-22T16:17:56.228+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/chat status_code=200 duration_ms=0 response_size=244 request_id=6f3edd5135048da7
+time=2025-06-22T16:17:56.228+01:00 level=INFO msg="Request completed" method=GET path=/api/chat/history request_id=6f3edd5135048da7
+time=2025-06-22T16:18:07.791+01:00 level=INFO msg="Request started" method=POST path=/api/chat request_id=ef8f6bd4fcbc287f remote_addr=[::1]:58013 user_agent=curl/8.7.1
+time=2025-06-22T16:18:07.791+01:00 level=INFO msg="HTTP request started" method=POST endpoint=/api/chat request_id=ef8f6bd4fcbc287f
+time=2025-06-22T16:18:07.791+01:00 level=INFO msg="Processing chat message" conversation_id=perf-test message_length=5
+time=2025-06-22T16:18:07.791+01:00 level=ERROR msg="Translation failed" error="LLM service is not enabled" conversation_id=perf-test
+time=2025-06-22T16:18:07.791+01:00 level=INFO msg="HTTP request completed" method=POST endpoint=/api/chat status_code=200 duration_ms=0 response_size=182 request_id=ef8f6bd4fcbc287f
+time=2025-06-22T16:18:07.791+01:00 level=INFO msg="Request completed" method=POST path=/api/chat request_id=ef8f6bd4fcbc287f
+time=2025-06-22T16:18:16.817+01:00 level=INFO msg="Request started" method=GET path=/ request_id=65ad0cdf75ac1060 remote_addr=[::1]:58021 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.817+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/ request_id=65ad0cdf75ac1060
+time=2025-06-22T16:18:16.822+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/ status_code=200 duration_ms=5 response_size=97622 request_id=65ad0cdf75ac1060
+time=2025-06-22T16:18:16.822+01:00 level=INFO msg="Request completed" method=GET path=/ request_id=65ad0cdf75ac1060
+time=2025-06-22T16:18:16.825+01:00 level=INFO msg="Request started" method=GET path=/static/js/app.js request_id=39f80b4328031a00 remote_addr=[::1]:58021 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.825+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=39f80b4328031a00
+time=2025-06-22T16:18:16.825+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=39f80b4328031a00
+time=2025-06-22T16:18:16.825+01:00 level=INFO msg="Request completed" method=GET path=/static/js/app.js request_id=39f80b4328031a00
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="Request started" method=GET path=/static/js/api-client.js request_id=a37952f4b639efc6 remote_addr=[::1]:58021 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=a37952f4b639efc6
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=a37952f4b639efc6
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="Request completed" method=GET path=/static/js/api-client.js request_id=a37952f4b639efc6
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="Request started" method=GET path=/static/js/chat-manager.js request_id=d59beb10caa91d83 remote_addr=[::1]:58022 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/static/js request_id=d59beb10caa91d83
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/static/js status_code=304 duration_ms=0 response_size=0 request_id=d59beb10caa91d83
+time=2025-06-22T16:18:16.827+01:00 level=INFO msg="Request completed" method=GET path=/static/js/chat-manager.js request_id=d59beb10caa91d83
+time=2025-06-22T16:18:16.829+01:00 level=INFO msg="Request started" method=GET path=/api/projects request_id=6c5bcede143ed17e remote_addr=[::1]:58022 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.829+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/projects request_id=6c5bcede143ed17e
+time=2025-06-22T16:18:16.829+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/projects status_code=200 duration_ms=0 response_size=610 request_id=6c5bcede143ed17e
+time=2025-06-22T16:18:16.829+01:00 level=INFO msg="Request completed" method=GET path=/api/projects request_id=6c5bcede143ed17e
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=81cc9d53a7b455b5 remote_addr=[::1]:58022 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=81cc9d53a7b455b5
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=81cc9d53a7b455b5
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=f6d95f34fb3459af remote_addr=[::1]:58021 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=f6d95f34fb3459af
+time=2025-06-22T16:18:16.843+01:00 level=INFO msg="Listing tasks" project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=f6d95f34fb3459af
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=b861b55b-012e-4cb2-9cd7-a6290a0b1857 request_id=f6d95f34fb3459af
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=81cc9d53a7b455b5
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=f6d95f34fb3459af
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=f6d95f34fb3459af
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=81cc9d53a7b455b5
+time=2025-06-22T16:18:16.844+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=81cc9d53a7b455b5
+time=2025-06-22T16:18:16.845+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=fd473903179fdfd6 remote_addr=[::1]:58023 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.845+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=fd473903179fdfd6
+time=2025-06-22T16:18:16.845+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=fd473903179fdfd6
+time=2025-06-22T16:18:16.847+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=fd473903179fdfd6
+time=2025-06-22T16:18:16.847+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=fd473903179fdfd6
+time=2025-06-22T16:18:16.847+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=fd473903179fdfd6
+time=2025-06-22T16:18:16.848+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=0f41dd34e0ca5eec remote_addr=[::1]:58022 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.848+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=0f41dd34e0ca5eec
+time=2025-06-22T16:18:16.848+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=0f41dd34e0ca5eec
+time=2025-06-22T16:18:16.851+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=0f41dd34e0ca5eec
+time=2025-06-22T16:18:16.851+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=2 response_size=37829 request_id=0f41dd34e0ca5eec
+time=2025-06-22T16:18:16.851+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=0f41dd34e0ca5eec
+time=2025-06-22T16:18:16.852+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=3d1f643d326c3b39 remote_addr=[::1]:58023 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.852+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=3d1f643d326c3b39
+time=2025-06-22T16:18:16.852+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=3d1f643d326c3b39
+time=2025-06-22T16:18:16.853+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=3d1f643d326c3b39
+time=2025-06-22T16:18:16.853+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=3d1f643d326c3b39
+time=2025-06-22T16:18:16.853+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=3d1f643d326c3b39
+time=2025-06-22T16:18:16.854+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=060b48000d7856c9 remote_addr=[::1]:58022 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.854+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=060b48000d7856c9
+time=2025-06-22T16:18:16.854+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=060b48000d7856c9
+time=2025-06-22T16:18:16.855+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=060b48000d7856c9
+time=2025-06-22T16:18:16.855+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=0 response_size=37829 request_id=060b48000d7856c9
+time=2025-06-22T16:18:16.855+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=060b48000d7856c9
+time=2025-06-22T16:18:16.856+01:00 level=INFO msg="Request started" method=GET path=/api/tasks request_id=e0ce160aa86beb41 remote_addr=[::1]:58023 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.101.1 Chrome/134.0.6998.205 Electron/35.5.1 Safari/537.36"
+time=2025-06-22T16:18:16.856+01:00 level=INFO msg="HTTP request started" method=GET endpoint=/api/tasks request_id=e0ce160aa86beb41
+time=2025-06-22T16:18:16.856+01:00 level=INFO msg="Listing tasks" project_id=ABC request_id=e0ce160aa86beb41
+time=2025-06-22T16:18:16.857+01:00 level=INFO msg="Tasks loaded successfully" count=36 project_id=ABC request_id=e0ce160aa86beb41
+time=2025-06-22T16:18:16.857+01:00 level=INFO msg="HTTP request completed" method=GET endpoint=/api/tasks status_code=200 duration_ms=1 response_size=37829 request_id=e0ce160aa86beb41
+time=2025-06-22T16:18:16.857+01:00 level=INFO msg="Request completed" method=GET path=/api/tasks request_id=e0ce160aa86beb41

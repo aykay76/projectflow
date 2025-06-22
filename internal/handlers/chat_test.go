@@ -38,7 +38,7 @@ func (m *MockLLMService) HealthCheck(ctx context.Context) error {
 func TestChatHandler_HandleChat(t *testing.T) {
 	// Setup mock storage
 	storage := newMockStorage()
-	
+
 	// Setup mock LLM service with a response to create a task
 	mockLLM := &MockLLMService{
 		enabled: true,
@@ -140,7 +140,7 @@ func TestChatHandler_HandleChatHistory(t *testing.T) {
 		},
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
+
 	chatHandler := NewChatHandler(storage, mockLLM, logger)
 
 	// First, send a chat message to create history
@@ -183,11 +183,11 @@ func TestChatHandler_HandleChatHistory(t *testing.T) {
 func TestChatHandler_LLMDisabled(t *testing.T) {
 	storage := newMockStorage()
 	mockLLM := &MockLLMService{
-		enabled: false, // LLM disabled
-		response: nil,  // No response needed since LLM is disabled
+		enabled:  false, // LLM disabled
+		response: nil,   // No response needed since LLM is disabled
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
+
 	chatHandler := NewChatHandler(storage, mockLLM, logger)
 
 	reqBody := ChatRequest{

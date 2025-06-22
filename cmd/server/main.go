@@ -60,7 +60,7 @@ func main() {
 
 	// Initialize handlers
 	handler := handlers.NewHandler(store)
-	
+
 	// Initialize chat handler
 	chatHandler := handlers.NewChatHandler(store, llmService, slog.Default())
 

@@ -24,22 +24,22 @@ type ChatRequest struct {
 
 // ChatResponse represents the response to a chat message
 type ChatResponse struct {
-	Response       string   `json:"response"`
-	ActionsTaken   []string `json:"actions_taken"`
-	TaskIDs        []string `json:"task_ids,omitempty"`
-	ProjectIDs     []string `json:"project_ids,omitempty"`
-	ConversationID string   `json:"conversation_id"`
-	RequiresConfirmation bool `json:"requires_confirmation,omitempty"`
-	Confidence     float64  `json:"confidence"`
-	Intent         string   `json:"intent"`
+	Response             string   `json:"response"`
+	ActionsTaken         []string `json:"actions_taken"`
+	TaskIDs              []string `json:"task_ids,omitempty"`
+	ProjectIDs           []string `json:"project_ids,omitempty"`
+	ConversationID       string   `json:"conversation_id"`
+	RequiresConfirmation bool     `json:"requires_confirmation,omitempty"`
+	Confidence           float64  `json:"confidence"`
+	Intent               string   `json:"intent"`
 }
 
 // ConversationMessage represents a single message in a conversation
 type ConversationMessage struct {
-	ID        string    `json:"id"`
-	Role      string    `json:"role"` // "user" or "assistant"
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        string                 `json:"id"`
+	Role      string                 `json:"role"` // "user" or "assistant"
+	Content   string                 `json:"content"`
+	Timestamp time.Time              `json:"timestamp"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -60,10 +60,10 @@ type LLMService interface {
 
 // ChatHandler handles chat-related HTTP requests
 type ChatHandler struct {
-	storage      storage.Storage
-	llmService   LLMService
-	translator   *translator.Translator
-	logger       *slog.Logger
+	storage       storage.Storage
+	llmService    LLMService
+	translator    *translator.Translator
+	logger        *slog.Logger
 	conversations map[string]*Conversation // In-memory for MVP, could be moved to storage later
 }
 
@@ -106,7 +106,7 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.ConversationID = uuid.New().String()
 	}
 
-	ch.logger.Info("Processing chat message", 
+	ch.logger.Info("Processing chat message",
 		"conversation_id", req.ConversationID,
 		"message_length", len(req.Message))
 
@@ -129,7 +129,7 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	translationResult, err := ch.translator.Translate(ctx, req.Message)
 	if err != nil {
 		ch.logger.Error("Translation failed", "error", err, "conversation_id", req.ConversationID)
-		
+
 		// Return error response but still maintain conversation
 		errorResponse := &ChatResponse{
 			Response:       "I'm sorry, I'm having trouble understanding your request right now. Please try again.",
@@ -138,7 +138,7 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 			Confidence:     0.0,
 			Intent:         "error",
 		}
-		
+
 		ch.respondWithJSON(w, errorResponse)
 		return
 	}
@@ -147,7 +147,7 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	actionsTaken, taskIDs, projectIDs, err := ch.executeMCPCommands(translationResult.MCPCommands)
 	if err != nil {
 		ch.logger.Error("Failed to execute MCP commands", "error", err, "conversation_id", req.ConversationID)
-		
+
 		// Return error response
 		errorResponse := &ChatResponse{
 			Response:       fmt.Sprintf("I understood what you want to do, but I encountered an error: %s", err.Error()),
@@ -156,7 +156,7 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 			Confidence:     translationResult.ParsedRequest.Confidence,
 			Intent:         string(translationResult.ParsedRequest.Intent),
 		}
-		
+
 		ch.respondWithJSON(w, errorResponse)
 		return
 	}

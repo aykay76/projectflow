@@ -315,7 +315,7 @@ func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
 	// Find the project to get its prefix
 	// For testing, we'll assume PF is the default prefix
 	prefix := "PF"
-	
+
 	// Count existing tasks for this project to determine next ID
 	count := 0
 	for _, task := range m.tasks {
@@ -323,7 +323,7 @@ func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
 			count++
 		}
 	}
-	
+
 	return fmt.Sprintf("%s-%d", prefix, count+1), nil
 }
 
