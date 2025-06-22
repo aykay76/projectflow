@@ -161,9 +161,12 @@ func (ch *ChatHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enhance response with actual data if needed
+	enhancedResponse := ch.enhanceResponseWithData(translationResult.HumanResponse, actionsTaken, taskIDs, projectIDs)
+
 	// Create response
 	response := &ChatResponse{
-		Response:             translationResult.HumanResponse,
+		Response:             enhancedResponse,
 		ActionsTaken:         actionsTaken,
 		TaskIDs:              taskIDs,
 		ProjectIDs:           projectIDs,
@@ -321,11 +324,14 @@ func (ch *ChatHandler) executeMCPCommands(commands []translator.MCPCommand) ([]s
 			projectIDs = append(projectIDs, projectID)
 
 		case "list_projects":
-			err := ch.executeListProjects(cmd.Parameters)
+			projects, err := ch.executeListProjects(cmd.Parameters)
 			if err != nil {
 				return actionsTaken, taskIDs, projectIDs, fmt.Errorf("failed to list projects: %w", err)
 			}
 			actionsTaken = append(actionsTaken, "list_projects")
+			for _, project := range projects {
+				projectIDs = append(projectIDs, project.DisplayPrefix)
+			}
 
 		case "get_task_hierarchy":
 			err := ch.executeGetTaskHierarchy(cmd.Parameters)
@@ -700,14 +706,14 @@ func (ch *ChatHandler) executeDeleteProject(params map[string]interface{}) (stri
 }
 
 // executeListProjects handles project listing
-func (ch *ChatHandler) executeListProjects(params map[string]interface{}) error {
-	_, err := ch.storage.ListProjects()
+func (ch *ChatHandler) executeListProjects(params map[string]interface{}) ([]*models.Project, error) {
+	projects, err := ch.storage.ListProjects()
 	if err != nil {
-		return fmt.Errorf("failed to list projects: %w", err)
+		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
 
-	ch.logger.Debug("Projects listed via chat")
-	return nil
+	ch.logger.Debug("Projects listed via chat", "count", len(projects))
+	return projects, nil
 }
 
 // executeGetTaskHierarchy handles task hierarchy retrieval
@@ -719,6 +725,40 @@ func (ch *ChatHandler) executeGetTaskHierarchy(params map[string]interface{}) er
 
 	ch.logger.Debug("Task hierarchy retrieved via chat")
 	return nil
+}
+
+// enhanceResponseWithData improves the response by including actual data
+func (ch *ChatHandler) enhanceResponseWithData(response string, actionsTaken, taskIDs, projectIDs []string) string {
+	// If projects were listed, enhance with actual project information
+	for _, action := range actionsTaken {
+		if action == "list_projects" && len(projectIDs) > 0 {
+			// Get project details for the listed project IDs
+			projects, err := ch.storage.ListProjects()
+			if err == nil {
+				// Build a nice project list
+				var projectList []string
+				for _, project := range projects {
+					projectList = append(projectList, fmt.Sprintf("• **%s** (%s): %s",
+						project.Name, project.DisplayPrefix, project.Description))
+				}
+
+				if len(projectList) > 0 {
+					enhancedResponse := "Here are your projects:\n\n" + strings.Join(projectList, "\n")
+					if len(projects) == 1 {
+						enhancedResponse = "Here is your project:\n\n" + strings.Join(projectList, "\n")
+					}
+					return enhancedResponse
+				}
+			}
+		}
+
+		if action == "list_tasks" && len(taskIDs) > 0 {
+			// Could enhance task listing as well in the future
+			// For now, just return the original response
+		}
+	}
+
+	return response
 }
 
 // respondWithJSON sends a JSON response
