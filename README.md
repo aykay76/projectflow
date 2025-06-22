@@ -5,11 +5,12 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
 ## Features
 
 - Hierarchical task management (Epics, Stories, Subtasks)
+- **🚀 NEW: Natural Language Chat Interface** - Interact with ProjectFlow using conversational commands
 - REST API for programmatic access
 - Model Context Protocol (MCP) support for AI agents
 - Web interface for human users
 - Flexible storage: File system (JSON) or PostgreSQL database
-- Clean, modern UI
+- Clean, modern UI with accessibility features
 - Containerized deployment
 
 ## Tech Stack
@@ -42,7 +43,39 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
 
 3. Open your browser and navigate to `http://localhost:16191`
 
-### Environment Variables
+## 💬 Natural Language Chat Interface
+
+ProjectFlow now features an AI-powered chat interface that allows you to manage tasks and projects using natural language commands. Simply click the chat button (💬) in the header or use the keyboard shortcut `⌘+/` (Mac) or `Ctrl+/` (Windows/Linux) to get started.
+
+### Quick Examples
+
+```
+Create a high priority task to fix the login bug
+List all tasks in the PF project  
+Mark task PF-123 as done
+Show me overdue tasks
+Create a new project called "Website Redesign"
+```
+
+### Getting Started with Chat
+
+1. **Open the chat interface**: Click the 💬 button in the header or press `⌘+/`
+2. **Type your request**: Use natural language to describe what you want to do
+3. **Get instant results**: The AI will interpret your request and perform the action
+
+For detailed chat commands and examples, see the [Chat Interface Guide](docs/chat-interface-guide.md).
+
+### LLM Configuration
+
+The chat interface supports multiple LLM providers:
+
+- **OpenAI GPT**: Use OpenAI's GPT models for natural language understanding and task management.
+- **Anthropic Claude**: Leverage Anthropic's Claude AI for conversational interactions.
+- **Cohere Command R**: Utilize Cohere's Command R model for command-based task handling.
+
+Select your preferred LLM in the settings, and configure the API keys and parameters as needed.
+
+## Environment Variables
 
 **Server Configuration:**
 - `PORT`: Server port (default: 16191)
@@ -64,6 +97,14 @@ A workflow management system for AI-assisted development, similar to Jira or Azu
 - `DB_PASSWORD`: Database password (required for postgres)
 - `DB_SSL_MODE`: SSL mode - disable, require, verify-ca, verify-full, prefer, allow (default: prefer)
 
+**LLM Configuration (for Chat Interface):**
+- `LLM_PROVIDER`: LLM provider - groq, ollama, openai, disabled (default: groq)
+- `LLM_API_KEY`: API key for the LLM provider (required for groq, openai)
+- `LLM_BASE_URL`: Custom base URL for the LLM provider (optional)
+- `LLM_MODEL`: Model name to use (default: llama-3.1-8b-instant for Groq)
+- `LLM_TIMEOUT`: Request timeout in seconds (default: 30)
+- `LLM_MAX_TOKENS`: Maximum tokens per response (default: 1000)
+
 For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postgresql-storage.md).
 
 ### Using Docker
@@ -79,6 +120,53 @@ For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postg
    ```
 
 ## API Documentation
+
+### Chat API
+
+- `POST /api/chat` - Send a natural language message to the chat interface
+- `GET /api/chat/history` - Retrieve conversation history
+
+#### Chat Request/Response
+
+**Send Message:**
+```json
+POST /api/chat
+{
+  "message": "Create a high priority task to fix the login bug",
+  "conversation_id": "optional-uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "response": "I've created task PF-123: 'Fix login bug' with high priority.",
+  "actions_taken": ["create_task"],
+  "task_ids": ["PF-123"],
+  "conversation_id": "uuid",
+  "confidence": 0.95,
+  "intent": "create_task"
+}
+```
+
+**Get History:**
+```json
+GET /api/chat/history?conversation_id=uuid
+
+{
+  "id": "uuid",
+  "messages": [
+    {
+      "id": "msg-uuid",
+      "role": "user",
+      "content": "Create a task...",
+      "timestamp": "2025-06-22T15:17:44.334579Z"
+    }
+  ],
+  "created": "2025-06-22T15:17:44.334574Z",
+  "updated": "2025-06-22T15:17:44.334574Z"
+}
+```
 
 ### Tasks API
 
@@ -338,12 +426,33 @@ While the primary interface is through MCP and AI agents, you can still access t
 - **Team synchronization**: Pull task updates when syncing with team
 - **Task cleanup**: Archive completed tasks periodically
 
+## Documentation
+
+### User Documentation
+- **[User Guide](docs/user-guide.md)** - Comprehensive guide for end users
+- **[Chat Interface Guide](docs/chat-interface-guide.md)** - Natural language commands and examples
+- **[FAQ](docs/faq.md)** - Frequently asked questions and answers
+
+### Administrator Documentation
+- **[Deployment Guide](docs/deployment-guide.md)** - Production deployment options
+- **[LLM Setup Guide](docs/llm-setup-guide.md)** - Configure AI providers
+- **[PostgreSQL Storage](docs/postgresql-storage.md)** - Database setup and configuration
+- **[Troubleshooting Guide](docs/troubleshooting.md)** - Common issues and solutions
+
+### Developer Documentation
+- **[Developer Guide](docs/developer-guide.md)** - Extending and customizing ProjectFlow
+- **[MCP Documentation](docs/mcp.md)** - Model Context Protocol integration
+- **[Configuration Guide](docs/configuration.md)** - Environment variables and settings
+- **[In-App Help System](docs/in-app-help.md)** - Frontend help implementation
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes with proper tests
 4. Submit a pull request
+
+See our [Developer Guide](docs/developer-guide.md) for detailed contribution guidelines.
 
 ## License
 
