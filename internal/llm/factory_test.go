@@ -10,10 +10,10 @@ import (
 
 func TestFactory_CreateProvider_Groq(t *testing.T) {
 	cfg := &config.Config{
-		LLMProvider: "groq",
-		LLMAPIKey:   "test-key",
-		LLMModel:    "test-model",
-		LLMTimeout:  30,
+		LLMProvider:  "groq",
+		LLMAPIKey:    "test-key",
+		LLMModel:     "test-model",
+		LLMTimeout:   30,
 		LLMMaxTokens: 1000,
 	}
 
@@ -77,13 +77,13 @@ func TestFactory_CreateProvider_Unsupported(t *testing.T) {
 func TestFactory_GetSupportedProviders(t *testing.T) {
 	cfg := &config.Config{}
 	factory := NewFactory(cfg)
-	
+
 	supported := factory.GetSupportedProviders()
-	
+
 	if len(supported) == 0 {
 		t.Error("Expected at least one supported provider")
 	}
-	
+
 	// Check that groq is supported
 	groqSupported := false
 	for _, provider := range supported {
@@ -92,7 +92,7 @@ func TestFactory_GetSupportedProviders(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !groqSupported {
 		t.Error("Expected 'groq' to be in supported providers")
 	}
@@ -102,14 +102,14 @@ func TestService_NewService_Disabled(t *testing.T) {
 	cfg := &config.Config{
 		LLMProvider: "disabled",
 	}
-	
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	
+
 	service, err := NewService(cfg, logger)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %s", err)
 	}
-	
+
 	if service.IsEnabled() {
 		t.Error("Expected service to be disabled")
 	}
@@ -120,9 +120,9 @@ func TestService_NewService_InvalidProvider(t *testing.T) {
 		LLMProvider: "invalid-provider",
 		LLMAPIKey:   "test-key",
 	}
-	
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	
+
 	_, err := NewService(cfg, logger)
 	if err == nil {
 		t.Error("Expected error for invalid provider")

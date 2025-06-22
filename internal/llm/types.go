@@ -22,11 +22,11 @@ type ChatRequest struct {
 
 // ChatResponse represents a response from the LLM
 type ChatResponse struct {
-	ID      string                 `json:"id"`
-	Object  string                 `json:"object"`
-	Model   string                 `json:"model"`
-	Choices []ChatResponseChoice   `json:"choices"`
-	Usage   ChatResponseUsage      `json:"usage"`
+	ID       string                 `json:"id"`
+	Object   string                 `json:"object"`
+	Model    string                 `json:"model"`
+	Choices  []ChatResponseChoice   `json:"choices"`
+	Usage    ChatResponseUsage      `json:"usage"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -48,22 +48,22 @@ type ChatResponseUsage struct {
 type Provider interface {
 	// Chat sends a chat request and returns the response
 	Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error)
-	
+
 	// HealthCheck verifies that the provider is available and configured correctly
 	HealthCheck(ctx context.Context) error
-	
+
 	// Name returns the name of this provider
 	Name() string
-	
+
 	// Model returns the default model name for this provider
 	Model() string
 }
 
 // ProviderConfig holds common configuration for LLM providers
 type ProviderConfig struct {
-	APIKey     string
-	BaseURL    string
-	Model      string
-	Timeout    time.Duration
-	MaxTokens  int
+	APIKey    string
+	BaseURL   string
+	Model     string
+	Timeout   time.Duration
+	MaxTokens int
 }

@@ -11,9 +11,9 @@ import (
 
 // MockLLMService implements the LLMService interface for testing
 type MockLLMService struct {
-	enabled bool
+	enabled      bool
 	chatResponse *llm.ChatResponse
-	chatError error
+	chatError    error
 }
 
 func (m *MockLLMService) IsEnabled() bool {
@@ -59,7 +59,7 @@ func TestTranslator_CreateTaskIntent(t *testing.T) {
 	}
 
 	mockLLM := &MockLLMService{
-		enabled: true,
+		enabled:      true,
 		chatResponse: mockResponse,
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -111,7 +111,7 @@ func TestTranslator_ListTasksIntent(t *testing.T) {
 	}
 
 	mockLLM := &MockLLMService{
-		enabled: true,
+		enabled:      true,
 		chatResponse: mockResponse,
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -154,7 +154,7 @@ func TestTranslator_UnknownIntent(t *testing.T) {
 	}
 
 	mockLLM := &MockLLMService{
-		enabled: true,
+		enabled:      true,
 		chatResponse: mockResponse,
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

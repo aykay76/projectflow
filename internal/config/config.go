@@ -31,12 +31,12 @@ type Config struct {
 	LogFormat string `env:"LOG_FORMAT" default:"text"`
 
 	// LLM configuration
-	LLMProvider   string `env:"LLM_PROVIDER" default:"groq"`
-	LLMAPIKey     string `env:"LLM_API_KEY" default:""`
-	LLMBaseURL    string `env:"LLM_BASE_URL" default:""`
-	LLMModel      string `env:"LLM_MODEL" default:"llama-3.1-8b-instant"`
-	LLMTimeout    int    `env:"LLM_TIMEOUT" default:"30"`
-	LLMMaxTokens  int    `env:"LLM_MAX_TOKENS" default:"1000"`
+	LLMProvider  string `env:"LLM_PROVIDER" default:"groq"`
+	LLMAPIKey    string `env:"LLM_API_KEY" default:""`
+	LLMBaseURL   string `env:"LLM_BASE_URL" default:""`
+	LLMModel     string `env:"LLM_MODEL" default:"llama-3.1-8b-instant"`
+	LLMTimeout   int    `env:"LLM_TIMEOUT" default:"30"`
+	LLMMaxTokens int    `env:"LLM_MAX_TOKENS" default:"1000"`
 }
 
 // Load loads configuration from environment variables with validation

@@ -15,15 +15,15 @@ import (
 type Intent string
 
 const (
-	IntentCreateTask   Intent = "create_task"
-	IntentReadTask     Intent = "read_task"
-	IntentUpdateTask   Intent = "update_task"
-	IntentDeleteTask   Intent = "delete_task"
-	IntentListTasks    Intent = "list_tasks"
+	IntentCreateTask    Intent = "create_task"
+	IntentReadTask      Intent = "read_task"
+	IntentUpdateTask    Intent = "update_task"
+	IntentDeleteTask    Intent = "delete_task"
+	IntentListTasks     Intent = "list_tasks"
 	IntentCreateProject Intent = "create_project"
-	IntentListProjects Intent = "list_projects"
-	IntentGetHelp      Intent = "get_help"
-	IntentUnknown      Intent = "unknown"
+	IntentListProjects  Intent = "list_projects"
+	IntentGetHelp       Intent = "get_help"
+	IntentUnknown       Intent = "unknown"
 )
 
 // Priority represents task priority levels
@@ -58,12 +58,12 @@ const (
 
 // ParsedRequest represents the structured interpretation of a natural language request
 type ParsedRequest struct {
-	Intent        Intent                 `json:"intent"`
-	Confidence    float64                `json:"confidence"`
-	Parameters    map[string]interface{} `json:"parameters"`
-	ErrorMessage  string                 `json:"error_message,omitempty"`
-	RequiresClarification bool           `json:"requires_clarification,omitempty"`
-	SuggestedActions []string            `json:"suggested_actions,omitempty"`
+	Intent                Intent                 `json:"intent"`
+	Confidence            float64                `json:"confidence"`
+	Parameters            map[string]interface{} `json:"parameters"`
+	ErrorMessage          string                 `json:"error_message,omitempty"`
+	RequiresClarification bool                   `json:"requires_clarification,omitempty"`
+	SuggestedActions      []string               `json:"suggested_actions,omitempty"`
 }
 
 // MCPCommand represents a command to be sent to the MCP server
@@ -74,10 +74,10 @@ type MCPCommand struct {
 
 // TranslationResult represents the complete translation result
 type TranslationResult struct {
-	ParsedRequest    ParsedRequest `json:"parsed_request"`
-	MCPCommands      []MCPCommand  `json:"mcp_commands"`
-	HumanResponse    string        `json:"human_response"`
-	RequiresConfirmation bool      `json:"requires_confirmation,omitempty"`
+	ParsedRequest        ParsedRequest `json:"parsed_request"`
+	MCPCommands          []MCPCommand  `json:"mcp_commands"`
+	HumanResponse        string        `json:"human_response"`
+	RequiresConfirmation bool          `json:"requires_confirmation,omitempty"`
 }
 
 // LLMService interface for the translator
@@ -124,13 +124,13 @@ func (t *Translator) Translate(ctx context.Context, userInput string) (*Translat
 	humanResponse := t.generateHumanResponse(parsedRequest, mcpCommands)
 
 	result := &TranslationResult{
-		ParsedRequest:    *parsedRequest,
-		MCPCommands:      mcpCommands,
-		HumanResponse:    humanResponse,
+		ParsedRequest:        *parsedRequest,
+		MCPCommands:          mcpCommands,
+		HumanResponse:        humanResponse,
 		RequiresConfirmation: t.requiresConfirmation(parsedRequest),
 	}
 
-	t.logger.Debug("Translation completed", 
+	t.logger.Debug("Translation completed",
 		"intent", parsedRequest.Intent,
 		"confidence", parsedRequest.Confidence,
 		"commands_count", len(mcpCommands))
@@ -176,12 +176,12 @@ func (t *Translator) parseIntent(ctx context.Context, userInput string) (*Parsed
 
 	if err := json.Unmarshal([]byte(content), &parsedRequest); err != nil {
 		t.logger.Warn("Failed to parse LLM response as JSON", "content", content, "error", err)
-		
+
 		// Fallback to unknown intent
 		return &ParsedRequest{
-			Intent:       IntentUnknown,
-			Confidence:   0.0,
-			ErrorMessage: fmt.Sprintf("Failed to understand request: %s", userInput),
+			Intent:                IntentUnknown,
+			Confidence:            0.0,
+			ErrorMessage:          fmt.Sprintf("Failed to understand request: %s", userInput),
 			RequiresClarification: true,
 			SuggestedActions: []string{
 				"Try rephrasing your request",
@@ -509,19 +509,19 @@ func (t *Translator) ValidateParameters(parsed *ParsedRequest) error {
 		if title, ok := parsed.Parameters["title"].(string); !ok || strings.TrimSpace(title) == "" {
 			return fmt.Errorf("task title is required")
 		}
-		
+
 		if priority, ok := parsed.Parameters["priority"].(string); ok {
 			if !t.isValidPriority(priority) {
 				return fmt.Errorf("invalid priority: %s", priority)
 			}
 		}
-		
+
 		if status, ok := parsed.Parameters["status"].(string); ok {
 			if !t.isValidStatus(status) {
 				return fmt.Errorf("invalid status: %s", status)
 			}
 		}
-		
+
 		if taskType, ok := parsed.Parameters["type"].(string); ok {
 			if !t.isValidTaskType(taskType) {
 				return fmt.Errorf("invalid task type: %s", taskType)
@@ -578,7 +578,7 @@ func (t *Translator) isValidTaskType(taskType string) bool {
 // ExtractTaskID attempts to extract a task ID from various formats
 func ExtractTaskID(text string) string {
 	text = strings.TrimSpace(text)
-	
+
 	// Direct format: PF-123
 	if strings.Contains(text, "-") && len(text) > 3 {
 		parts := strings.Split(text, "-")
@@ -586,19 +586,19 @@ func ExtractTaskID(text string) string {
 			return text
 		}
 	}
-	
+
 	// Format: task 123, issue 123, #123
 	text = strings.ToLower(text)
 	text = strings.ReplaceAll(text, "task ", "")
 	text = strings.ReplaceAll(text, "issue ", "")
 	text = strings.ReplaceAll(text, "#", "")
 	text = strings.TrimSpace(text)
-	
+
 	// If it's a number, assume PF project
 	if len(text) > 0 && isNumeric(text) {
 		return fmt.Sprintf("PF-%s", text)
 	}
-	
+
 	return text
 }
 
@@ -618,11 +618,11 @@ func ParseDueDate(dateStr string) (string, error) {
 	if dateStr == "" {
 		return "", nil
 	}
-	
+
 	// Handle relative dates
 	dateStr = strings.ToLower(dateStr)
 	now := time.Now()
-	
+
 	switch dateStr {
 	case "today":
 		return now.Format("2006-01-02"), nil
@@ -633,7 +633,7 @@ func ParseDueDate(dateStr string) (string, error) {
 	case "next month":
 		return now.AddDate(0, 1, 0).Format("2006-01-02"), nil
 	}
-	
+
 	// Try to parse absolute dates
 	formats := []string{
 		"2006-01-02",
@@ -645,12 +645,12 @@ func ParseDueDate(dateStr string) (string, error) {
 		"2 Jan 2006",
 		"2 January 2006",
 	}
-	
+
 	for _, format := range formats {
 		if parsed, err := time.Parse(format, dateStr); err == nil {
 			return parsed.Format("2006-01-02"), nil
 		}
 	}
-	
+
 	return "", fmt.Errorf("unable to parse date: %s", dateStr)
 }

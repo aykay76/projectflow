@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	GroqBaseURL    = "https://api.groq.com/openai/v1"
+	GroqBaseURL      = "https://api.groq.com/openai/v1"
 	GroqDefaultModel = "llama-3.1-8b-instant"
 )
 

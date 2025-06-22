@@ -43,7 +43,7 @@ func NewService(cfg *config.Config, logger *slog.Logger) (*Service, error) {
 		logger.Warn("LLM provider health check failed", "error", err)
 		// Don't fail service creation, just log the warning
 	} else {
-		logger.Info("LLM service initialized successfully", 
+		logger.Info("LLM service initialized successfully",
 			"provider", provider.Name(),
 			"model", provider.Model())
 	}
@@ -62,14 +62,14 @@ func (s *Service) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, err
 		return nil, fmt.Errorf("LLM service is disabled")
 	}
 
-	s.logger.Debug("Sending chat request to LLM", 
+	s.logger.Debug("Sending chat request to LLM",
 		"provider", s.provider.Name(),
 		"model", req.Model,
 		"messages_count", len(req.Messages))
 
 	resp, err := s.provider.Chat(ctx, req)
 	if err != nil {
-		s.logger.Error("LLM chat request failed", 
+		s.logger.Error("LLM chat request failed",
 			"provider", s.provider.Name(),
 			"error", err)
 		return nil, err
@@ -96,7 +96,7 @@ func (s *Service) HealthCheck(ctx context.Context) error {
 func (s *Service) GetProviderInfo() map[string]interface{} {
 	if !s.IsEnabled() {
 		return map[string]interface{}{
-			"enabled": false,
+			"enabled":  false,
 			"provider": "disabled",
 		}
 	}
