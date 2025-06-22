@@ -15,6 +15,7 @@ import { FilterManager } from './filter-manager.js';
 import { NotificationManager } from './notification-manager.js';
 import { ViewManager } from './view-manager.js';
 import { ChatManager } from './chat-manager.js';
+import { DocsManager } from './docs-manager.js';
 import HeaderMenuManager from './header-menu-manager.js';
 
 /**
@@ -39,6 +40,9 @@ class ProjectFlowApp {
         
         // Initialize chat manager
         this.chatManager = new ChatManager(this.apiClient, this.notificationManager);
+        
+        // Initialize documentation manager
+        this.docsManager = new DocsManager(this.apiClient);
         
         // Initialize UI manager with dependencies (after chat manager)
         this.uiManager = new UIManager(this.stateManager, this.taskManager, this.chatManager);

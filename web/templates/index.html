@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/markdown.css">
 </head>
 <body>
     <div class="container">
@@ -49,6 +50,13 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="header-menu-section">
+                        <h4>Help & Resources</h4>
+                        <button id="docs-btn" class="header-menu-item" title="Documentation & Help">
+                            <span class="icon">📚</span>
+                            <span class="label">Documentation</span>
+                        </button>
                     </div>
                     <div class="header-menu-section">
                         <h4>Settings</h4>
@@ -501,6 +509,59 @@
                         <span class="btn-text">Delete Project</span>
                         <span class="btn-loading" style="display: none;">Deleting...</span>
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Modal -->
+    <div id="docs-modal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>
+                    <span class="icon">📚</span>
+                    Documentation & Help
+                </h2>
+                <span class="close docs-modal-close">&times;</span>
+            </div>
+            <div class="modal-body docs-modal-body">
+                <div class="docs-container">
+                    <!-- Documentation Navigation -->
+                    <div class="docs-nav">
+                        <div class="docs-nav-header">
+                            <h3>📋 Topics</h3>
+                            <div class="docs-search">
+                                <input type="text" id="docs-search" placeholder="Search documentation..." />
+                                <span class="search-icon">🔍</span>
+                            </div>
+                        </div>
+                        <div id="docs-nav-list" class="docs-nav-list">
+                            <!-- Navigation will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Documentation Content -->
+                    <div class="docs-content">
+                        <div id="docs-loading" class="docs-loading" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p>Loading documentation...</p>
+                        </div>
+                        <div id="docs-content-area" class="docs-content-area">
+                            <!-- Documentation content will be rendered here -->
+                            <div class="docs-welcome">
+                                <h1>📚 Welcome to ProjectFlow Documentation</h1>
+                                <p>Select a topic from the navigation menu to get started.</p>
+                                <div class="docs-quick-links">
+                                    <h3>🚀 Quick Start</h3>
+                                    <ul>
+                                        <li><a href="#" data-doc="user-guide">User Guide</a></li>
+                                        <li><a href="#" data-doc="chat-interface-guide">Chat Interface Guide</a></li>
+                                        <li><a href="#" data-doc="mcp">Model Context Protocol (MCP)</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
