@@ -34,12 +34,14 @@ class ProjectFlowApp {
         this.taskManager = new TaskManager(this.apiClient, this.stateManager, this.notificationManager);
         this.taskDetailManager = new TaskDetailManager(this.apiClient, this.stateManager);
         this.dragDropManager = new DragDropManager(this.apiClient, this.stateManager);
-        this.uiManager = new UIManager(this.stateManager, this.taskManager);
         this.filterManager = new FilterManager(this.stateManager);
         this.viewManager = new ViewManager();
         
         // Initialize chat manager
         this.chatManager = new ChatManager(this.apiClient, this.notificationManager);
+        
+        // Initialize UI manager with dependencies (after chat manager)
+        this.uiManager = new UIManager(this.stateManager, this.taskManager, this.chatManager);
         
         // Initialize HeaderMenuManager after DOM is ready
         this.initializeHeaderMenu();

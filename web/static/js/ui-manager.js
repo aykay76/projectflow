@@ -2,7 +2,10 @@
  * UI Manager - Handles UI interactions, themes, keyboard shortcuts, and mobile enhancements
  */
 class UIManager {
-    constructor() {
+    constructor(stateManager = null, taskManager = null, chatManager = null) {
+        this.stateManager = stateManager;
+        this.taskManager = taskManager;
+        this.chatManager = chatManager;
         this.currentTheme = localStorage.getItem('theme') || 'light';
         this.keyboardShortcuts = new Map();
         this.isMobile = this.detectMobile();
@@ -114,6 +117,8 @@ class UIManager {
         this.registerShortcut('KeyN', () => this.handleNewTask(), { ctrlKey: true });
         this.registerShortcut('KeyS', (e) => this.handleSave(e), { ctrlKey: true });
         this.registerShortcut('KeyF', (e) => this.handleSearch(e), { ctrlKey: true });
+        this.registerShortcut('Slash', () => this.handleToggleChat(), { metaKey: true }); // ⌘+/ on Mac
+        this.registerShortcut('Slash', () => this.handleToggleChat(), { ctrlKey: true }); // Ctrl+/ on Windows/Linux
         this.registerShortcut('Escape', () => this.handleEscape());
         this.registerShortcut('Digit1', () => this.switchView('kanban'), { ctrlKey: true });
         this.registerShortcut('Digit2', () => this.switchView('hierarchy'), { ctrlKey: true });
@@ -174,6 +179,12 @@ class UIManager {
         const newTaskBtn = document.getElementById('new-task-btn');
         if (newTaskBtn) {
             newTaskBtn.click();
+        }
+    }
+
+    handleToggleChat() {
+        if (this.chatManager) {
+            this.chatManager.toggleChat();
         }
     }
 
