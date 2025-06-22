@@ -51,6 +51,15 @@ Welcome to ProjectFlow! This comprehensive guide will help you get the most out 
 - **Medium**: Normal priority (default)
 - **Low**: Nice to have, can be delayed
 
+### Visual Indicators
+
+ProjectFlow uses emojis and visual indicators to make information easier to scan:
+
+**Status Emojis**: 📋 Todo, 🔄 In Progress, ✅ Done, 🚫 Blocked  
+**Priority Colors**: 🔴 Critical, 🟡 High, 🔵 Low
+
+> 💡 **Tip**: For complete details on all visual indicators, see the [Chat Interface Guide](chat-interface-guide.md#visual-indicators-and-emojis)
+
 ## Web Interface
 
 ### Navigation

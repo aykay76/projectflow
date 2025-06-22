@@ -145,6 +145,71 @@ When the system can't understand your request:
 | `Escape` | Close chat interface |
 | `↑/↓` | Navigate message history |
 
+## Visual Indicators and Emojis
+
+The chat interface uses emojis and visual indicators to make information easier to scan and understand at a glance. Here's what each symbol means:
+
+### Task Status Emojis
+
+| Emoji | Status | Description |
+|-------|---------|-------------|
+| 📋 | **Todo** | Task is planned but not yet started |
+| 🔄 | **In Progress** | Task is currently being worked on |
+| ✅ | **Done** | Task has been completed |
+| 🚫 | **Blocked** | Task cannot proceed due to dependencies or issues |
+
+### Priority Indicators
+
+| Emoji | Priority | Description |
+|-------|----------|-------------|
+| 🔴 | **Critical** | Urgent tasks that need immediate attention |
+| 🟡 | **High** | Important tasks that should be prioritized |
+| 🔵 | **Low** | Tasks that can be done when time permits |
+| (none) | **Medium** | Standard priority tasks (default) |
+
+### Example Task List Output
+
+When you ask for tasks, you'll see output like this:
+
+```
+Here are your tasks:
+
+• ✅ **PF-123** 🟡: Complete user authentication feature
+• 🔄 **PF-124** 🔴 (due 2025-06-25): Fix critical security vulnerability  
+• 📋 **PF-125**: Add project documentation
+• 🚫 **PF-126** 🟡: Deploy to production (blocked by review)
+```
+
+**Reading the format:**
+- **Status emoji** (✅🔄📋🚫) shows current state
+- **Task ID** (PF-123) in bold for easy reference
+- **Priority emoji** (🔴🟡🔵) when not medium priority
+- **Due date** when applicable
+- **Task title** describes the work
+
+### Project List Format
+
+Project listings use a clean, structured format:
+
+```
+Here are your projects:
+
+• **ProjectFlow** (PF): Task management and project planning system
+• **ABC System** (ABC): Customer journey management platform
+```
+
+**Format explanation:**
+- **Project Name** in bold
+- **(Prefix)** for task identification
+- **Description** of the project's purpose
+
+### Tips for Reading Responses
+
+1. **Scan by emoji first** - Quickly identify status and priority
+2. **Look for red circles** 🔴 - These need immediate attention  
+3. **Check due dates** - Items with dates show urgency
+4. **Use task IDs** - Reference specific tasks in follow-up messages
+
 ## Examples and Use Cases
 
 ### Daily Standups
