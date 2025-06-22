@@ -16,31 +16,31 @@ echo "Testing API endpoints..."
 
 # Test projects API
 echo "1. Testing /api/projects"
-curl -s http://localhost:8081/api/projects | jq -r '.[] | "Project: \(.name) (ID: \(.id))"'
+curl -s http://localhost:16191/api/projects | jq -r '.[] | "Project: \(.name) (ID: \(.id))"'
 
 echo ""
 echo "2. Testing individual project endpoints"
 # Get project IDs
-PROJECT1=$(curl -s http://localhost:8081/api/projects | jq -r '.[0].id')
-PROJECT2=$(curl -s http://localhost:8081/api/projects | jq -r '.[1].id')
+PROJECT1=$(curl -s http://localhost:16191/api/projects | jq -r '.[0].id')
+PROJECT2=$(curl -s http://localhost:16191/api/projects | jq -r '.[1].id')
 
 echo "Testing project 1: $PROJECT1"
-curl -s http://localhost:8081/api/projects/$PROJECT1 | jq -r '.name'
+curl -s http://localhost:16191/api/projects/$PROJECT1 | jq -r '.name'
 
 echo "Testing project 2: $PROJECT2"
-curl -s http://localhost:8081/api/projects/$PROJECT2 | jq -r '.name'
+curl -s http://localhost:16191/api/projects/$PROJECT2 | jq -r '.name'
 
 echo ""
 echo "3. Testing tasks for each project"
 echo "Tasks for project 1:"
-curl -s "http://localhost:8081/api/tasks?project_id=$PROJECT1" | jq -r 'length'
+curl -s "http://localhost:16191/api/tasks?project_id=$PROJECT1" | jq -r 'length'
 
 echo "Tasks for project 2:"
-curl -s "http://localhost:8081/api/tasks?project_id=$PROJECT2" | jq -r 'length'
+curl -s "http://localhost:16191/api/tasks?project_id=$PROJECT2" | jq -r 'length'
 
 echo ""
 echo "4. Opening browser to test UI..."
-open http://localhost:8081
+open http://localhost:16191
 
 echo ""
 echo "Manual Test Instructions:"

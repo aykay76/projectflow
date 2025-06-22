@@ -9,7 +9,7 @@ ProjectFlow supports configuration through environment variables. This document 
 #### PORT
 - **Description**: The HTTP port the server will listen on
 - **Type**: String (representing a valid port number)
-- **Default**: `8081`
+- **Default**: `16191`
 - **Validation**: Must be a valid port number (1-65535)
 - **Example**: `PORT=9000`
 
@@ -49,7 +49,7 @@ ProjectFlow supports configuration through environment variables. This document 
 
 ### Development Environment
 ```bash
-export PORT=8081
+export PORT=16191
 export DATA_DIR=./data
 export LOG_LEVEL=DEBUG
 export LOG_FORMAT=text
@@ -67,7 +67,7 @@ export SHUTDOWN_TIMEOUT=60
 
 ### Docker Environment
 ```dockerfile
-ENV PORT=8081
+ENV PORT=16191
 ENV DATA_DIR=/app/data
 ENV LOG_LEVEL=INFO
 ENV LOG_FORMAT=json
@@ -95,7 +95,7 @@ On startup, the application logs all configuration values (excluding sensitive d
   "time": "2025-01-01T12:00:00Z",
   "level": "INFO",
   "msg": "Application configuration loaded",
-  "port": "8081",
+  "port": "16191",
   "shutdown_timeout_seconds": 30,
   "data_dir": "./data",
   "log_level": "INFO",

@@ -83,7 +83,7 @@ services:
       DB_PASSWORD: projectflow123
       DB_SSL_MODE: disable
     ports:
-      - "8081:8081"
+      - "16191:16191"
     depends_on:
       - postgres
 

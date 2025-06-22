@@ -380,7 +380,7 @@ const (
     apiKey = "sk-1234567890abcdef"
     
     // Good - use environment variables or config
-    defaultPort = 8081
+    defaultPort = 16191
 )
 
 // Load from environment
