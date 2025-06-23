@@ -737,7 +737,7 @@ export class ChatManager {
                     this.currentConversationId = conversationData.currentConversationId;
                     
                     // Restore messages to UI if chat is open
-                    if (this.isOpen && this.chatMessages) {
+                    if (this.isOpen && this.messagesContainer) {
                         this.messages.forEach(message => {
                             this.addMessageToUI(message);
                         });
@@ -775,7 +775,7 @@ export class ChatManager {
      * Add a message to the chat UI
      */
     addMessageToUI(message) {
-        if (!this.chatMessages) {
+        if (!this.messagesContainer) {
             console.warn('Chat messages container not found');
             return;
         }
@@ -864,10 +864,88 @@ export class ChatManager {
         }
         
         // Add to UI
-        this.chatMessages.appendChild(messageElement);
+        this.messagesContainer.appendChild(messageElement);
         
         // Scroll to bottom
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    /**
+     * Show typing indicator
+     */
+    showTypingIndicator() {
+        if (this.typingIndicator) {
+            return;
+        }
+
+        this.typingIndicator = document.createElement('div');
+        this.typingIndicator.className = 'chat-typing';
+        this.typingIndicator.innerHTML = 
+            '<div class="chat-typing-dots">' +
+                '<div class="chat-typing-dot"></div>' +
+                '<div class="chat-typing-dot"></div>' +
+                '<div class="chat-typing-dot"></div>' +
+            '</div>' +
+            '<span>Assistant is thinking...</span>';
+
+        this.messagesContainer.appendChild(this.typingIndicator);
+        this.scrollToBottom();
+    }
+
+    /**
+     * Hide typing indicator
+     */
+    hideTypingIndicator() {
+        if (this.typingIndicator) {
+            this.typingIndicator.remove();
+            this.typingIndicator = null;
+        }
+    }
+
+    /**
+     * Set loading state
+     */
+    setLoading(loading) {
+        this.isLoading = loading;
+        this.sendBtn.disabled = loading;
+        this.inputElement.disabled = loading;
+        
+        if (loading) {
+            this.sendBtn.innerHTML = '⏳';
+        } else {
+            this.sendBtn.innerHTML = '➤';
+        }
+    }
+
+    /**
+     * Scroll to bottom of messages
+     */
+    scrollToBottom() {
+        setTimeout(() => {
+            this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+        }, 100);
+    }
+
+    /**
+     * Trigger UI refresh for other components
+     */
+    triggerUIRefresh() {
+        // Dispatch custom event for other managers to listen to
+        window.dispatchEvent(new CustomEvent('chat:dataChanged', {
+            detail: {
+                timestamp: new Date(),
+                source: 'chat'
+            }
+        }));
+    }
+
+    /**
+     * Auto-resize the input textarea based on content
+     */
+    autoResizeInput() {
+        this.inputElement.style.height = 'auto';
+        const newHeight = Math.min(this.inputElement.scrollHeight, 120);
+        this.inputElement.style.height = newHeight + 'px';
     }
 
     /**
