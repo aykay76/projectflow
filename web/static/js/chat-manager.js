@@ -781,93 +781,50 @@ export class ChatManager {
         }
 
         const messageElement = document.createElement('div');
-        messageElement.className = `chat-message ${message.role}`;
-        
-        // Create message header
-        const headerElement = document.createElement('div');
-        headerElement.className = 'message-header';
-        
-        // Role indicator
-        const roleElement = document.createElement('span');
-        roleElement.className = 'message-role';
-        let roleIcon = '';
-        switch (message.role) {
-            case 'user':
-                roleIcon = '👤';
-                break;
-            case 'assistant':
-                roleIcon = '🤖';
-                break;
-            case 'system':
-                roleIcon = '⚙️';
-                break;
-            case 'error':
-                roleIcon = '❌';
-                break;
-            default:
-                roleIcon = '💬';
-        }
-        roleElement.textContent = `${roleIcon} ${message.role.charAt(0).toUpperCase() + message.role.slice(1)}`;
-        headerElement.appendChild(roleElement);
-        
-        // Timestamp
-        const timestampElement = document.createElement('span');
-        timestampElement.className = 'message-timestamp';
-        timestampElement.textContent = message.timestamp ? 
-            new Date(message.timestamp).toLocaleTimeString() : 
-            new Date().toLocaleTimeString();
-        headerElement.appendChild(timestampElement);
-        
-        messageElement.appendChild(headerElement);
-        
-        // Message content
-        const contentElement = document.createElement('div');
-        contentElement.className = 'message-content';
-        
-        // Handle different content types
-        if (message.content) {
-            // Convert basic markdown to HTML
-            let content = message.content
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/`(.*?)`/g, '<code>$1</code>')
-                .replace(/\n/g, '<br>');
-            
-            contentElement.innerHTML = content;
-        } else {
-            contentElement.textContent = 'No content';
-        }
-        
-        messageElement.appendChild(contentElement);
-        
-        // Add metadata if present
-        if (message.metadata && Object.keys(message.metadata).length > 0) {
-            const metadataElement = document.createElement('div');
-            metadataElement.className = 'message-metadata';
-            
-            // Show intent and confidence for translated messages
-            if (message.metadata.intent) {
-                const intentElement = document.createElement('span');
-                intentElement.className = 'metadata-intent';
-                intentElement.textContent = `Intent: ${message.metadata.intent}`;
-                metadataElement.appendChild(intentElement);
-            }
-            
-            if (message.metadata.confidence !== undefined) {
-                const confidenceElement = document.createElement('span');
-                confidenceElement.className = 'metadata-confidence';
-                confidenceElement.textContent = `Confidence: ${(message.metadata.confidence * 100).toFixed(0)}%`;
-                metadataElement.appendChild(confidenceElement);
-            }
-            
-            messageElement.appendChild(metadataElement);
-        }
-        
-        // Add to UI
+        messageElement.className = 'chat-message ' + message.role;
+        messageElement.innerHTML = 
+            '<div class="chat-message-content">' +
+                this.formatMessageContent(message.content) +
+                '<div class="chat-message-meta">' +
+                    this.formatTimestamp(message.timestamp) +
+                    (message.metadata && message.metadata.confidence ? ' • ' + Math.round(message.metadata.confidence * 100) + '% confidence' : '') +
+                '</div>' +
+            '</div>';
+
         this.messagesContainer.appendChild(messageElement);
+        this.scrollToBottom();
+    }
+
+    /**
+     * Format message content with markdown support
+     */
+    formatMessageContent(content) {
+        return content
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/•/g, '•'); // Preserve bullet points
+    }
+
+    /**
+     * Format timestamp for display
+     */
+    formatTimestamp(timestamp) {
+        const now = new Date();
+        const messageTime = new Date(timestamp);
+        const diffMs = now - messageTime;
+        const diffMins = Math.floor(diffMs / 60000);
         
-        // Scroll to bottom
-        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+        if (diffMins < 1) {
+            return 'Just now';
+        } else if (diffMins < 60) {
+            return diffMins + 'm ago';
+        } else if (diffMins < 1440) {
+            return Math.floor(diffMins / 60) + 'h ago';
+        } else {
+            return messageTime.toLocaleDateString();
+        }
     }
 
     /**
