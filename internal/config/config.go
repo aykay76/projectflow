@@ -31,11 +31,11 @@ type Config struct {
 	LogFormat string `env:"LOG_FORMAT" default:"text"`
 
 	// LLM configuration
-	LLMProvider  string `env:"LLM_PROVIDER" default:"groq"`
+	LLMProvider  string `env:"LLM_PROVIDER" default:"disabled"`
 	LLMAPIKey    string `env:"LLM_API_KEY" default:""`
 	LLMBaseURL   string `env:"LLM_BASE_URL" default:""`
-	LLMModel     string `env:"LLM_MODEL" default:"llama-3.1-8b-instant"`
-	LLMTimeout   int    `env:"LLM_TIMEOUT" default:"30"`
+	LLMModel     string `env:"LLM_MODEL" default:"llama3.2"`
+	LLMTimeout   int    `env:"LLM_TIMEOUT" default:"60"`
 	LLMMaxTokens int    `env:"LLM_MAX_TOKENS" default:"1000"`
 }
 
@@ -54,11 +54,11 @@ func Load() (*Config, error) {
 		DatabaseSSLMode:  getEnv("DB_SSL_MODE", "prefer"),
 		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
 		LogFormat:        getEnv("LOG_FORMAT", "text"),
-		LLMProvider:      getEnv("LLM_PROVIDER", "groq"),
+		LLMProvider:      getEnv("LLM_PROVIDER", "disabled"),
 		LLMAPIKey:        getEnv("LLM_API_KEY", ""),
 		LLMBaseURL:       getEnv("LLM_BASE_URL", ""),
-		LLMModel:         getEnv("LLM_MODEL", "llama-3.1-8b-instant"),
-		LLMTimeout:       getEnvInt("LLM_TIMEOUT", 30),
+		LLMModel:         getEnv("LLM_MODEL", "llama3.2"),
+		LLMTimeout:       getEnvInt("LLM_TIMEOUT", 60),
 		LLMMaxTokens:     getEnvInt("LLM_MAX_TOKENS", 1000),
 	}
 
