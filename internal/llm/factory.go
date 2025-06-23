@@ -19,6 +19,26 @@ func NewFactory(cfg *config.Config) *Factory {
 	}
 }
 
+// getBaseURL returns the appropriate base URL for the configured provider
+func (f *Factory) getBaseURL() string {
+	// If a base URL is explicitly configured, use it
+	if f.config.LLMBaseURL != "" {
+		return f.config.LLMBaseURL
+	}
+
+	// Otherwise, use provider-specific defaults
+	switch f.config.GetLLMProvider() {
+	case "ollama":
+		return f.config.GetOllamaBaseURL()
+	case "groq":
+		return "" // Groq provider will set its own default
+	case "openai":
+		return "" // OpenAI provider will set its own default
+	default:
+		return f.config.LLMBaseURL
+	}
+}
+
 // CreateProvider creates a provider based on the configuration
 func (f *Factory) CreateProvider() (Provider, error) {
 	if !f.config.IsLLMEnabled() {
@@ -27,7 +47,7 @@ func (f *Factory) CreateProvider() (Provider, error) {
 
 	providerConfig := ProviderConfig{
 		APIKey:    f.config.LLMAPIKey,
-		BaseURL:   f.config.LLMBaseURL,
+		BaseURL:   f.getBaseURL(),
 		Model:     f.config.LLMModel,
 		Timeout:   time.Duration(f.config.LLMTimeout) * time.Second,
 		MaxTokens: f.config.LLMMaxTokens,
