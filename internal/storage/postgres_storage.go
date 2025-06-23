@@ -46,6 +46,22 @@ func NewPostgresStorage(connectionString string) (*PostgresStorage, error) {
 
 // initializeSchema creates the necessary database tables and indexes
 func (ps *PostgresStorage) initializeSchema() error {
+	// Create tenants table first (required for foreign key relationships)
+	createTenantsTableSQL := `
+	CREATE TABLE IF NOT EXISTS tenants (
+		id VARCHAR(36) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL UNIQUE,
+		settings JSONB DEFAULT '{}'::jsonb,
+		status VARCHAR(20) NOT NULL DEFAULT 'active',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		CONSTRAINT check_tenant_status CHECK (status IN ('active', 'inactive', 'suspended'))
+	);`
+
+	if _, err := ps.db.Exec(createTenantsTableSQL); err != nil {
+		return fmt.Errorf("failed to create tenants table: %w", err)
+	}
+
 	// Create tasks table with proper JSON support for children array
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS tasks (
@@ -136,12 +152,17 @@ func (ps *PostgresStorage) initializeSchema() error {
 
 	// Create indexes for better performance
 	indexes := []string{
+		// Tenants table indexes
+		"CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);",
+		"CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at);",
+		// Tasks table indexes
 		"CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);",
+		// Projects table indexes
 		"CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);",
 	}
