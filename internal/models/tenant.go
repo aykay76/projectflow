@@ -8,10 +8,10 @@ import (
 
 // Tenant validation errors
 var (
-	ErrTenantNameRequired     = errors.New("tenant name is required")
-	ErrTenantNameTooLong      = errors.New("tenant name cannot exceed 255 characters")
-	ErrTenantDomainInvalid    = errors.New("tenant domain is invalid")
-	ErrTenantStorageTypeEmpty = errors.New("tenant storage type is required")
+	ErrTenantNameRequired        = errors.New("tenant name is required")
+	ErrTenantNameTooLong         = errors.New("tenant name cannot exceed 255 characters")
+	ErrTenantDomainInvalid       = errors.New("tenant domain is invalid")
+	ErrTenantStorageTypeEmpty    = errors.New("tenant storage type is required")
 	ErrTenantAuthProviderInvalid = errors.New("tenant auth provider is invalid")
 )
 
@@ -45,15 +45,15 @@ const (
 
 // TenantSettings contains tenant-specific configuration
 type TenantSettings struct {
-	StorageType    StorageType               `json:"storage_type"`
-	DatabaseConfig map[string]string         `json:"database_config,omitempty"`
-	AuthProvider   AuthProvider              `json:"auth_provider"`
-	AuthConfig     map[string]string         `json:"auth_config,omitempty"`
-	CustomDomain   string                    `json:"custom_domain,omitempty"`
-	Branding       map[string]string         `json:"branding,omitempty"`
-	Features       []string                  `json:"features,omitempty"`
-	Limits         map[string]int            `json:"limits,omitempty"`
-	Preferences    map[string]interface{}    `json:"preferences,omitempty"`
+	StorageType    StorageType            `json:"storage_type"`
+	DatabaseConfig map[string]string      `json:"database_config,omitempty"`
+	AuthProvider   AuthProvider           `json:"auth_provider"`
+	AuthConfig     map[string]string      `json:"auth_config,omitempty"`
+	CustomDomain   string                 `json:"custom_domain,omitempty"`
+	Branding       map[string]string      `json:"branding,omitempty"`
+	Features       []string               `json:"features,omitempty"`
+	Limits         map[string]int         `json:"limits,omitempty"`
+	Preferences    map[string]interface{} `json:"preferences,omitempty"`
 }
 
 // Tenant represents a tenant in the multi-tenant system
@@ -236,20 +236,20 @@ func isValidDomain(domain string) bool {
 	if len(domain) == 0 || len(domain) > 253 {
 		return false
 	}
-	
+
 	// Basic domain validation - just check for basic format
 	// In production, you might want more sophisticated validation
 	if strings.Contains(domain, "..") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
 		return false
 	}
-	
+
 	// Check for valid characters (simplified)
 	for _, char := range domain {
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-			 (char >= '0' && char <= '9') || char == '.' || char == '-') {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '.' || char == '-') {
 			return false
 		}
 	}
-	
+
 	return true
 }
