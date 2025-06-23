@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -87,7 +88,7 @@ func (s *MCPServer) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse 
 // readTasksResource reads the tasks resource
 func (s *MCPServer) readTasksResource() ([]Content, error) {
 	// Get all projects first
-	projects, err := s.storage.ListProjects()
+	projects, err := s.storage.ListProjects(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -95,7 +96,7 @@ func (s *MCPServer) readTasksResource() ([]Content, error) {
 	// Get tasks from all projects
 	var allTasks []*models.Task
 	for _, project := range projects {
-		tasks, err := s.storage.ListTasks(project.ID)
+		tasks, err := s.storage.ListTasks(context.Background(), project.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tasks for project %s: %w", project.ID, err)
 		}
@@ -115,7 +116,7 @@ func (s *MCPServer) readTasksResource() ([]Content, error) {
 
 // readHierarchyResource reads the hierarchy resource
 func (s *MCPServer) readHierarchyResource() ([]Content, error) {
-	hierarchy, err := s.storage.GetTaskHierarchy()
+	hierarchy, err := s.storage.GetTaskHierarchy(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hierarchy: %w", err)
 	}
@@ -134,7 +135,7 @@ func (s *MCPServer) readHierarchyResource() ([]Content, error) {
 // readSummaryResource reads the summary resource
 func (s *MCPServer) readSummaryResource() ([]Content, error) {
 	// Get all projects first
-	projects, err := s.storage.ListProjects()
+	projects, err := s.storage.ListProjects(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -142,7 +143,7 @@ func (s *MCPServer) readSummaryResource() ([]Content, error) {
 	// Get tasks from all projects
 	var allTasks []*models.Task
 	for _, project := range projects {
-		tasks, err := s.storage.ListTasks(project.ID)
+		tasks, err := s.storage.ListTasks(context.Background(), project.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list tasks for project %s: %w", project.ID, err)
 		}

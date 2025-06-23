@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"net/http"
@@ -36,7 +37,7 @@ func (h *Handler) getTaskByIdentifier(identifier string) (*models.Task, error) {
 	// Check if identifier looks like a UUID (36 characters with dashes)
 	if len(identifier) == 36 && strings.Count(identifier, "-") == 4 {
 		// Try UUID lookup first for performance
-		task, err := h.storage.GetTask(identifier)
+		task, err := h.storage.GetTask(context.Background(), identifier)
 		if err == nil {
 			return task, nil
 		}
@@ -44,11 +45,11 @@ func (h *Handler) getTaskByIdentifier(identifier string) (*models.Task, error) {
 
 	// If not a UUID or UUID lookup failed, and identifier looks like a display ID, try display ID lookup
 	if models.IsValidDisplayID(identifier) {
-		return h.storage.GetTaskByDisplayID(identifier)
+		return h.storage.GetTaskByDisplayID(context.Background(), identifier)
 	}
 
 	// If it doesn't look like a display ID, try UUID lookup anyway (in case the UUID check above failed)
-	return h.storage.GetTask(identifier)
+	return h.storage.GetTask(context.Background(), identifier)
 }
 
 // HandleIndex serves the main web interface
@@ -59,7 +60,7 @@ func (h *Handler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Default to showing tasks from the "ABC" project
-	tasks, err := h.storage.ListTasks("ABC")
+	tasks, err := h.storage.ListTasks(context.Background(), "ABC")
 	if err != nil {
 		http.Error(w, "Failed to load tasks", http.StatusInternalServerError)
 		return
@@ -88,7 +89,7 @@ func (h *Handler) HandleHierarchy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hierarchyTasks, err := h.storage.GetTaskHierarchy()
+	hierarchyTasks, err := h.storage.GetTaskHierarchy(context.Background())
 	if err != nil {
 		http.Error(w, "Failed to get task hierarchy", http.StatusInternalServerError)
 		return
@@ -148,7 +149,7 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 
 	logger.InfoContext(ctx, "Listing tasks", "project_id", projectID, "request_id", requestID)
 
-	tasks, err := h.storage.ListTasks(projectID)
+	tasks, err := h.storage.ListTasks(context.Background(), projectID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to list tasks", "error", err, "project_id", projectID, "request_id", requestID)
 		http.Error(w, "Failed to list tasks", http.StatusInternalServerError)
@@ -261,7 +262,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 		task.Children = []string{}
 	}
 
-	if err := h.storage.CreateTask(&task); err != nil {
+	if err := h.storage.CreateTask(context.Background(), &task); err != nil {
 		// Record failed task creation
 		if m, ok := metrics.FromContext(ctx); ok {
 			m.RecordTaskOperation("create", "failed")
@@ -339,7 +340,7 @@ func (h *Handler) HandleTaskByDisplayID(w http.ResponseWriter, r *http.Request) 
 
 	logger.DebugContext(ctx, "Getting task by display ID", "request_id", requestID, "display_id", displayID)
 
-	task, err := h.storage.GetTaskByDisplayID(displayID)
+	task, err := h.storage.GetTaskByDisplayID(context.Background(), displayID)
 	if err != nil {
 		// Record failed task retrieval
 		if m, ok := metrics.FromContext(ctx); ok {
@@ -455,7 +456,7 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request, taskID stri
 		return
 	}
 
-	if err := h.storage.UpdateTask(&task); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), &task); err != nil {
 		// Record failed task update
 		if m, ok := metrics.FromContext(r.Context()); ok {
 			m.RecordTaskOperation("update", "failed")
@@ -497,7 +498,7 @@ func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request, taskID stri
 		return
 	}
 
-	if err := h.storage.DeleteTask(task.ID); err != nil {
+	if err := h.storage.DeleteTask(context.Background(), task.ID); err != nil {
 		// Record failed task deletion
 		if m, ok := metrics.FromContext(ctx); ok {
 			m.RecordTaskOperation("delete", "failed")
@@ -598,7 +599,7 @@ func (h *Handler) HandleTaskMove(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getTaskChildren(w http.ResponseWriter, r *http.Request, parentID string) {
-	children, err := h.storage.GetTaskChildren(parentID)
+	children, err := h.storage.GetTaskChildren(context.Background(), parentID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Parent task not found", http.StatusNotFound)
@@ -627,7 +628,7 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 	}
 
 	// Verify both tasks exist
-	parentTask, err := h.storage.GetTask(parentID)
+	parentTask, err := h.storage.GetTask(context.Background(), parentID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Parent task not found", http.StatusNotFound)
@@ -637,7 +638,7 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 		return
 	}
 
-	childTask, err := h.storage.GetTask(request.ChildID)
+	childTask, err := h.storage.GetTask(context.Background(), request.ChildID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Child task not found", http.StatusNotFound)
@@ -655,10 +656,10 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 
 	// Remove child from its current parent if it has one
 	if childTask.ParentID != "" {
-		currentParent, err := h.storage.GetTask(childTask.ParentID)
+		currentParent, err := h.storage.GetTask(context.Background(), childTask.ParentID)
 		if err == nil {
 			currentParent.RemoveChild(request.ChildID)
-			h.storage.UpdateTask(currentParent)
+			h.storage.UpdateTask(context.Background(), currentParent)
 		}
 	}
 
@@ -668,12 +669,12 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 	childTask.UpdatedAt = time.Now()
 
 	// Update both tasks
-	if err := h.storage.UpdateTask(parentTask); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), parentTask); err != nil {
 		http.Error(w, "Failed to update parent task", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.storage.UpdateTask(childTask); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), childTask); err != nil {
 		http.Error(w, "Failed to update child task", http.StatusInternalServerError)
 		return
 	}
@@ -694,7 +695,7 @@ func (h *Handler) addTaskChild(w http.ResponseWriter, r *http.Request, parentID 
 
 func (h *Handler) removeTaskChild(w http.ResponseWriter, r *http.Request, parentID, childID string) {
 	// Verify parent task exists
-	parentTask, err := h.storage.GetTask(parentID)
+	parentTask, err := h.storage.GetTask(context.Background(), parentID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Parent task not found", http.StatusNotFound)
@@ -705,7 +706,7 @@ func (h *Handler) removeTaskChild(w http.ResponseWriter, r *http.Request, parent
 	}
 
 	// Verify child task exists
-	childTask, err := h.storage.GetTask(childID)
+	childTask, err := h.storage.GetTask(context.Background(), childID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Child task not found", http.StatusNotFound)
@@ -735,12 +736,12 @@ func (h *Handler) removeTaskChild(w http.ResponseWriter, r *http.Request, parent
 	childTask.UpdatedAt = time.Now()
 
 	// Update both tasks
-	if err := h.storage.UpdateTask(parentTask); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), parentTask); err != nil {
 		http.Error(w, "Failed to update parent task", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.storage.UpdateTask(childTask); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), childTask); err != nil {
 		http.Error(w, "Failed to update child task", http.StatusInternalServerError)
 		return
 	}
@@ -769,7 +770,7 @@ func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string
 	}
 
 	// Get the task to move
-	task, err := h.storage.GetTask(taskID)
+	task, err := h.storage.GetTask(context.Background(), taskID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Task not found", http.StatusNotFound)
@@ -782,7 +783,7 @@ func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string
 	// If new parent ID is provided, verify it exists
 	var newParent *models.Task
 	if request.NewParentID != "" {
-		newParent, err = h.storage.GetTask(request.NewParentID)
+		newParent, err = h.storage.GetTask(context.Background(), request.NewParentID)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				http.Error(w, "New parent task not found", http.StatusNotFound)
@@ -801,17 +802,17 @@ func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string
 
 	// Remove task from current parent if it has one
 	if task.ParentID != "" {
-		currentParent, err := h.storage.GetTask(task.ParentID)
+		currentParent, err := h.storage.GetTask(context.Background(), task.ParentID)
 		if err == nil {
 			currentParent.RemoveChild(taskID)
-			h.storage.UpdateTask(currentParent)
+			h.storage.UpdateTask(context.Background(), currentParent)
 		}
 	}
 
 	// Add task to new parent if specified
 	if newParent != nil {
 		newParent.AddChild(taskID)
-		if err := h.storage.UpdateTask(newParent); err != nil {
+		if err := h.storage.UpdateTask(context.Background(), newParent); err != nil {
 			http.Error(w, "Failed to update new parent task", http.StatusInternalServerError)
 			return
 		}
@@ -821,7 +822,7 @@ func (h *Handler) moveTask(w http.ResponseWriter, r *http.Request, taskID string
 	task.ParentID = request.NewParentID
 	task.UpdatedAt = time.Now()
 
-	if err := h.storage.UpdateTask(task); err != nil {
+	if err := h.storage.UpdateTask(context.Background(), task); err != nil {
 		http.Error(w, "Failed to update task", http.StatusInternalServerError)
 		return
 	}
@@ -852,7 +853,7 @@ func (h *Handler) wouldCreateCircularReference(parentID, childID string) bool {
 
 // isDescendant checks if ancestorID is a descendant of taskID
 func (h *Handler) isDescendant(taskID, ancestorID string) bool {
-	task, err := h.storage.GetTask(taskID)
+	task, err := h.storage.GetTask(context.Background(), taskID)
 	if err != nil {
 		return false
 	}
@@ -914,7 +915,7 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 
 // listProjects returns all projects as JSON
 func (h *Handler) listProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.storage.ListProjects()
+	projects, err := h.storage.ListProjects(context.Background())
 	if err != nil {
 		logger.Error("Failed to list projects", "error", err)
 		http.Error(w, "Failed to retrieve projects", http.StatusInternalServerError)
@@ -960,7 +961,7 @@ func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if project with same name already exists
-	existingProject, err := h.storage.GetProjectByName(projectData.Name)
+	existingProject, err := h.storage.GetProjectByName(context.Background(), projectData.Name)
 	if err == nil && existingProject != nil {
 		http.Error(w, "Project with this name already exists", http.StatusConflict)
 		return
@@ -983,7 +984,7 @@ func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to storage
-	if err := h.storage.CreateProject(project); err != nil {
+	if err := h.storage.CreateProject(context.Background(), project); err != nil {
 		logger.Error("Failed to create project", "error", err)
 		http.Error(w, "Failed to create project", http.StatusInternalServerError)
 		return
@@ -1001,7 +1002,7 @@ func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
 
 // getProject returns a specific project by ID
 func (h *Handler) getProject(w http.ResponseWriter, r *http.Request, projectID string) {
-	project, err := h.storage.GetProject(projectID)
+	project, err := h.storage.GetProject(context.Background(), projectID)
 	if err != nil {
 		logger.Error("Failed to get project", "error", err, "project_id", projectID)
 		http.Error(w, "Project not found", http.StatusNotFound)
@@ -1023,7 +1024,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 	}
 
 	// First check if project exists
-	existingProject, err := h.storage.GetProject(projectID)
+	existingProject, err := h.storage.GetProject(context.Background(), projectID)
 	if err != nil {
 		logger.Error("Failed to get project for update", "error", err, "project_id", projectID)
 		http.Error(w, "Project not found", http.StatusNotFound)
@@ -1052,7 +1053,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 
 		// Check for name conflicts (excluding current project)
 		if *updateData.Name != existingProject.Name {
-			conflictProject, err := h.storage.GetProjectByName(*updateData.Name)
+			conflictProject, err := h.storage.GetProjectByName(context.Background(), *updateData.Name)
 			if err == nil && conflictProject != nil && conflictProject.ID != projectID {
 				http.Error(w, "Project with this name already exists", http.StatusConflict)
 				return
@@ -1089,7 +1090,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 
 	// Update timestamp and save
 	existingProject.UpdateTimestamp()
-	if err := h.storage.UpdateProject(existingProject); err != nil {
+	if err := h.storage.UpdateProject(context.Background(), existingProject); err != nil {
 		logger.Error("Failed to update project", "error", err, "project_id", projectID)
 		http.Error(w, "Failed to update project", http.StatusInternalServerError)
 		return
@@ -1107,7 +1108,7 @@ func (h *Handler) updateProject(w http.ResponseWriter, r *http.Request, projectI
 // deleteProject deletes a project by ID
 func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, projectID string) {
 	// First check if project exists
-	project, err := h.storage.GetProject(projectID)
+	project, err := h.storage.GetProject(context.Background(), projectID)
 	if err != nil {
 		logger.Error("Failed to get project for deletion", "error", err, "project_id", projectID)
 		http.Error(w, "Project not found", http.StatusNotFound)
@@ -1117,7 +1118,7 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, projectI
 	// TODO: In future versions, check if project has associated tasks
 	// For now, we'll allow deletion regardless
 
-	if err := h.storage.DeleteProject(projectID); err != nil {
+	if err := h.storage.DeleteProject(context.Background(), projectID); err != nil {
 		logger.Error("Failed to delete project", "error", err, "project_id", projectID)
 		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
 		return

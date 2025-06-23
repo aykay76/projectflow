@@ -387,13 +387,13 @@ func (ch *ChatHandler) executeCreateTask(params map[string]interface{}) (string,
 	}
 
 	// Get project to validate it exists
-	project, err := ch.storage.GetProjectByDisplayPrefix(projectID)
+	project, err := ch.storage.GetProjectByDisplayPrefix(context.Background(), projectID)
 	if err != nil {
 		return "", fmt.Errorf("project not found: %s", projectID)
 	}
 
 	// Generate display ID
-	displayID, err := ch.storage.GetNextDisplayID(project.ID)
+	displayID, err := ch.storage.GetNextDisplayID(context.Background(), project.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate display ID: %w", err)
 	}
@@ -424,9 +424,9 @@ func (ch *ChatHandler) executeCreateTask(params map[string]interface{}) (string,
 	// Handle parent task if specified
 	if parentID, ok := params["parent_id"].(string); ok && parentID != "" {
 		// Try to find parent by display ID first, then by UUID
-		parent, err := ch.storage.GetTaskByDisplayID(parentID)
+		parent, err := ch.storage.GetTaskByDisplayID(context.Background(), parentID)
 		if err != nil {
-			parent, err = ch.storage.GetTask(parentID)
+			parent, err = ch.storage.GetTask(context.Background(), parentID)
 			if err != nil {
 				return "", fmt.Errorf("parent task not found: %s", parentID)
 			}
@@ -434,7 +434,7 @@ func (ch *ChatHandler) executeCreateTask(params map[string]interface{}) (string,
 		task.ParentID = parent.ID
 	}
 
-	err = ch.storage.CreateTask(task)
+	err = ch.storage.CreateTask(context.Background(), task)
 	if err != nil {
 		return "", fmt.Errorf("failed to create task: %w", err)
 	}
@@ -452,9 +452,9 @@ func (ch *ChatHandler) executeUpdateTask(params map[string]interface{}) (string,
 	}
 
 	// Try to find task by display ID first, then by UUID
-	task, err := ch.storage.GetTaskByDisplayID(id)
+	task, err := ch.storage.GetTaskByDisplayID(context.Background(), id)
 	if err != nil {
-		task, err = ch.storage.GetTask(id)
+		task, err = ch.storage.GetTask(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("task not found: %s", id)
 		}
@@ -491,9 +491,9 @@ func (ch *ChatHandler) executeUpdateTask(params map[string]interface{}) (string,
 		if parentID == "" {
 			task.ParentID = ""
 		} else {
-			parent, err := ch.storage.GetTaskByDisplayID(parentID)
+			parent, err := ch.storage.GetTaskByDisplayID(context.Background(), parentID)
 			if err != nil {
-				parent, err = ch.storage.GetTask(parentID)
+				parent, err = ch.storage.GetTask(context.Background(), parentID)
 				if err != nil {
 					return "", fmt.Errorf("parent task not found: %s", parentID)
 				}
@@ -504,7 +504,7 @@ func (ch *ChatHandler) executeUpdateTask(params map[string]interface{}) (string,
 
 	task.UpdatedAt = time.Now().UTC()
 
-	err = ch.storage.UpdateTask(task)
+	err = ch.storage.UpdateTask(context.Background(), task)
 	if err != nil {
 		return "", fmt.Errorf("failed to update task: %w", err)
 	}
@@ -521,9 +521,9 @@ func (ch *ChatHandler) executeGetTask(params map[string]interface{}) (string, er
 	}
 
 	// Try to find task by display ID first, then by UUID
-	task, err := ch.storage.GetTaskByDisplayID(id)
+	task, err := ch.storage.GetTaskByDisplayID(context.Background(), id)
 	if err != nil {
-		task, err = ch.storage.GetTask(id)
+		task, err = ch.storage.GetTask(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("task not found: %s", id)
 		}
@@ -541,15 +541,15 @@ func (ch *ChatHandler) executeDeleteTask(params map[string]interface{}) (string,
 	}
 
 	// Try to find task by display ID first, then by UUID
-	task, err := ch.storage.GetTaskByDisplayID(id)
+	task, err := ch.storage.GetTaskByDisplayID(context.Background(), id)
 	if err != nil {
-		task, err = ch.storage.GetTask(id)
+		task, err = ch.storage.GetTask(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("task not found: %s", id)
 		}
 	}
 
-	err = ch.storage.DeleteTask(task.ID)
+	err = ch.storage.DeleteTask(context.Background(), task.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to delete task: %w", err)
 	}
@@ -563,10 +563,10 @@ func (ch *ChatHandler) executeListTasks(params map[string]interface{}) ([]*model
 	projectID := ""
 	if p, ok := params["project_id"].(string); ok && p != "" {
 		// Try to get project by display prefix first
-		project, err := ch.storage.GetProjectByDisplayPrefix(p)
+		project, err := ch.storage.GetProjectByDisplayPrefix(context.Background(), p)
 		if err != nil {
 			// Try by UUID
-			project, err = ch.storage.GetProject(p)
+			project, err = ch.storage.GetProject(context.Background(), p)
 			if err != nil {
 				return nil, "", fmt.Errorf("project not found: %s", p)
 			}
@@ -574,7 +574,7 @@ func (ch *ChatHandler) executeListTasks(params map[string]interface{}) ([]*model
 		projectID = project.ID
 	}
 
-	tasks, err := ch.storage.ListTasks(projectID)
+	tasks, err := ch.storage.ListTasks(context.Background(), projectID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list tasks: %w", err)
 	}
@@ -616,7 +616,7 @@ func (ch *ChatHandler) executeCreateProject(params map[string]interface{}) (stri
 		UpdatedAt:     time.Now().UTC(),
 	}
 
-	err := ch.storage.CreateProject(project)
+	err := ch.storage.CreateProject(context.Background(), project)
 	if err != nil {
 		return "", fmt.Errorf("failed to create project: %w", err)
 	}
@@ -633,9 +633,9 @@ func (ch *ChatHandler) executeUpdateProject(params map[string]interface{}) (stri
 	}
 
 	// Try to find project by display prefix first, then by UUID
-	project, err := ch.storage.GetProjectByDisplayPrefix(id)
+	project, err := ch.storage.GetProjectByDisplayPrefix(context.Background(), id)
 	if err != nil {
-		project, err = ch.storage.GetProject(id)
+		project, err = ch.storage.GetProject(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("project not found: %s", id)
 		}
@@ -654,7 +654,7 @@ func (ch *ChatHandler) executeUpdateProject(params map[string]interface{}) (stri
 
 	project.UpdatedAt = time.Now().UTC()
 
-	err = ch.storage.UpdateProject(project)
+	err = ch.storage.UpdateProject(context.Background(), project)
 	if err != nil {
 		return "", fmt.Errorf("failed to update project: %w", err)
 	}
@@ -671,9 +671,9 @@ func (ch *ChatHandler) executeGetProject(params map[string]interface{}) (string,
 	}
 
 	// Try to find project by display prefix first, then by UUID
-	project, err := ch.storage.GetProjectByDisplayPrefix(id)
+	project, err := ch.storage.GetProjectByDisplayPrefix(context.Background(), id)
 	if err != nil {
-		project, err = ch.storage.GetProject(id)
+		project, err = ch.storage.GetProject(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("project not found: %s", id)
 		}
@@ -691,15 +691,15 @@ func (ch *ChatHandler) executeDeleteProject(params map[string]interface{}) (stri
 	}
 
 	// Try to find project by display prefix first, then by UUID
-	project, err := ch.storage.GetProjectByDisplayPrefix(id)
+	project, err := ch.storage.GetProjectByDisplayPrefix(context.Background(), id)
 	if err != nil {
-		project, err = ch.storage.GetProject(id)
+		project, err = ch.storage.GetProject(context.Background(), id)
 		if err != nil {
 			return "", fmt.Errorf("project not found: %s", id)
 		}
 	}
 
-	err = ch.storage.DeleteProject(project.ID)
+	err = ch.storage.DeleteProject(context.Background(), project.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to delete project: %w", err)
 	}
@@ -710,7 +710,7 @@ func (ch *ChatHandler) executeDeleteProject(params map[string]interface{}) (stri
 
 // executeListProjects handles project listing
 func (ch *ChatHandler) executeListProjects(params map[string]interface{}) ([]*models.Project, error) {
-	projects, err := ch.storage.ListProjects()
+	projects, err := ch.storage.ListProjects(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -721,7 +721,7 @@ func (ch *ChatHandler) executeListProjects(params map[string]interface{}) ([]*mo
 
 // executeGetTaskHierarchy handles task hierarchy retrieval
 func (ch *ChatHandler) executeGetTaskHierarchy(params map[string]interface{}) error {
-	_, err := ch.storage.GetTaskHierarchy()
+	_, err := ch.storage.GetTaskHierarchy(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to get task hierarchy: %w", err)
 	}
@@ -736,7 +736,7 @@ func (ch *ChatHandler) enhanceResponseWithData(response string, actionsTaken, ta
 	for _, action := range actionsTaken {
 		if action == "list_projects" && len(projectIDs) > 0 {
 			// Get project details for the listed project IDs
-			projects, err := ch.storage.ListProjects()
+			projects, err := ch.storage.ListProjects(context.Background())
 			if err == nil {
 				// Build a nice project list
 				var projectList []string
@@ -759,7 +759,7 @@ func (ch *ChatHandler) enhanceResponseWithData(response string, actionsTaken, ta
 			// Get task details for the listed task IDs
 			var taskList []string
 			for _, taskID := range taskIDs {
-				task, err := ch.storage.GetTaskByDisplayID(taskID)
+				task, err := ch.storage.GetTaskByDisplayID(context.Background(), taskID)
 				if err == nil {
 					// Format task info
 					statusEmoji := "📋"

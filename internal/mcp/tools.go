@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -79,7 +80,7 @@ func (s *MCPServer) handleListTasks(args map[string]interface{}) (ToolCallResult
 		return ToolCallResult{}, fmt.Errorf("project_id is required")
 	}
 
-	tasks, err := s.storage.ListTasks(projectID)
+	tasks, err := s.storage.ListTasks(context.Background(), projectID)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to list tasks for project %s: %w", projectID, err)
 	}
@@ -148,7 +149,7 @@ func (s *MCPServer) handleCreateTask(args map[string]interface{}) (ToolCallResul
 		}
 	}
 
-	if err := s.storage.CreateTask(task); err != nil {
+	if err := s.storage.CreateTask(context.Background(), task); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to create task: %w", err)
 	}
 
@@ -172,7 +173,7 @@ func (s *MCPServer) handleGetTask(args map[string]interface{}) (ToolCallResult, 
 		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
 	}
 
-	task, err := s.storage.GetTask(id)
+	task, err := s.storage.GetTask(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task: %w", err)
 	}
@@ -198,7 +199,7 @@ func (s *MCPServer) handleUpdateTask(args map[string]interface{}) (ToolCallResul
 	}
 
 	// Get existing task
-	existingTask, err := s.storage.GetTask(id)
+	existingTask, err := s.storage.GetTask(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get existing task: %w", err)
 	}
@@ -257,7 +258,7 @@ func (s *MCPServer) handleUpdateTask(args map[string]interface{}) (ToolCallResul
 
 	task.UpdatedAt = time.Now()
 
-	if err := s.storage.UpdateTask(&task); err != nil {
+	if err := s.storage.UpdateTask(context.Background(), &task); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to update task: %w", err)
 	}
 
@@ -282,12 +283,12 @@ func (s *MCPServer) handleDeleteTask(args map[string]interface{}) (ToolCallResul
 	}
 
 	// Get task info before deletion for confirmation
-	task, err := s.storage.GetTask(id)
+	task, err := s.storage.GetTask(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task: %w", err)
 	}
 
-	if err := s.storage.DeleteTask(id); err != nil {
+	if err := s.storage.DeleteTask(context.Background(), id); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to delete task: %w", err)
 	}
 
@@ -301,7 +302,7 @@ func (s *MCPServer) handleDeleteTask(args map[string]interface{}) (ToolCallResul
 
 // handleGetTaskHierarchy handles the get_task_hierarchy tool call
 func (s *MCPServer) handleGetTaskHierarchy(args map[string]interface{}) (ToolCallResult, error) {
-	hierarchy, err := s.storage.GetTaskHierarchy()
+	hierarchy, err := s.storage.GetTaskHierarchy(context.Background())
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get task hierarchy: %w", err)
 	}
@@ -321,7 +322,7 @@ func (s *MCPServer) handleGetTaskHierarchy(args map[string]interface{}) (ToolCal
 
 // handleListProjects handles the list_projects tool call
 func (s *MCPServer) handleListProjects(args map[string]interface{}) (ToolCallResult, error) {
-	projects, err := s.storage.ListProjects()
+	projects, err := s.storage.ListProjects(context.Background())
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -357,7 +358,7 @@ func (s *MCPServer) handleCreateProject(args map[string]interface{}) (ToolCallRe
 	// Create new project
 	project := models.NewProject(name, description, prefix)
 
-	if err := s.storage.CreateProject(project); err != nil {
+	if err := s.storage.CreateProject(context.Background(), project); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to create project: %w", err)
 	}
 
@@ -376,7 +377,7 @@ func (s *MCPServer) handleGetProject(args map[string]interface{}) (ToolCallResul
 		return ToolCallResult{}, fmt.Errorf("id is required and must be a string")
 	}
 
-	project, err := s.storage.GetProject(id)
+	project, err := s.storage.GetProject(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
 	}
@@ -402,7 +403,7 @@ func (s *MCPServer) handleUpdateProject(args map[string]interface{}) (ToolCallRe
 	}
 
 	// Get existing project
-	project, err := s.storage.GetProject(id)
+	project, err := s.storage.GetProject(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
 	}
@@ -420,7 +421,7 @@ func (s *MCPServer) handleUpdateProject(args map[string]interface{}) (ToolCallRe
 
 	project.UpdatedAt = time.Now()
 
-	if err := s.storage.UpdateProject(project); err != nil {
+	if err := s.storage.UpdateProject(context.Background(), project); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to update project: %w", err)
 	}
 
@@ -440,12 +441,12 @@ func (s *MCPServer) handleDeleteProject(args map[string]interface{}) (ToolCallRe
 	}
 
 	// Get project details before deletion for confirmation message
-	project, err := s.storage.GetProject(id)
+	project, err := s.storage.GetProject(context.Background(), id)
 	if err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to get project: %w", err)
 	}
 
-	if err := s.storage.DeleteProject(id); err != nil {
+	if err := s.storage.DeleteProject(context.Background(), id); err != nil {
 		return ToolCallResult{}, fmt.Errorf("failed to delete project: %w", err)
 	}
 
