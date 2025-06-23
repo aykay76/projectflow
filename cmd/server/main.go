@@ -114,6 +114,12 @@ func main() {
 	mux.HandleFunc("/api/chat", chatHandler.HandleChat)
 	mux.HandleFunc("/api/chat/history", chatHandler.HandleChatHistory)
 
+	// LLM API routes
+	llmHandler := handlers.NewLLMHandler(llmService, slog.Default())
+	mux.HandleFunc("/api/llm/info", llmHandler.HandleLLMInfo)
+	mux.HandleFunc("/api/llm/chat", llmHandler.HandleLLMChat)
+	mux.HandleFunc("/api/llm/health", llmHandler.HandleLLMHealthCheck)
+
 	// Documentation API routes
 	docsHandler := handlers.NewDocsHandler("docs")
 	mux.HandleFunc("/api/docs/list", docsHandler.HandleDocsList)
