@@ -180,7 +180,7 @@ func (h *HealthChecker) checkLLM() Check {
 	if err != nil {
 		check.Status = "unhealthy"
 		check.Error = err.Error()
-		
+
 		// Add specific guidance for common Ollama issues
 		if provider, exists := check.Details["provider"]; exists && provider == "ollama" {
 			if duration > 10*time.Second {

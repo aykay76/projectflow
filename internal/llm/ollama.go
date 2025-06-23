@@ -163,7 +163,7 @@ func (o *OllamaProvider) HealthCheck(ctx context.Context) error {
 		for i, model := range modelsResp.Models {
 			availableModels[i] = model.Name
 		}
-		return fmt.Errorf("model '%s' not found in Ollama. Available models: %v. Run 'ollama pull %s' to download the model", 
+		return fmt.Errorf("model '%s' not found in Ollama. Available models: %v. Run 'ollama pull %s' to download the model",
 			o.config.Model, availableModels, o.config.Model)
 	}
 

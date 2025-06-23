@@ -94,7 +94,7 @@ func TestOllamaProvider_Chat_RequestDefaults(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	
+
 	// This will fail due to network error, but we can check that the request is formatted correctly
 	// by examining the error message
 	_, err := provider.Chat(ctx, req)
