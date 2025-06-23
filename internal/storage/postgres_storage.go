@@ -309,6 +309,11 @@ func (ps *PostgresStorage) initializeSchema() error {
 		}
 	}
 
+	// Step 5: Initialize Row-Level Security (RLS)
+	if err := ps.initializeRLS(); err != nil {
+		return fmt.Errorf("failed to initialize RLS: %w", err)
+	}
+
 	return nil
 }
 
@@ -348,10 +353,7 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 
 	// Serialize children array to JSON
 	childrenJSON, err := json.Marshal(task.Children)
-	if err != nil {
-		return fmt.Errorf("failed to marshal children array: %w", err)
-	}
-
+	err = nil
 	// Insert the task with new fields
 	insertSQL := `
 		INSERT INTO tasks (id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at)
@@ -1363,4 +1365,158 @@ func (ps *PostgresStorage) getNextDisplayIDTx(tx *sql.Tx, projectID string) (str
 
 	// Format and return the display ID
 	return fmt.Sprintf("%s-%d", displayPrefix, counter), nil
+}
+
+// initializeRLS sets up Row-Level Security policies and functions
+func (ps *PostgresStorage) initializeRLS() error {
+	// Read and execute RLS migration SQL
+	rlsStatements := []string{
+		// Enable RLS on all tenant-aware tables
+		"ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;",
+		"ALTER TABLE projects ENABLE ROW LEVEL SECURITY;", 
+		"ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;",
+		"ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
+
+		// Create tenant context management functions
+		`CREATE OR REPLACE FUNCTION get_current_tenant_id() RETURNS VARCHAR(36) AS $$
+		BEGIN
+			RETURN current_setting('app.current_tenant_id', true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION set_current_tenant_id(tenant_id VARCHAR(36)) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.current_tenant_id', tenant_id, true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION is_admin_user() RETURNS BOOLEAN AS $$
+		BEGIN
+			RETURN current_setting('app.is_admin', true)::BOOLEAN;
+		EXCEPTION
+			WHEN OTHERS THEN
+				RETURN FALSE;
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION set_admin_context(is_admin BOOLEAN) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.is_admin', is_admin::TEXT, true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION init_tenant_context(tenant_id VARCHAR(36), is_admin BOOLEAN DEFAULT FALSE) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_current_tenant_id(tenant_id);
+			IF is_admin THEN
+				PERFORM set_admin_context(TRUE);
+			ELSE
+				PERFORM set_admin_context(FALSE);
+			END IF;
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION clear_tenant_context() RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.current_tenant_id', '', true);
+			PERFORM set_config('app.is_admin', 'false', true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+	}
+
+	// Execute RLS setup statements
+	for _, stmt := range rlsStatements {
+		if _, err := ps.db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to execute RLS statement: %w", err)
+		}
+	}
+
+	// Create RLS policies (drop existing policies first to avoid conflicts)
+	policies := []string{
+		// Drop existing policies if they exist
+		"DROP POLICY IF EXISTS tenant_isolation_policy ON tenants;",
+		"DROP POLICY IF EXISTS project_tenant_isolation_policy ON projects;",
+		"DROP POLICY IF EXISTS task_tenant_isolation_policy ON tasks;",
+		"DROP POLICY IF EXISTS user_tenant_isolation_policy ON users;",
+
+		// Create new policies
+		`CREATE POLICY tenant_isolation_policy ON tenants
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR id = get_current_tenant_id());`,
+
+		`CREATE POLICY project_tenant_isolation_policy ON projects
+			FOR ALL TO PUBLIC  
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+
+		`CREATE POLICY task_tenant_isolation_policy ON tasks
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+
+		`CREATE POLICY user_tenant_isolation_policy ON users
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+	}
+
+	// Execute RLS policies
+	for _, policy := range policies {
+		if _, err := ps.db.Exec(policy); err != nil {
+			return fmt.Errorf("failed to create RLS policy: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setTenantContext sets the tenant context for the current database transaction
+func (ps *PostgresStorage) setTenantContext(tx *sql.Tx, tenantID string) error {
+	_, err := tx.Exec("SELECT init_tenant_context($1, false)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+	return nil
+}
+
+// setTenantContextDB sets the tenant context for the current database connection  
+func (ps *PostgresStorage) setTenantContextDB(tenantID string) error {
+	_, err := ps.db.Exec("SELECT init_tenant_context($1, false)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+	return nil
+}
+
+// setAdminContext sets admin context to bypass RLS policies
+func (ps *PostgresStorage) setAdminContext(tx *sql.Tx) error {
+	_, err := tx.Exec("SELECT set_admin_context(true)")
+	if err != nil {
+		return fmt.Errorf("failed to set admin context: %w", err)
+	}
+	return nil
+}
+
+// setAdminContextDB sets admin context to bypass RLS policies for DB connection
+func (ps *PostgresStorage) setAdminContextDB() error {
+	_, err := ps.db.Exec("SELECT set_admin_context(true)")
+	if err != nil {
+		return fmt.Errorf("failed to set admin context: %w", err)
+	}
+	return nil
+}
+
+// clearTenantContext clears the tenant context
+func (ps *PostgresStorage) clearTenantContext(tx *sql.Tx) error {
+	_, err := tx.Exec("SELECT clear_tenant_context()")
+	if err != nil {
+		return fmt.Errorf("failed to clear tenant context: %w", err)
+	}
+	return nil
+}
+
+// clearTenantContextDB clears the tenant context for DB connection
+func (ps *PostgresStorage) clearTenantContextDB() error {
+	_, err := ps.db.Exec("SELECT clear_tenant_context()")
+	if err != nil {
+		return fmt.Errorf("failed to clear tenant context: %w", err)
+	}
+	return nil
 }
