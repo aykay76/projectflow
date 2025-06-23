@@ -1,24 +1,5 @@
 /**
- * ChatManager - Handles the chat interface and        this.chatPanel.innerHTML = `
-            <div class="chat-header">
-                <h3>💬 Chat Assistant</h3>
-                <div class="chat-header-actions">
-                    <button class="chat-status-btn" id="chat-status-btn" title="LLM Status" aria-label="LLM Status">
-                        <span class="status-indicator" id="llm-status-indicator">⚪</span>
-                    </button>
-                    <button class="chat-close-btn" title="Close Chat" aria-label="Close Chat">×</button>
-                </div>
-            </div>
-            <div class="chat-status-panel" id="chat-status-panel" style="display: none;">
-                <div class="status-content">
-                    <h4>🤖 LLM Status</h4>
-                    <div id="llm-status-details">Checking...</div>
-                    <div class="status-actions">
-                        <button class="btn-refresh-status" id="refresh-status-btn">🔄 Refresh</button>
-                    </div>
-                </div>
-            </div>
-            <div class="chat-messages" id="chat-messages"></div>`cation with the backend
+ * ChatManager - Handles the chat interface and communication with the backend
  */
 
 import { ApiClient } from './api-client.js';
@@ -72,68 +53,67 @@ export class ChatManager {
         // Create chat panel
         this.chatPanel = document.createElement('div');
         this.chatPanel.className = 'chat-panel';
-        this.chatPanel.innerHTML = `
-            <div class="chat-header">
-                <h3>💬 Chat Assistant</h3>
-                <div class="chat-header-actions">
-                    <button class="chat-mode-btn" id="chat-mode-btn" title="Chat Mode" aria-label="Chat Mode">
-                        <span id="chat-mode-indicator">🔄</span>
-                    </button>
-                    <button class="chat-status-btn" id="chat-status-btn" title="LLM Status" aria-label="LLM Status">
-                        <span class="status-indicator" id="llm-status-indicator">⚪</span>
-                    </button>
-                    <button class="chat-close-btn" title="Close Chat" aria-label="Close Chat">×</button>
-                </div>
-            </div>
-            <div class="chat-mode-panel" id="chat-mode-panel" style="display: none;">
-                <div class="mode-content">
-                    <h4>💬 Chat Mode</h4>
-                    <div class="mode-options">
-                        <label class="mode-option">
-                            <input type="radio" name="chat-mode" value="translated" id="mode-translated" checked>
-                            <div class="mode-info">
-                                <strong>🔄 Smart Assistant</strong>
-                                <p>Translates your requests into ProjectFlow actions (recommended)</p>
-                            </div>
-                        </label>
-                        <label class="mode-option">
-                            <input type="radio" name="chat-mode" value="direct" id="mode-direct">
-                            <div class="mode-info">
-                                <strong>🤖 Direct LLM</strong>
-                                <p>Chat directly with the language model</p>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="mode-actions">
-                        <button class="btn-apply-mode" id="apply-mode-btn">Apply</button>
-                    </div>
-                </div>
-            </div>
-            <div class="chat-status-panel" id="chat-status-panel" style="display: none;">
-                <div class="status-content">
-                    <h4>🤖 LLM Status</h4>
-                    <div id="llm-status-details">Checking...</div>
-                    <div class="status-actions">
-                        <button class="btn-refresh-status" id="refresh-status-btn">🔄 Refresh</button>
-                    </div>
-                </div>
-            </div>
-            <div class="chat-messages" id="chat-messages"></div>
-            <div class="chat-input-container">
-                <div class="chat-input-wrapper">
-                    <textarea 
-                        class="chat-input" 
-                        id="chat-input" 
-                        placeholder="Ask me to create tasks, list projects, or anything else..."
-                        rows="1"
-                        maxlength="1000"
-                    ></textarea>
-                    <button class="chat-send-btn" id="chat-send-btn" title="Send Message" aria-label="Send Message">
-                        ➤
-                    </button>
-                </div>
-            </div>
-        `;
+        this.chatPanel.innerHTML = 
+            '<div class="chat-header">' +
+                '<h3>💬 Chat Assistant</h3>' +
+                '<div class="chat-header-actions">' +
+                    '<button class="chat-mode-btn" id="chat-mode-btn" title="Chat Mode" aria-label="Chat Mode">' +
+                        '<span id="chat-mode-indicator">🔄</span>' +
+                    '</button>' +
+                    '<button class="chat-status-btn" id="chat-status-btn" title="LLM Status" aria-label="LLM Status">' +
+                        '<span class="status-indicator" id="llm-status-indicator">⚪</span>' +
+                    '</button>' +
+                    '<button class="chat-close-btn" title="Close Chat" aria-label="Close Chat">×</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="chat-mode-panel" id="chat-mode-panel" style="display: none;">' +
+                '<div class="mode-content">' +
+                    '<h4>💬 Chat Mode</h4>' +
+                    '<div class="mode-options">' +
+                        '<label class="mode-option">' +
+                            '<input type="radio" name="chat-mode" value="translated" id="mode-translated" checked>' +
+                            '<div class="mode-info">' +
+                                '<strong>🔄 Smart Assistant</strong>' +
+                                '<p>Translates your requests into ProjectFlow actions (recommended)</p>' +
+                            '</div>' +
+                        '</label>' +
+                        '<label class="mode-option">' +
+                            '<input type="radio" name="chat-mode" value="direct" id="mode-direct">' +
+                            '<div class="mode-info">' +
+                                '<strong>🤖 Direct LLM</strong>' +
+                                '<p>Chat directly with the language model</p>' +
+                            '</div>' +
+                        '</label>' +
+                    '</div>' +
+                    '<div class="mode-actions">' +
+                        '<button class="btn-apply-mode" id="apply-mode-btn">Apply</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="chat-status-panel" id="chat-status-panel" style="display: none;">' +
+                '<div class="status-content">' +
+                    '<h4>🤖 LLM Status</h4>' +
+                    '<div id="llm-status-details">Checking...</div>' +
+                    '<div class="status-actions">' +
+                        '<button class="btn-refresh-status" id="refresh-status-btn">🔄 Refresh</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="chat-messages" id="chat-messages"></div>' +
+            '<div class="chat-input-container">' +
+                '<div class="chat-input-wrapper">' +
+                    '<textarea ' +
+                        'class="chat-input" ' +
+                        'id="chat-input" ' +
+                        'placeholder="Ask me to create tasks, list projects, or anything else..."' +
+                        'rows="1"' +
+                        'maxlength="1000"' +
+                    '></textarea>' +
+                    '<button class="chat-send-btn" id="chat-send-btn" title="Send Message" aria-label="Send Message">' +
+                        '➤' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
 
         // Add to document
         document.body.appendChild(this.toggleBtn);
@@ -282,15 +262,13 @@ export class ChatManager {
         const welcomeMessage = {
             id: 'welcome-' + Date.now(),
             role: 'assistant',
-            content: `Hi! I'm your ProjectFlow assistant. I can help you manage tasks and projects using natural language. 
-
-Try asking me things like:
-• "Create a high priority task to fix the login bug"
-• "List all tasks in the PF project"
-• "Show me task PF-123"
-• "Mark task PF-123 as done"
-
-What would you like me to help you with?`,
+            content: 'Hi! I\'m your ProjectFlow assistant. I can help you manage tasks and projects using natural language.\n\n' +
+                'Try asking me things like:\n' +
+                '• "Create a high priority task to fix the login bug"\n' +
+                '• "List all tasks in the PF project"\n' +
+                '• "Show me task PF-123"\n' +
+                '• "Mark task PF-123 as done"\n\n' +
+                'What would you like me to help you with?',
             timestamp: new Date(),
             metadata: {
                 intent: 'welcome',
@@ -386,7 +364,9 @@ What would you like me to help you with?`,
             // Show notification for successful actions (only in translated mode)
             if (this.chatMode === 'translated' && response.actions_taken && response.actions_taken.length > 0) {
                 const actionText = response.actions_taken.join(', ');
-                this.notificationManager?.showSuccess(`Action completed: ${actionText}`);
+                if (this.notificationManager) {
+                    this.notificationManager.showSuccess('Action completed: ' + actionText);
+                }
                 
                 // Trigger refresh if tasks/projects were modified
                 if (response.actions_taken.some(action => 
@@ -401,7 +381,7 @@ What would you like me to help you with?`,
             this.hideTypingIndicator();
             
             // Check if this is an LLM-related error and provide specific guidance
-            let errorContent = `Sorry, I encountered an error: ${error.message || 'Please try again.'}`;
+            let errorContent = 'Sorry, I encountered an error: ' + (error.message || 'Please try again.');
             let helpContent = '';
             
             // Add mode-specific and LLM-specific error guidance
@@ -413,7 +393,7 @@ What would you like me to help you with?`,
                 if (this.llmInfo) {
                     if (this.llmInfo.provider === 'ollama') {
                         helpContent += '• Make sure Ollama is running with `ollama serve`\n';
-                        helpContent += `• Verify the model "${this.llmInfo.model || 'llama3.2'}" is installed\n`;
+                        helpContent += '• Verify the model "' + (this.llmInfo.model || 'llama3.2') + '" is installed\n';
                     } else if (this.llmInfo.provider === 'groq') {
                         helpContent += '• Check your Groq API key configuration\n';
                     } else if (this.llmInfo.provider === 'openai') {
@@ -428,7 +408,7 @@ What would you like me to help you with?`,
                     if (this.llmInfo) {
                         if (this.llmInfo.provider === 'ollama') {
                             helpContent += '• Make sure Ollama is running with `ollama serve`\n';
-                            helpContent += `• Verify the model "${this.llmInfo.model || 'llama3.2'}" is installed with \`ollama pull ${this.llmInfo.model || 'llama3.2'}\`\n';
+                            helpContent += '• Verify the model "' + (this.llmInfo.model || 'llama3.2') + '" is installed with `ollama pull ' + (this.llmInfo.model || 'llama3.2') + '`\n';
                             helpContent += '• Check Ollama logs for detailed error information\n';
                         } else if (this.llmInfo.provider === 'groq') {
                             helpContent += '• Check your Groq API key configuration\n';
@@ -457,14 +437,16 @@ What would you like me to help you with?`,
                     intent: 'error',
                     confidence: 0,
                     hasHelpLink: true,
-                    llmProvider: this.llmInfo?.provider || 'unknown',
+                    llmProvider: (this.llmInfo && this.llmInfo.provider) || 'unknown',
                     chat_mode: this.chatMode
                 }
             };
 
             this.addMessageToUI(errorMessage);
             this.messages.push(errorMessage);
-            this.notificationManager?.showError('Failed to send message. Please try again.');
+            if (this.notificationManager) {
+                this.notificationManager.showError('Failed to send message. Please try again.');
+            }
         } finally {
             this.setLoading(false);
         }
@@ -516,10 +498,10 @@ What would you like me to help you with?`,
         if (this.statusIndicator) {
             if (this.llmInfo.enabled && this.llmHealthy) {
                 this.statusIndicator.textContent = '🟢';
-                this.statusIndicator.title = `${this.llmInfo.provider} - Healthy`;
+                this.statusIndicator.title = this.llmInfo.provider + ' - Healthy';
             } else if (this.llmInfo.enabled && !this.llmHealthy) {
                 this.statusIndicator.textContent = '🟡';
-                this.statusIndicator.title = `${this.llmInfo.provider} - Unhealthy`;
+                this.statusIndicator.title = this.llmInfo.provider + ' - Unhealthy';
             } else {
                 this.statusIndicator.textContent = '⚪';
                 this.statusIndicator.title = 'LLM Disabled';
@@ -531,37 +513,22 @@ What would you like me to help you with?`,
             let statusHTML = '';
             
             if (this.llmInfo.enabled) {
-                statusHTML += `<div class="status-item">
-                    <strong>Provider:</strong> ${this.llmInfo.provider || 'Unknown'}
-                </div>`;
+                statusHTML += '<div class="status-item"><strong>Provider:</strong> ' + (this.llmInfo.provider || 'Unknown') + '</div>';
                 
                 if (this.llmInfo.model) {
-                    statusHTML += `<div class="status-item">
-                        <strong>Model:</strong> ${this.llmInfo.model}
-                    </div>`;
+                    statusHTML += '<div class="status-item"><strong>Model:</strong> ' + this.llmInfo.model + '</div>';
                 }
                 
-                statusHTML += `<div class="status-item">
-                    <strong>Status:</strong> 
-                    <span class="status-${this.llmInfo.status}">${this.llmInfo.status}</span>
-                </div>`;
+                statusHTML += '<div class="status-item"><strong>Status:</strong> <span class="status-' + this.llmInfo.status + '">' + this.llmInfo.status + '</span></div>';
                 
-                if (this.llmInfo.metadata?.health_error) {
-                    statusHTML += `<div class="status-item error">
-                        <strong>Error:</strong> ${this.llmInfo.metadata.health_error}
-                    </div>`;
+                if (this.llmInfo.metadata && this.llmInfo.metadata.health_error) {
+                    statusHTML += '<div class="status-item error"><strong>Error:</strong> ' + this.llmInfo.metadata.health_error + '</div>';
                 }
                 
-                statusHTML += `<div class="status-item">
-                    <strong>Last Check:</strong> ${new Date(this.llmInfo.timestamp).toLocaleTimeString()}
-                </div>`;
+                statusHTML += '<div class="status-item"><strong>Last Check:</strong> ' + new Date(this.llmInfo.timestamp).toLocaleTimeString() + '</div>';
             } else {
-                statusHTML += `<div class="status-item">
-                    <strong>Status:</strong> <span class="status-disabled">Disabled</span>
-                </div>
-                <div class="status-item">
-                    LLM functionality is currently disabled in the configuration.
-                </div>`;
+                statusHTML += '<div class="status-item"><strong>Status:</strong> <span class="status-disabled">Disabled</span></div>';
+                statusHTML += '<div class="status-item">LLM functionality is currently disabled in the configuration.</div>';
             }
             
             this.statusDetails.innerHTML = statusHTML;
@@ -595,11 +562,11 @@ What would you like me to help you with?`,
             });
 
             if (!response.ok) {
-                throw new Error(`LLM request failed: ${response.status} ${response.statusText}`);
+                throw new Error('LLM request failed: ' + response.status + ' ' + response.statusText);
             }
 
             const data = await response.json();
-            return data.response.choices[0]?.message?.content || 'No response from LLM';
+            return data.response.choices[0] && data.response.choices[0].message && data.response.choices[0].message.content || 'No response from LLM';
         } catch (error) {
             console.error('Direct LLM message failed:', error);
             throw error;
@@ -666,7 +633,7 @@ What would you like me to help you with?`,
                 'direct': 'Direct LLM'
             };
             
-            this.addSystemMessage(`Switched to ${modeNames[this.chatMode]} mode.`);
+            this.addSystemMessage('Switched to ' + modeNames[this.chatMode] + ' mode.');
             
             console.log('Chat mode changed to:', this.chatMode);
         }
@@ -700,16 +667,16 @@ What would you like me to help you with?`,
         
         if (this.chatMode === 'direct') {
             if (this.llmHealthy) {
-                this.inputElement.placeholder = `Chat directly with ${this.llmInfo?.provider || 'LLM'}...`;
+                this.inputElement.placeholder = 'Chat directly with ' + (this.llmInfo && this.llmInfo.provider || 'LLM') + '...';
             } else {
                 this.inputElement.placeholder = 'Direct LLM mode requires a healthy LLM connection...';
             }
         } else {
             // Translated mode
-            if (this.llmInfo?.enabled && this.llmHealthy) {
-                this.inputElement.placeholder = `Ask me to create tasks, list projects, or anything else... (${this.llmInfo.provider})`;
-            } else if (this.llmInfo?.enabled && !this.llmHealthy) {
-                this.inputElement.placeholder = `LLM (${this.llmInfo?.provider || 'unknown'}) is currently unavailable. Basic commands still work...`;
+            if (this.llmInfo && this.llmInfo.enabled && this.llmHealthy) {
+                this.inputElement.placeholder = 'Ask me to create tasks, list projects, or anything else... (' + this.llmInfo.provider + ')';
+            } else if (this.llmInfo && this.llmInfo.enabled && !this.llmHealthy) {
+                this.inputElement.placeholder = 'LLM (' + (this.llmInfo.provider || 'unknown') + ') is currently unavailable. Basic commands still work...';
             } else {
                 this.inputElement.placeholder = 'Ask me to create tasks, list projects, etc...';
             }
