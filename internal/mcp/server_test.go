@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -23,12 +24,12 @@ func newMockStorage() *mockStorage {
 	}
 }
 
-func (m *mockStorage) CreateTask(task *models.Task) error {
+func (m *mockStorage) CreateTask(ctx context.Context, task *models.Task) error {
 	m.tasks[task.ID] = task
 	return nil
 }
 
-func (m *mockStorage) GetTask(id string) (*models.Task, error) {
+func (m *mockStorage) GetTask(ctx context.Context, id string) (*models.Task, error) {
 	task, exists := m.tasks[id]
 	if !exists {
 		return nil, ErrTaskNotFound
