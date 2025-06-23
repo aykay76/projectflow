@@ -168,7 +168,7 @@ func (m *mockStorage) GetTaskParent(ctx context.Context, childID string) (*model
 	return &parentCopy, nil
 }
 
-func (m *mockStorage) GetTaskHierarchy(ctx context.Context, ) ([]*models.HierarchyTask, error) {
+func (m *mockStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -251,7 +251,7 @@ func (m *mockStorage) DeleteProject(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListProjects(ctx context.Context, ) ([]*models.Project, error) {
+func (m *mockStorage) ListProjects(ctx context.Context) ([]*models.Project, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")

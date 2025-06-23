@@ -36,7 +36,7 @@ func TestTenantContextHelpers(t *testing.T) {
 	t.Run("Nested tenant contexts", func(t *testing.T) {
 		ctx1 := WithTenant(context.Background(), "tenant1")
 		ctx2 := WithTenant(ctx1, "tenant2")
-		
+
 		// The most recent tenant should be used
 		tenantID := GetTenantID(ctx2)
 		assert.Equal(t, "tenant2", tenantID)
@@ -64,7 +64,7 @@ func TestTenantContextHelpers(t *testing.T) {
 	t.Run("case sensitivity in tenant IDs", func(t *testing.T) {
 		ctx1 := WithTenant(context.Background(), "TestTenant")
 		ctx2 := WithTenant(context.Background(), "testtenant")
-		
+
 		// Both should be preserved as-is
 		tenantID1 := GetTenantID(ctx1)
 		tenantID2 := GetTenantID(ctx2)
@@ -115,10 +115,10 @@ func TestBackwardCompatibility(t *testing.T) {
 		// List tasks should include this task
 		project, err := storage.GetProject(defaultCtx, task.ProjectID)
 		require.NoError(t, err)
-		
+
 		tasks, err := storage.ListTasks(defaultCtx, project.ID)
 		require.NoError(t, err)
-		
+
 		var foundTask bool
 		for _, t := range tasks {
 			if t.ID == task.ID {

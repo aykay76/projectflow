@@ -85,7 +85,7 @@ func (m *mockStorage) GetTaskParent(ctx context.Context, childID string) (*model
 	return m.GetTask(ctx, child.ParentID)
 }
 
-func (m *mockStorage) GetTaskHierarchy(ctx context.Context, ) ([]*models.HierarchyTask, error) {
+func (m *mockStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
 	var rootTasks []*models.HierarchyTask
 	for _, task := range m.tasks {
 		if task.ParentID == "" {
@@ -129,7 +129,7 @@ func (m *mockStorage) DeleteProject(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListProjects(ctx context.Context, ) ([]*models.Project, error) {
+func (m *mockStorage) ListProjects(ctx context.Context) ([]*models.Project, error) {
 	projects := make([]*models.Project, 0, len(m.projects))
 	for _, project := range m.projects {
 		projects = append(projects, project)
