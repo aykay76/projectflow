@@ -46,7 +46,7 @@ func NewPostgresStorage(connectionString string) (*PostgresStorage, error) {
 
 // initializeSchema creates the necessary database tables and indexes
 func (ps *PostgresStorage) initializeSchema() error {
-	// Create tenants table first (required for foreign key relationships)
+	// Step 1: Create tenants table first (required for foreign key relationships)
 	createTenantsTableSQL := `
 	CREATE TABLE IF NOT EXISTS tenants (
 		id VARCHAR(36) PRIMARY KEY,
@@ -62,11 +62,10 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to create tenants table: %w", err)
 	}
 
-	// Create tasks table with proper JSON support for children array
-	createTableSQL := `
+	// Step 2: Create base tables without tenant foreign keys (for backward compatibility)
+	createTasksTableSQL := `
 	CREATE TABLE IF NOT EXISTS tasks (
 		id VARCHAR(36) PRIMARY KEY,
-		tenant_id VARCHAR(36),
 		display_id VARCHAR(50),
 		project_id VARCHAR(36),
 		title VARCHAR(255) NOT NULL,
@@ -81,37 +80,31 @@ func (ps *PostgresStorage) initializeSchema() error {
 		completed_at TIMESTAMPTZ,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL,
-		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
-		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
 		UNIQUE(display_id)
 	);`
 
-	if _, err := ps.db.Exec(createTableSQL); err != nil {
+	if _, err := ps.db.Exec(createTasksTableSQL); err != nil {
 		return fmt.Errorf("failed to create tasks table: %w", err)
 	}
 
-	// Create projects table
+	// Create projects table without tenant foreign key initially
 	createProjectsTableSQL := `
 	CREATE TABLE IF NOT EXISTS projects (
 		id VARCHAR(36) PRIMARY KEY,
-		tenant_id VARCHAR(36),
-		name VARCHAR(255) NOT NULL,
+		name VARCHAR(255) NOT NULL UNIQUE,
 		description TEXT,
 		display_prefix VARCHAR(10) NOT NULL,
 		task_counter INTEGER NOT NULL DEFAULT 0,
 		settings JSONB DEFAULT '{}'::jsonb,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-		UNIQUE(tenant_id, name)
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 	);`
 
 	if _, err := ps.db.Exec(createProjectsTableSQL); err != nil {
 		return fmt.Errorf("failed to create projects table: %w", err)
 	}
 
-	// Create users table
+	// Create users table (new table, can include all constraints from start)
 	createUsersTableSQL := `
 	CREATE TABLE IF NOT EXISTS users (
 		id VARCHAR(36) PRIMARY KEY,
@@ -134,6 +127,8 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to create users table: %w", err)
 	}
 
+	// Step 3: Add missing columns to existing tables (for backward compatibility)
+	
 	// Add task_counter column to existing projects table if it doesn't exist
 	alterTableSQL := `
 	DO $$ 
@@ -161,17 +156,6 @@ func (ps *PostgresStorage) initializeSchema() error {
 			WHERE table_name='projects' AND column_name='tenant_id'
 		) THEN
 			ALTER TABLE projects ADD COLUMN tenant_id VARCHAR(36);
-		END IF;
-		
-		-- Add foreign key constraint if it doesn't exist
-		IF NOT EXISTS (
-			SELECT constraint_name 
-			FROM information_schema.table_constraints 
-			WHERE table_name='projects' AND constraint_name='fk_projects_tenant_id'
-		) THEN
-			ALTER TABLE projects 
-			ADD CONSTRAINT fk_projects_tenant_id 
-			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
 		END IF;
 	END $$;`
 
@@ -209,8 +193,72 @@ func (ps *PostgresStorage) initializeSchema() error {
 		) THEN
 			ALTER TABLE tasks ADD COLUMN tenant_id VARCHAR(36);
 		END IF;
-		
+	END $$;`
+
+	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
+		return fmt.Errorf("failed to add display_id, project_id, and tenant_id columns: %w", err)
+	}
+
+	// Step 4: Add foreign key constraints (after all columns exist)
+	
+	// Add foreign key constraints for projects table
+	addProjectsConstraintsSQL := `
+	DO $$
+	BEGIN
 		-- Add foreign key constraint for tenant_id if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='projects' AND constraint_name='fk_projects_tenant_id'
+		) THEN
+			ALTER TABLE projects 
+			ADD CONSTRAINT fk_projects_tenant_id 
+			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+		END IF;
+		
+		-- Update unique constraint to include tenant_id if needed
+		-- Note: This requires dropping and recreating the constraint
+		IF EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='projects' AND constraint_name='projects_name_key'
+		) THEN
+			ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_name_key;
+			ALTER TABLE projects ADD CONSTRAINT projects_tenant_name_unique UNIQUE(tenant_id, name);
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(addProjectsConstraintsSQL); err != nil {
+		return fmt.Errorf("failed to add projects constraints: %w", err)
+	}
+
+	// Add foreign key constraints for tasks table
+	addTasksConstraintsSQL := `
+	DO $$
+	BEGIN
+		-- Add parent_id foreign key if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='tasks_parent_id_fkey'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT tasks_parent_id_fkey 
+			FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL;
+		END IF;
+		
+		-- Add project_id foreign key if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='tasks_project_id_fkey'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT tasks_project_id_fkey 
+			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+		END IF;
+		
+		-- Add tenant_id foreign key if it doesn't exist
 		IF NOT EXISTS (
 			SELECT constraint_name 
 			FROM information_schema.table_constraints 
@@ -222,8 +270,8 @@ func (ps *PostgresStorage) initializeSchema() error {
 		END IF;
 	END $$;`
 
-	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
-		return fmt.Errorf("failed to add display_id, project_id, and tenant_id columns: %w", err)
+	if _, err := ps.db.Exec(addTasksConstraintsSQL); err != nil {
+		return fmt.Errorf("failed to add tasks constraints: %w", err)
 	}
 
 	// Create indexes for better performance
