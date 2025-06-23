@@ -66,6 +66,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS tasks (
 		id VARCHAR(36) PRIMARY KEY,
+		tenant_id VARCHAR(36),
 		display_id VARCHAR(50),
 		project_id VARCHAR(36),
 		title VARCHAR(255) NOT NULL,
@@ -82,6 +83,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL,
 		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
 		UNIQUE(display_id)
 	);`
 
@@ -154,7 +156,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to add tenant_id column to projects: %w", err)
 	}
 
-	// Add display_id and project_id columns to existing tasks table if they don't exist
+	// Add display_id, project_id, and tenant_id columns to existing tasks table if they don't exist
 	alterTasksSQL := `
 	DO $$ 
 	BEGIN 
@@ -175,10 +177,30 @@ func (ps *PostgresStorage) initializeSchema() error {
 		) THEN
 			ALTER TABLE tasks ADD COLUMN project_id VARCHAR(36);
 		END IF;
+		
+		-- Add tenant_id column
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='tasks' AND column_name='tenant_id'
+		) THEN
+			ALTER TABLE tasks ADD COLUMN tenant_id VARCHAR(36);
+		END IF;
+		
+		-- Add foreign key constraint for tenant_id if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='fk_tasks_tenant_id'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT fk_tasks_tenant_id 
+			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+		END IF;
 	END $$;`
 
 	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
-		return fmt.Errorf("failed to add display_id and project_id columns: %w", err)
+		return fmt.Errorf("failed to add display_id, project_id, and tenant_id columns: %w", err)
 	}
 
 	// Create indexes for better performance
@@ -187,6 +209,9 @@ func (ps *PostgresStorage) initializeSchema() error {
 		"CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);",
 		"CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at);",
 		// Tasks table indexes
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_id ON tasks(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_status ON tasks(tenant_id, status);",
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_priority ON tasks(tenant_id, priority);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);",
