@@ -770,6 +770,105 @@ export class ChatManager {
     }
 
     /**
+     * Add a message to the chat UI
+     */
+    addMessageToUI(message) {
+        if (!this.chatMessages) {
+            console.warn('Chat messages container not found');
+            return;
+        }
+
+        const messageElement = document.createElement('div');
+        messageElement.className = `chat-message ${message.role}`;
+        
+        // Create message header
+        const headerElement = document.createElement('div');
+        headerElement.className = 'message-header';
+        
+        // Role indicator
+        const roleElement = document.createElement('span');
+        roleElement.className = 'message-role';
+        let roleIcon = '';
+        switch (message.role) {
+            case 'user':
+                roleIcon = '👤';
+                break;
+            case 'assistant':
+                roleIcon = '🤖';
+                break;
+            case 'system':
+                roleIcon = '⚙️';
+                break;
+            case 'error':
+                roleIcon = '❌';
+                break;
+            default:
+                roleIcon = '💬';
+        }
+        roleElement.textContent = `${roleIcon} ${message.role.charAt(0).toUpperCase() + message.role.slice(1)}`;
+        headerElement.appendChild(roleElement);
+        
+        // Timestamp
+        const timestampElement = document.createElement('span');
+        timestampElement.className = 'message-timestamp';
+        timestampElement.textContent = message.timestamp ? 
+            new Date(message.timestamp).toLocaleTimeString() : 
+            new Date().toLocaleTimeString();
+        headerElement.appendChild(timestampElement);
+        
+        messageElement.appendChild(headerElement);
+        
+        // Message content
+        const contentElement = document.createElement('div');
+        contentElement.className = 'message-content';
+        
+        // Handle different content types
+        if (message.content) {
+            // Convert basic markdown to HTML
+            let content = message.content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+            
+            contentElement.innerHTML = content;
+        } else {
+            contentElement.textContent = 'No content';
+        }
+        
+        messageElement.appendChild(contentElement);
+        
+        // Add metadata if present
+        if (message.metadata && Object.keys(message.metadata).length > 0) {
+            const metadataElement = document.createElement('div');
+            metadataElement.className = 'message-metadata';
+            
+            // Show intent and confidence for translated messages
+            if (message.metadata.intent) {
+                const intentElement = document.createElement('span');
+                intentElement.className = 'metadata-intent';
+                intentElement.textContent = `Intent: ${message.metadata.intent}`;
+                metadataElement.appendChild(intentElement);
+            }
+            
+            if (message.metadata.confidence !== undefined) {
+                const confidenceElement = document.createElement('span');
+                confidenceElement.className = 'metadata-confidence';
+                confidenceElement.textContent = `Confidence: ${(message.metadata.confidence * 100).toFixed(0)}%`;
+                metadataElement.appendChild(confidenceElement);
+            }
+            
+            messageElement.appendChild(metadataElement);
+        }
+        
+        // Add to UI
+        this.chatMessages.appendChild(messageElement);
+        
+        // Scroll to bottom
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    /**
      * Destroy the chat manager
      */
     destroy() {
