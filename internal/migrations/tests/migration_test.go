@@ -295,7 +295,7 @@ func testIndexes(t *testing.T, db *sql.DB) {
 
 	// Check if indexes exist
 	indexes := []string{"idx_projects_tenant_id", "idx_tasks_tenant_id"}
-	
+
 	for _, indexName := range indexes {
 		var exists bool
 		err := db.QueryRow(`
@@ -357,7 +357,7 @@ func testMigrationPerformance(t *testing.T, db *sql.DB) {
 
 	// Create a large dataset for performance testing
 	start := time.Now()
-	
+
 	// Insert 1000 test records
 	tx, err := db.Begin()
 	if err != nil {

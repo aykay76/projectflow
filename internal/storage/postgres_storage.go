@@ -1430,7 +1430,7 @@ func (ps *PostgresStorage) initializeRLS() error {
 	rlsStatements := []string{
 		// Enable RLS on all tenant-aware tables
 		"ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;",
-		"ALTER TABLE projects ENABLE ROW LEVEL SECURITY;", 
+		"ALTER TABLE projects ENABLE ROW LEVEL SECURITY;",
 		"ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;",
 		"ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
 
@@ -1533,7 +1533,7 @@ func (ps *PostgresStorage) setTenantContext(tx *sql.Tx, tenantID string) error {
 	return nil
 }
 
-// setTenantContextDB sets the tenant context for the current database connection  
+// setTenantContextDB sets the tenant context for the current database connection
 func (ps *PostgresStorage) setTenantContextDB(tenantID string) error {
 	_, err := ps.db.Exec("SELECT init_tenant_context($1, false)", tenantID)
 	if err != nil {
@@ -1587,12 +1587,12 @@ func (ps *PostgresStorage) getOrCreateDefaultTenant() (string, error) {
 	var existingID string
 	querySQL := "SELECT id FROM tenants WHERE id = $1"
 	err := ps.db.QueryRow(querySQL, defaultTenantID).Scan(&existingID)
-	
+
 	if err == nil {
 		// Default tenant exists
 		return existingID, nil
 	}
-	
+
 	if err != sql.ErrNoRows {
 		// Unexpected error
 		return "", fmt.Errorf("failed to check for default tenant: %w", err)
@@ -1602,7 +1602,7 @@ func (ps *PostgresStorage) getOrCreateDefaultTenant() (string, error) {
 	createSQL := `
 		INSERT INTO tenants (id, name, status, created_at, updated_at)
 		VALUES ($1, $2, 'active', NOW(), NOW())`
-	
+
 	_, err = ps.db.Exec(createSQL, defaultTenantID, defaultTenantName)
 	if err != nil {
 		return "", fmt.Errorf("failed to create default tenant: %w", err)

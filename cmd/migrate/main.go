@@ -265,7 +265,7 @@ func createCommand(name string) error {
 // loadMigrations loads all migration files from the scripts directory
 func loadMigrations() ([]migrations.Migration, error) {
 	scriptsDir := "internal/migrations/scripts"
-	
+
 	// Read directory contents
 	entries, err := os.ReadDir(scriptsDir)
 	if err != nil {
@@ -273,28 +273,28 @@ func loadMigrations() ([]migrations.Migration, error) {
 	}
 
 	var migrationList []migrations.Migration
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
 			continue
 		}
-		
+
 		// Parse version and name from filename
 		version, name, err := migrations.ParseMigrationVersion(entry.Name())
 		if err != nil {
 			continue // Skip invalid files
 		}
-		
+
 		// Read the file content
 		filePath := fmt.Sprintf("%s/%s", scriptsDir, entry.Name())
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read migration file %s: %w", entry.Name(), err)
 		}
-		
+
 		// Parse up and down SQL from the file
 		upSQL, downSQL, description := parseMigrationContent(string(content))
-		
+
 		migrationList = append(migrationList, migrations.Migration{
 			Version:     version,
 			Name:        name,
@@ -303,31 +303,31 @@ func loadMigrations() ([]migrations.Migration, error) {
 			Description: description,
 		})
 	}
-	
+
 	// Validate and sort migrations
 	if err := migrations.ValidateMigrations(migrationList); err != nil {
 		return nil, fmt.Errorf("migration validation failed: %w", err)
 	}
-	
+
 	return migrationList, nil
 }
 
 // parseMigrationContent extracts up SQL, down SQL and description from migration file content
 func parseMigrationContent(content string) (upSQL, downSQL, description string) {
 	lines := strings.Split(content, "\n")
-	
+
 	var upLines, downLines []string
 	var inUp, inDown bool
-	
+
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
+
 		// Extract description from comment
 		if strings.HasPrefix(trimmed, "-- Description:") {
 			description = strings.TrimSpace(strings.TrimPrefix(trimmed, "-- Description:"))
 			continue
 		}
-		
+
 		// Check for section markers
 		if trimmed == "-- +migrate Up" {
 			inUp = true
@@ -339,7 +339,7 @@ func parseMigrationContent(content string) (upSQL, downSQL, description string) 
 			inDown = true
 			continue
 		}
-		
+
 		// Collect SQL lines
 		if inUp {
 			upLines = append(upLines, line)
@@ -347,9 +347,9 @@ func parseMigrationContent(content string) (upSQL, downSQL, description string) 
 			downLines = append(downLines, line)
 		}
 	}
-	
+
 	upSQL = strings.TrimSpace(strings.Join(upLines, "\n"))
 	downSQL = strings.TrimSpace(strings.Join(downLines, "\n"))
-	
+
 	return upSQL, downSQL, description
 }

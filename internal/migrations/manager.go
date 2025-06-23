@@ -91,7 +91,7 @@ func (mm *MigrationManager) ApplyMigration(migration Migration) error {
 	recordSQL := `
 	INSERT INTO schema_migrations (version, name, description, rollback_sql) 
 	VALUES ($1, $2, $3, $4)`
-	
+
 	_, err = tx.Exec(recordSQL, migration.Version, migration.Name, migration.Description, migration.DownSQL)
 	if err != nil {
 		return fmt.Errorf("failed to record migration %d: %w", migration.Version, err)
