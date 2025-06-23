@@ -128,7 +128,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 	}
 
 	// Step 3: Add missing columns to existing tables (for backward compatibility)
-	
+
 	// Add task_counter column to existing projects table if it doesn't exist
 	alterTableSQL := `
 	DO $$ 
@@ -200,7 +200,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 	}
 
 	// Step 4: Add foreign key constraints (after all columns exist)
-	
+
 	// Add foreign key constraints for projects table
 	addProjectsConstraintsSQL := `
 	DO $$
