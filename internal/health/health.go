@@ -126,7 +126,7 @@ func (h *HealthChecker) checkStorage() Check {
 	}
 
 	// Try to list tasks to verify storage is working (use default project "ABC")
-	tasks, err := h.storage.ListTasks("ABC")
+	tasks, err := h.storage.ListTasks(context.Background(), "ABC")
 	duration := time.Since(start)
 	check.Duration = duration.String()
 

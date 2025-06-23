@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -44,7 +45,7 @@ func NewFileStorage(dataDir string) (*FileStorage, error) {
 }
 
 // CreateTask creates a new task and assigns it an ID
-func (fs *FileStorage) CreateTask(task *models.Task) error {
+func (fs *FileStorage) CreateTask(ctx context.Context, task *models.Task) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -86,21 +87,21 @@ func (fs *FileStorage) CreateTask(task *models.Task) error {
 }
 
 // GetTask retrieves a task by ID
-func (fs *FileStorage) GetTask(id string) (*models.Task, error) {
+func (fs *FileStorage) GetTask(ctx context.Context, id string) (*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getTaskUnsafe(id)
 }
 
 // GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
-func (fs *FileStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+func (fs *FileStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getTaskByDisplayIDUnsafe(displayID)
 }
 
 // UpdateTask updates an existing task
-func (fs *FileStorage) UpdateTask(task *models.Task) error {
+func (fs *FileStorage) UpdateTask(ctx context.Context, task *models.Task) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -112,7 +113,7 @@ func (fs *FileStorage) UpdateTask(task *models.Task) error {
 }
 
 // DeleteTask deletes a task and removes it from parent's children
-func (fs *FileStorage) DeleteTask(id string) error {
+func (fs *FileStorage) DeleteTask(ctx context.Context, id string) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -139,7 +140,7 @@ func (fs *FileStorage) DeleteTask(id string) error {
 }
 
 // ListTasks returns tasks for a specific project
-func (fs *FileStorage) ListTasks(projectID string) ([]*models.Task, error) {
+func (fs *FileStorage) ListTasks(ctx context.Context, projectID string) ([]*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.listTasksUnsafe(projectID)
@@ -184,7 +185,7 @@ func (fs *FileStorage) listTasksUnsafe(projectID string) ([]*models.Task, error)
 }
 
 // GetTaskChildren returns all direct children of a task
-func (fs *FileStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
+func (fs *FileStorage) GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 
@@ -205,7 +206,7 @@ func (fs *FileStorage) GetTaskChildren(parentID string) ([]*models.Task, error) 
 }
 
 // GetTaskParent returns the parent task of a given task
-func (fs *FileStorage) GetTaskParent(childID string) (*models.Task, error) {
+func (fs *FileStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 
@@ -223,7 +224,7 @@ func (fs *FileStorage) GetTaskParent(childID string) (*models.Task, error) {
 
 // GetTaskHierarchy returns all tasks organized in hierarchical structure
 // Returns only top-level tasks (epics without parents) with their nested children
-func (fs *FileStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
+func (fs *FileStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 
@@ -270,7 +271,7 @@ func (fs *FileStorage) buildHierarchyTask(task *models.Task, taskMap map[string]
 }
 
 // TaskExists checks if a task exists
-func (fs *FileStorage) TaskExists(id string) bool {
+func (fs *FileStorage) TaskExists(ctx context.Context, id string) bool {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.taskExistsUnsafe(id)
@@ -279,7 +280,7 @@ func (fs *FileStorage) TaskExists(id string) bool {
 // Project CRUD methods
 
 // CreateProject creates a new project and assigns it an ID
-func (fs *FileStorage) CreateProject(project *models.Project) error {
+func (fs *FileStorage) CreateProject(ctx context.Context, project *models.Project) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -290,21 +291,21 @@ func (fs *FileStorage) CreateProject(project *models.Project) error {
 }
 
 // GetProject retrieves a project by ID
-func (fs *FileStorage) GetProject(id string) (*models.Project, error) {
+func (fs *FileStorage) GetProject(ctx context.Context, id string) (*models.Project, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getProjectUnsafe(id)
 }
 
 // GetProjectByDisplayPrefix retrieves a project by its display prefix
-func (fs *FileStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+func (fs *FileStorage) GetProjectByDisplayPrefix(ctx context.Context, displayPrefix string) (*models.Project, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.getProjectUnsafe(displayPrefix)
 }
 
 // UpdateProject updates an existing project
-func (fs *FileStorage) UpdateProject(project *models.Project) error {
+func (fs *FileStorage) UpdateProject(ctx context.Context, project *models.Project) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -316,7 +317,7 @@ func (fs *FileStorage) UpdateProject(project *models.Project) error {
 }
 
 // DeleteProject deletes a project
-func (fs *FileStorage) DeleteProject(id string) error {
+func (fs *FileStorage) DeleteProject(ctx context.Context, id string) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -328,14 +329,14 @@ func (fs *FileStorage) DeleteProject(id string) error {
 }
 
 // ListProjects returns all projects
-func (fs *FileStorage) ListProjects() ([]*models.Project, error) {
+func (fs *FileStorage) ListProjects(ctx context.Context) ([]*models.Project, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.listProjectsUnsafe()
 }
 
 // GetProjectByName retrieves a project by name
-func (fs *FileStorage) GetProjectByName(name string) (*models.Project, error) {
+func (fs *FileStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 
@@ -354,7 +355,7 @@ func (fs *FileStorage) GetProjectByName(name string) (*models.Project, error) {
 }
 
 // ProjectExists checks if a project exists
-func (fs *FileStorage) ProjectExists(id string) bool {
+func (fs *FileStorage) ProjectExists(ctx context.Context, id string) bool {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return fs.projectExistsUnsafe(id)
@@ -736,7 +737,7 @@ func (fs *FileStorage) projectExistsUnsafe(id string) bool {
 }
 
 // GetNextDisplayID generates and returns the next sequential display ID for a project
-func (fs *FileStorage) GetNextDisplayID(projectID string) (string, error) {
+func (fs *FileStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
