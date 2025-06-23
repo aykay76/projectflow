@@ -111,6 +111,29 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to create projects table: %w", err)
 	}
 
+	// Create users table
+	createUsersTableSQL := `
+	CREATE TABLE IF NOT EXISTS users (
+		id VARCHAR(36) PRIMARY KEY,
+		tenant_id VARCHAR(36) NOT NULL,
+		username VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		role VARCHAR(50) NOT NULL DEFAULT 'user',
+		is_active BOOLEAN NOT NULL DEFAULT true,
+		last_login TIMESTAMPTZ,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+		UNIQUE(tenant_id, username),
+		UNIQUE(tenant_id, email),
+		CONSTRAINT check_user_role CHECK (role IN ('admin', 'user', 'viewer'))
+	);`
+
+	if _, err := ps.db.Exec(createUsersTableSQL); err != nil {
+		return fmt.Errorf("failed to create users table: %w", err)
+	}
+
 	// Add task_counter column to existing projects table if it doesn't exist
 	alterTableSQL := `
 	DO $$ 
@@ -223,6 +246,13 @@ func (ps *PostgresStorage) initializeSchema() error {
 		"CREATE INDEX IF NOT EXISTS idx_projects_tenant_name ON projects(tenant_id, name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);",
+		// Users table indexes
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_email ON users(tenant_id, email);",
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_username ON users(tenant_id, username);",
+		"CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
+		"CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);",
+		"CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login);",
 	}
 
 	for _, indexSQL := range indexes {
