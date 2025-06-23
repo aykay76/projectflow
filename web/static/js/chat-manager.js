@@ -704,6 +704,55 @@ export class ChatManager {
     }
 
     /**
+     * Save conversation to localStorage
+     */
+    saveConversationToStorage() {
+        try {
+            const conversationData = {
+                messages: this.messages,
+                currentConversationId: this.currentConversationId,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('projectflow_chat_conversation', JSON.stringify(conversationData));
+        } catch (error) {
+            console.warn('Failed to save conversation to storage:', error);
+        }
+    }
+
+    /**
+     * Load conversation from localStorage
+     */
+    loadConversationFromStorage() {
+        try {
+            const savedData = localStorage.getItem('projectflow_chat_conversation');
+            if (savedData) {
+                const conversationData = JSON.parse(savedData);
+                
+                // Check if data is not too old (24 hours)
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                if (Date.now() - conversationData.timestamp < maxAge) {
+                    this.messages = conversationData.messages || [];
+                    this.currentConversationId = conversationData.currentConversationId;
+                    
+                    // Restore messages to UI if chat is open
+                    if (this.isOpen && this.chatMessages) {
+                        this.messages.forEach(message => {
+                            this.addMessageToUI(message);
+                        });
+                    }
+                } else {
+                    // Clear old conversation
+                    localStorage.removeItem('projectflow_chat_conversation');
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load conversation from storage:', error);
+            // Clear corrupted data
+            localStorage.removeItem('projectflow_chat_conversation');
+        }
+    }
+
+    /**
      * Load chat mode preference from localStorage
      */
     loadChatModePreference() {
