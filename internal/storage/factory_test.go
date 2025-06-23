@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/aykay76/projectflow/internal/config"
@@ -21,7 +22,7 @@ func TestNewStorage_FileStorage(t *testing.T) {
 
 	// Verify it's a FileStorage instance by testing a simple operation
 	// We can't directly type assert because the interface doesn't expose the type
-	if !storage.TaskExists("nonexistent") {
+	if !storage.TaskExists(context.Background(), "nonexistent") {
 		// This is expected behavior - just ensuring the storage is functional
 	}
 }
@@ -48,7 +49,7 @@ func TestNewStorage_PostgresStorage(t *testing.T) {
 	defer storage.Close()
 
 	// Verify it's functional
-	if !storage.TaskExists("nonexistent") {
+	if !storage.TaskExists(context.Background(), "nonexistent") {
 		// This is expected behavior - just ensuring the storage is functional
 	}
 }

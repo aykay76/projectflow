@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aykay76/projectflow/internal/models"
 )
@@ -75,15 +76,23 @@ func WithTenant(ctx context.Context, tenantID string) context.Context {
 }
 
 // GetTenantID extracts tenant ID from context
-// Returns empty string if no tenant ID is set
+// Returns "default" if no tenant ID is set
 func GetTenantID(ctx context.Context) string {
 	if tenantID, ok := ctx.Value(TenantIDKey).(string); ok {
+		// Handle empty or whitespace-only tenant IDs
+		tenantID = strings.TrimSpace(tenantID)
+		if tenantID == "" {
+			return "default"
+		}
 		return tenantID
 	}
-	return ""
+	return "default"
 }
 
 // HasTenant checks if context contains tenant information
 func HasTenant(ctx context.Context) bool {
-	return GetTenantID(ctx) != ""
+	if tenantID, ok := ctx.Value(TenantIDKey).(string); ok && strings.TrimSpace(tenantID) != "" {
+		return true
+	}
+	return false
 }

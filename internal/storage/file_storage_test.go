@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +24,7 @@ func TestFileStorage_CreateTask(t *testing.T) {
 
 	task := models.NewTask("Test Task", "Test Description")
 
-	err = storage.CreateTask(task)
+	err = storage.CreateTask(context.Background(), task)
 	if err != nil {
 		t.Fatalf("CreateTask() error = %v", err)
 	}
@@ -39,7 +40,7 @@ func TestFileStorage_CreateTask(t *testing.T) {
 	}
 
 	// Get the project to find its display prefix
-	project, err := storage.GetProject(task.ProjectID)
+	project, err := storage.GetProject(context.Background(), task.ProjectID)
 	if err != nil {
 		t.Fatalf("Failed to get project: %v", err)
 	}
@@ -64,13 +65,13 @@ func TestFileStorage_GetTask(t *testing.T) {
 
 	// Create a task first
 	originalTask := models.NewTask("Test Task", "Test Description")
-	err = storage.CreateTask(originalTask)
+	err = storage.CreateTask(context.Background(), originalTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Test getting the task
-	retrievedTask, err := storage.GetTask(originalTask.ID)
+	retrievedTask, err := storage.GetTask(context.Background(), originalTask.ID)
 	if err != nil {
 		t.Fatalf("GetTask() error = %v", err)
 	}
@@ -91,7 +92,7 @@ func TestFileStorage_GetTask_NotFound(t *testing.T) {
 		t.Fatalf("Failed to create storage: %v", err)
 	}
 
-	_, err = storage.GetTask("nonexistent-id")
+	_, err = storage.GetTask(context.Background(), "nonexistent-id")
 	if err == nil {
 		t.Error("GetTask() with nonexistent ID should return error")
 	}
@@ -105,12 +106,12 @@ func TestFileStorage_GetTaskByDisplayID(t *testing.T) {
 
 	// Create a task (this should auto-generate a display ID)
 	task := models.NewTask("Test Display ID Task", "Testing display ID lookup")
-	err = storage.CreateTask(task)
+	err = storage.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 	require.NotEmpty(t, task.DisplayID, "Task should have a display ID")
 
 	// Test retrieving task by display ID
-	retrievedTask, err := storage.GetTaskByDisplayID(task.DisplayID)
+	retrievedTask, err := storage.GetTaskByDisplayID(context.Background(), task.DisplayID)
 	require.NoError(t, err)
 
 	assert.Equal(t, task.ID, retrievedTask.ID)
@@ -127,7 +128,7 @@ func TestFileStorage_GetTaskByDisplayID_NotFound(t *testing.T) {
 	defer storage.Close()
 
 	// Test with non-existent display ID
-	_, err = storage.GetTaskByDisplayID("NONEXISTENT-999")
+	_, err = storage.GetTaskByDisplayID(context.Background(), "NONEXISTENT-999")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "task not found with display ID")
 }
@@ -140,7 +141,7 @@ func TestFileStorage_GetTaskByDisplayID_CaseInsensitive(t *testing.T) {
 
 	// Create a task (this should auto-generate a display ID like "PF-1")
 	task := models.NewTask("Test Case Insensitive Task", "Testing case insensitive lookup")
-	err = storage.CreateTask(task)
+	err = storage.CreateTask(context.Background(), task)
 	require.NoError(t, err)
 	require.NotEmpty(t, task.DisplayID, "Task should have a display ID")
 
@@ -153,7 +154,7 @@ func TestFileStorage_GetTaskByDisplayID_CaseInsensitive(t *testing.T) {
 	}
 
 	for _, displayID := range testCases {
-		retrievedTask, err := storage.GetTaskByDisplayID(displayID)
+		retrievedTask, err := storage.GetTaskByDisplayID(context.Background(), displayID)
 		require.NoError(t, err, "Should find task with display ID: %s", displayID)
 		assert.Equal(t, task.ID, retrievedTask.ID, "Should return same task for display ID: %s", displayID)
 		assert.Equal(t, task.DisplayID, retrievedTask.DisplayID, "Original display ID should be preserved")
@@ -169,7 +170,7 @@ func TestFileStorage_UpdateTask(t *testing.T) {
 
 	// Create a task first
 	task := models.NewTask("Original Title", "Original Description")
-	err = storage.CreateTask(task)
+	err = storage.CreateTask(context.Background(), task)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -177,13 +178,13 @@ func TestFileStorage_UpdateTask(t *testing.T) {
 	// Update the task
 	task.Title = "Updated Title"
 	task.Description = "Updated Description"
-	err = storage.UpdateTask(task)
+	err = storage.UpdateTask(context.Background(), task)
 	if err != nil {
 		t.Fatalf("UpdateTask() error = %v", err)
 	}
 
 	// Verify the update
-	retrievedTask, err := storage.GetTask(task.ID)
+	retrievedTask, err := storage.GetTask(context.Background(), task.ID)
 	if err != nil {
 		t.Fatalf("Failed to retrieve updated task: %v", err)
 	}
@@ -206,19 +207,19 @@ func TestFileStorage_DeleteTask(t *testing.T) {
 
 	// Create a task first
 	task := models.NewTask("Test Task", "Test Description")
-	err = storage.CreateTask(task)
+	err = storage.CreateTask(context.Background(), task)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Delete the task
-	err = storage.DeleteTask(task.ID)
+	err = storage.DeleteTask(context.Background(), task.ID)
 	if err != nil {
 		t.Fatalf("DeleteTask() error = %v", err)
 	}
 
 	// Verify the task is gone
-	_, err = storage.GetTask(task.ID)
+	_, err = storage.GetTask(context.Background(), task.ID)
 	if err == nil {
 		t.Error("DeleteTask() should make task no longer retrievable")
 	}
@@ -241,12 +242,12 @@ func TestFileStorage_ListTasks(t *testing.T) {
 	task1 := models.NewTask("Task 1", "Description 1")
 	task2 := models.NewTask("Task 2", "Description 2")
 
-	err = storage.CreateTask(task1)
+	err = storage.CreateTask(context.Background(), task1)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
-	err = storage.CreateTask(task2)
+	err = storage.CreateTask(context.Background(), task2)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -258,7 +259,7 @@ func TestFileStorage_ListTasks(t *testing.T) {
 		t.Fatalf("Failed to get default project: %v", err)
 	}
 
-	tasks, err := storage.ListTasks(defaultProject.ID)
+	tasks, err := storage.ListTasks(context.Background(), defaultProject.ID)
 	if err != nil {
 		t.Fatalf("ListTasks() error = %v", err)
 	}
@@ -296,7 +297,7 @@ func TestFileStorage_GetTaskHierarchy(t *testing.T) {
 	// Create parent task
 	parentTask := models.NewTask("Parent Task", "Parent Description")
 	parentTask.Type = models.TypeEpic
-	err = storage.CreateTask(parentTask)
+	err = storage.CreateTask(context.Background(), parentTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -305,20 +306,20 @@ func TestFileStorage_GetTaskHierarchy(t *testing.T) {
 	childTask := models.NewTask("Child Task", "Child Description")
 	childTask.Type = models.TypeStory
 	childTask.ParentID = parentTask.ID
-	err = storage.CreateTask(childTask)
+	err = storage.CreateTask(context.Background(), childTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Update parent to include child
 	parentTask.AddChild(childTask.ID)
-	err = storage.UpdateTask(parentTask)
+	err = storage.UpdateTask(context.Background(), parentTask)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Test hierarchy
-	hierarchy, err := storage.GetTaskHierarchy()
+	hierarchy, err := storage.GetTaskHierarchy(context.Background())
 	if err != nil {
 		t.Fatalf("GetTaskHierarchy() error = %v", err)
 	}
@@ -356,7 +357,7 @@ func TestFileStorage_CreateProject(t *testing.T) {
 
 	project := models.NewProject("Test Project", "Test Description", "TEST")
 
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	if err != nil {
 		t.Fatalf("CreateProject() error = %v", err)
 	}
@@ -381,13 +382,13 @@ func TestFileStorage_GetProject(t *testing.T) {
 
 	// Create a project first
 	originalProject := models.NewProject("Test Project", "Test Description", "TEST")
-	err = storage.CreateProject(originalProject)
+	err = storage.CreateProject(context.Background(), originalProject)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Test getting the project
-	retrievedProject, err := storage.GetProject(originalProject.ID)
+	retrievedProject, err := storage.GetProject(context.Background(), originalProject.ID)
 	if err != nil {
 		t.Fatalf("GetProject() error = %v", err)
 	}
@@ -412,7 +413,7 @@ func TestFileStorage_GetProject_NotFound(t *testing.T) {
 		t.Fatalf("Failed to create storage: %v", err)
 	}
 
-	_, err = storage.GetProject("nonexistent-id")
+	_, err = storage.GetProject(context.Background(), "nonexistent-id")
 	if err == nil {
 		t.Error("GetProject() with nonexistent ID should return error")
 	}
@@ -427,7 +428,7 @@ func TestFileStorage_UpdateProject(t *testing.T) {
 
 	// Create a project first
 	project := models.NewProject("Original Name", "Original Description", "ORIG")
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
@@ -436,13 +437,13 @@ func TestFileStorage_UpdateProject(t *testing.T) {
 	project.Name = "Updated Name"
 	project.Description = "Updated Description"
 	project.SetSetting("testKey", "testValue")
-	err = storage.UpdateProject(project)
+	err = storage.UpdateProject(context.Background(), project)
 	if err != nil {
 		t.Fatalf("UpdateProject() error = %v", err)
 	}
 
 	// Verify the update
-	retrievedProject, err := storage.GetProject(project.ID)
+	retrievedProject, err := storage.GetProject(context.Background(), project.ID)
 	if err != nil {
 		t.Fatalf("Failed to retrieve updated project: %v", err)
 	}
@@ -470,19 +471,19 @@ func TestFileStorage_DeleteProject(t *testing.T) {
 
 	// Create a project first
 	project := models.NewProject("Test Project", "Test Description", "TEST")
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Delete the project
-	err = storage.DeleteProject(project.ID)
+	err = storage.DeleteProject(context.Background(), project.ID)
 	if err != nil {
 		t.Fatalf("DeleteProject() error = %v", err)
 	}
 
 	// Verify it's gone
-	_, err = storage.GetProject(project.ID)
+	_, err = storage.GetProject(context.Background(), project.ID)
 	if err == nil {
 		t.Error("DeleteProject() should remove project")
 	}
@@ -505,18 +506,18 @@ func TestFileStorage_ListProjects(t *testing.T) {
 	project1 := models.NewProject("Project 1", "Description 1", "P1")
 	project2 := models.NewProject("Project 2", "Description 2", "P2")
 
-	err = storage.CreateProject(project1)
+	err = storage.CreateProject(context.Background(), project1)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
-	err = storage.CreateProject(project2)
+	err = storage.CreateProject(context.Background(), project2)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// List projects
-	projects, err := storage.ListProjects()
+	projects, err := storage.ListProjects(context.Background())
 	if err != nil {
 		t.Fatalf("ListProjects() error = %v", err)
 	}
@@ -553,13 +554,13 @@ func TestFileStorage_GetProjectByName(t *testing.T) {
 
 	// Create a project
 	originalProject := models.NewProject("Unique Project Name", "Test Description", "UPN")
-	err = storage.CreateProject(originalProject)
+	err = storage.CreateProject(context.Background(), originalProject)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
 	// Test getting by name
-	retrievedProject, err := storage.GetProjectByName("Unique Project Name")
+	retrievedProject, err := storage.GetProjectByName(context.Background(), "Unique Project Name")
 	if err != nil {
 		t.Fatalf("GetProjectByName() error = %v", err)
 	}
@@ -569,7 +570,7 @@ func TestFileStorage_GetProjectByName(t *testing.T) {
 	}
 
 	// Test non-existent name
-	_, err = storage.GetProjectByName("Non-existent Project")
+	_, err = storage.GetProjectByName(context.Background(), "Non-existent Project")
 	if err == nil {
 		t.Error("GetProjectByName() with non-existent name should return error")
 	}
@@ -582,15 +583,15 @@ func TestFileStorage_ProjectExists(t *testing.T) {
 
 	// Create a test project
 	project := models.NewProject("Test Project", "A test project", "TEST")
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	require.NoError(t, err)
 
 	// Test exists
-	exists := storage.ProjectExists(project.ID)
+	exists := storage.ProjectExists(context.Background(), project.ID)
 	assert.True(t, exists)
 
 	// Test non-existent project
-	exists = storage.ProjectExists("non-existent")
+	exists = storage.ProjectExists(context.Background(), "non-existent")
 	assert.False(t, exists)
 }
 
@@ -601,24 +602,24 @@ func TestFileStorage_GetNextDisplayID(t *testing.T) {
 
 	// Create a test project
 	project := models.NewProject("Test Project", "A test project", "TEST")
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	require.NoError(t, err)
 
 	// Test getting sequential display IDs
-	displayID1, err := storage.GetNextDisplayID(project.ID)
+	displayID1, err := storage.GetNextDisplayID(context.Background(), project.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "TEST-1", displayID1)
 
-	displayID2, err := storage.GetNextDisplayID(project.ID)
+	displayID2, err := storage.GetNextDisplayID(context.Background(), project.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "TEST-2", displayID2)
 
-	displayID3, err := storage.GetNextDisplayID(project.ID)
+	displayID3, err := storage.GetNextDisplayID(context.Background(), project.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "TEST-3", displayID3)
 
 	// Test with non-existent project
-	_, err = storage.GetNextDisplayID("non-existent")
+	_, err = storage.GetNextDisplayID(context.Background(), "non-existent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "project not found")
 }
@@ -630,7 +631,7 @@ func TestFileStorage_GetNextDisplayID_ConcurrentAccess(t *testing.T) {
 
 	// Create a test project
 	project := models.NewProject("Test Project", "A test project", "CONC")
-	err = storage.CreateProject(project)
+	err = storage.CreateProject(context.Background(), project)
 	require.NoError(t, err)
 
 	// Test concurrent access to display ID generation
@@ -643,7 +644,7 @@ func TestFileStorage_GetNextDisplayID_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			displayID, err := storage.GetNextDisplayID(project.ID)
+			displayID, err := storage.GetNextDisplayID(context.Background(), project.ID)
 			require.NoError(t, err)
 
 			mu.Lock()

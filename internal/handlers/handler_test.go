@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,7 +29,7 @@ func newMockStorage() *mockStorage {
 	}
 }
 
-func (m *mockStorage) CreateTask(task *models.Task) error {
+func (m *mockStorage) CreateTask(ctx context.Context, task *models.Task) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -43,7 +44,7 @@ func (m *mockStorage) CreateTask(task *models.Task) error {
 	return nil
 }
 
-func (m *mockStorage) GetTask(id string) (*models.Task, error) {
+func (m *mockStorage) GetTask(ctx context.Context, id string) (*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -63,7 +64,7 @@ func (m *mockStorage) GetTask(id string) (*models.Task, error) {
 	return &taskCopy, nil
 }
 
-func (m *mockStorage) UpdateTask(task *models.Task) error {
+func (m *mockStorage) UpdateTask(ctx context.Context, task *models.Task) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -81,7 +82,7 @@ func (m *mockStorage) UpdateTask(task *models.Task) error {
 	return nil
 }
 
-func (m *mockStorage) DeleteTask(id string) error {
+func (m *mockStorage) DeleteTask(ctx context.Context, id string) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -99,7 +100,7 @@ func (m *mockStorage) DeleteTask(id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListTasks(projectID string) ([]*models.Task, error) {
+func (m *mockStorage) ListTasks(ctx context.Context, projectID string) ([]*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -117,7 +118,7 @@ func (m *mockStorage) ListTasks(projectID string) ([]*models.Task, error) {
 	return tasks, nil
 }
 
-func (m *mockStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
+func (m *mockStorage) GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -143,7 +144,7 @@ func (m *mockStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
 	return children, nil
 }
 
-func (m *mockStorage) GetTaskParent(childID string) (*models.Task, error) {
+func (m *mockStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -167,7 +168,7 @@ func (m *mockStorage) GetTaskParent(childID string) (*models.Task, error) {
 	return &parentCopy, nil
 }
 
-func (m *mockStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
+func (m *mockStorage) GetTaskHierarchy(ctx context.Context, ) ([]*models.HierarchyTask, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -188,13 +189,13 @@ func (m *mockStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
 	return hierarchy, nil
 }
 
-func (m *mockStorage) TaskExists(id string) bool {
+func (m *mockStorage) TaskExists(ctx context.Context, id string) bool {
 	_, exists := m.tasks[id]
 	return exists
 }
 
 // Project methods for mockStorage
-func (m *mockStorage) CreateProject(project *models.Project) error {
+func (m *mockStorage) CreateProject(ctx context.Context, project *models.Project) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -204,7 +205,7 @@ func (m *mockStorage) CreateProject(project *models.Project) error {
 	return nil
 }
 
-func (m *mockStorage) GetProject(id string) (*models.Project, error) {
+func (m *mockStorage) GetProject(ctx context.Context, id string) (*models.Project, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -224,7 +225,7 @@ func (m *mockStorage) GetProject(id string) (*models.Project, error) {
 	}, nil
 }
 
-func (m *mockStorage) UpdateProject(project *models.Project) error {
+func (m *mockStorage) UpdateProject(ctx context.Context, project *models.Project) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -237,7 +238,7 @@ func (m *mockStorage) UpdateProject(project *models.Project) error {
 	return nil
 }
 
-func (m *mockStorage) DeleteProject(id string) error {
+func (m *mockStorage) DeleteProject(ctx context.Context, id string) error {
 	if m.failNext {
 		m.failNext = false
 		return fmt.Errorf("storage error")
@@ -250,7 +251,7 @@ func (m *mockStorage) DeleteProject(id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListProjects() ([]*models.Project, error) {
+func (m *mockStorage) ListProjects(ctx context.Context, ) ([]*models.Project, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -260,7 +261,7 @@ func (m *mockStorage) ListProjects() ([]*models.Project, error) {
 	return []*models.Project{}, nil
 }
 
-func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
+func (m *mockStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -280,7 +281,7 @@ func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
 	}, nil
 }
 
-func (m *mockStorage) ProjectExists(id string) bool {
+func (m *mockStorage) ProjectExists(ctx context.Context, id string) bool {
 	// For mock purposes, return true unless explicitly set to not exist
 	return !m.notFoundFor[id]
 }
@@ -290,7 +291,7 @@ func (m *mockStorage) Close() error {
 }
 
 // GetTaskByDisplayID retrieves a task by its display ID
-func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+func (m *mockStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -306,7 +307,7 @@ func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error)
 }
 
 // GetNextDisplayID generates the next display ID for a project
-func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
+func (m *mockStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) {
 	if m.failNext {
 		m.failNext = false
 		return "", fmt.Errorf("storage error")
@@ -328,7 +329,7 @@ func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
 }
 
 // GetProjectByDisplayPrefix retrieves a project by its display prefix
-func (m *mockStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+func (m *mockStorage) GetProjectByDisplayPrefix(ctx context.Context, displayPrefix string) (*models.Project, error) {
 	if m.failNext {
 		m.failNext = false
 		return nil, fmt.Errorf("storage error")
@@ -409,7 +410,7 @@ func TestHandler_HandleTasks(t *testing.T) {
 	t.Run("GET /api/tasks - list tasks", func(t *testing.T) {
 		// Add a test task
 		task := models.NewTask("Test Task", "Test Description")
-		storage.CreateTask(task)
+		storage.CreateTask(context.Background(), task)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
 		w := httptest.NewRecorder()
@@ -558,7 +559,7 @@ func TestHandler_HandleTask(t *testing.T) {
 	// Create a test task
 	task := models.NewTask("Test Task", "Test Description")
 	task.ID = "test-task-1"
-	storage.CreateTask(task)
+	storage.CreateTask(context.Background(), task)
 
 	t.Run("GET /api/tasks/{id} - get task", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/tasks/test-task-1", nil)
@@ -644,7 +645,7 @@ func TestHandler_HandleTask(t *testing.T) {
 		// Create another task for deletion
 		deleteTask := models.NewTask("Delete Me", "To be deleted")
 		deleteTask.ID = "delete-me"
-		storage.CreateTask(deleteTask)
+		storage.CreateTask(context.Background(), deleteTask)
 
 		req := httptest.NewRequest(http.MethodDelete, "/api/tasks/delete-me", nil)
 		w := httptest.NewRecorder()
@@ -656,7 +657,7 @@ func TestHandler_HandleTask(t *testing.T) {
 		}
 
 		// Verify task is deleted
-		if storage.TaskExists("delete-me") {
+		if storage.TaskExists(context.Background(), "delete-me") {
 			t.Error("Task should have been deleted")
 		}
 	})
@@ -702,14 +703,14 @@ func TestHandler_HandleTaskChildren(t *testing.T) {
 	// Create parent and child tasks
 	parentTask := models.NewTask("Parent Task", "Parent Description")
 	parentTask.ID = "parent-task"
-	storage.CreateTask(parentTask)
+	storage.CreateTask(context.Background(), parentTask)
 
 	childTask := models.NewTask("Child Task", "Child Description")
 	childTask.ID = "child-task"
 	childTask.ParentID = "parent-task"
 	parentTask.AddChild("child-task")
-	storage.CreateTask(childTask)
-	storage.UpdateTask(parentTask)
+	storage.CreateTask(context.Background(), childTask)
+	storage.UpdateTask(context.Background(), parentTask)
 
 	t.Run("GET /api/tasks/{id}/children - get children", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/tasks/parent-task/children", nil)
@@ -750,7 +751,7 @@ func TestHandler_HandleTaskChildren(t *testing.T) {
 		// Create a new child task
 		newChild := models.NewTask("New Child", "New Child Description")
 		newChild.ID = "new-child"
-		storage.CreateTask(newChild)
+		storage.CreateTask(context.Background(), newChild)
 
 		requestData := map[string]interface{}{
 			"child_id": "new-child",
@@ -813,14 +814,14 @@ func TestHandler_HandleTaskChildRelation(t *testing.T) {
 	// Create parent and child tasks
 	parentTask := models.NewTask("Parent Task", "Parent Description")
 	parentTask.ID = "parent-task"
-	storage.CreateTask(parentTask)
+	storage.CreateTask(context.Background(), parentTask)
 
 	childTask := models.NewTask("Child Task", "Child Description")
 	childTask.ID = "child-task"
 	childTask.ParentID = "parent-task"
 	parentTask.AddChild("child-task")
-	storage.CreateTask(childTask)
-	storage.UpdateTask(parentTask)
+	storage.CreateTask(context.Background(), childTask)
+	storage.UpdateTask(context.Background(), parentTask)
 
 	t.Run("DELETE /api/tasks/{id}/children/{child_id} - remove child", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/api/tasks/parent-task/children/child-task", nil)
@@ -833,12 +834,12 @@ func TestHandler_HandleTaskChildRelation(t *testing.T) {
 		}
 
 		// Verify child relationship was removed
-		updatedParent, _ := storage.GetTask("parent-task")
+		updatedParent, _ := storage.GetTask(context.Background(), "parent-task")
 		if len(updatedParent.Children) != 0 {
 			t.Error("Child should have been removed from parent")
 		}
 
-		updatedChild, _ := storage.GetTask("child-task")
+		updatedChild, _ := storage.GetTask(context.Background(), "child-task")
 		if updatedChild.ParentID != "" {
 			t.Error("Parent ID should have been cleared from child")
 		}
@@ -896,15 +897,15 @@ func TestHandler_HandleTaskMove(t *testing.T) {
 	// Create tasks
 	task1 := models.NewTask("Task 1", "Description 1")
 	task1.ID = "task-1"
-	storage.CreateTask(task1)
+	storage.CreateTask(context.Background(), task1)
 
 	task2 := models.NewTask("Task 2", "Description 2")
 	task2.ID = "task-2"
-	storage.CreateTask(task2)
+	storage.CreateTask(context.Background(), task2)
 
 	newParent := models.NewTask("New Parent", "New Parent Description")
 	newParent.ID = "new-parent"
-	storage.CreateTask(newParent)
+	storage.CreateTask(context.Background(), newParent)
 
 	t.Run("PUT /api/tasks/{id}/move - move task to new parent", func(t *testing.T) {
 		requestData := map[string]interface{}{
@@ -923,12 +924,12 @@ func TestHandler_HandleTaskMove(t *testing.T) {
 		}
 
 		// Verify task was moved
-		movedTask, _ := storage.GetTask("task-1")
+		movedTask, _ := storage.GetTask(context.Background(), "task-1")
 		if movedTask.ParentID != "new-parent" {
 			t.Errorf("Expected parent ID 'new-parent', got %s", movedTask.ParentID)
 		}
 
-		updatedParent, _ := storage.GetTask("new-parent")
+		updatedParent, _ := storage.GetTask(context.Background(), "new-parent")
 		if len(updatedParent.Children) != 1 || updatedParent.Children[0] != "task-1" {
 			t.Error("Task should have been added to new parent's children")
 		}
@@ -972,8 +973,8 @@ func TestHandler_HandleTaskMove(t *testing.T) {
 		// Set up circular reference scenario
 		task2.ParentID = "task-1"
 		task1.AddChild("task-2")
-		storage.UpdateTask(task1)
-		storage.UpdateTask(task2)
+		storage.UpdateTask(context.Background(), task1)
+		storage.UpdateTask(context.Background(), task2)
 
 		requestData := map[string]interface{}{
 			"new_parent_id": "task-2",
@@ -1021,21 +1022,21 @@ func TestHandler_CircularReferenceDetection(t *testing.T) {
 	// Create a chain: A -> B -> C
 	taskA := models.NewTask("Task A", "Description A")
 	taskA.ID = "task-a"
-	storage.CreateTask(taskA)
+	storage.CreateTask(context.Background(), taskA)
 
 	taskB := models.NewTask("Task B", "Description B")
 	taskB.ID = "task-b"
 	taskB.ParentID = "task-a"
 	taskA.AddChild("task-b")
-	storage.CreateTask(taskB)
-	storage.UpdateTask(taskA)
+	storage.CreateTask(context.Background(), taskB)
+	storage.UpdateTask(context.Background(), taskA)
 
 	taskC := models.NewTask("Task C", "Description C")
 	taskC.ID = "task-c"
 	taskC.ParentID = "task-b"
 	taskB.AddChild("task-c")
-	storage.CreateTask(taskC)
-	storage.UpdateTask(taskB)
+	storage.CreateTask(context.Background(), taskC)
+	storage.UpdateTask(context.Background(), taskB)
 
 	t.Run("wouldCreateCircularReference - direct circular", func(t *testing.T) {
 		if !handler.wouldCreateCircularReference("task-a", "task-a") {
@@ -1052,7 +1053,7 @@ func TestHandler_CircularReferenceDetection(t *testing.T) {
 	t.Run("wouldCreateCircularReference - valid relationship", func(t *testing.T) {
 		taskD := models.NewTask("Task D", "Description D")
 		taskD.ID = "task-d"
-		storage.CreateTask(taskD)
+		storage.CreateTask(context.Background(), taskD)
 
 		if handler.wouldCreateCircularReference("task-d", "task-a") {
 			t.Error("Should not detect circular reference for valid relationship")
@@ -1095,7 +1096,7 @@ func TestHandler_EdgeCases(t *testing.T) {
 		// Create task
 		task := models.NewTask("Test Task", "Test Description")
 		task.ID = "test-task"
-		storage.CreateTask(task)
+		storage.CreateTask(context.Background(), task)
 
 		updateData := map[string]interface{}{
 			"status": "in_progress",
@@ -1150,7 +1151,7 @@ func BenchmarkHandler_ListTasks(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		task := models.NewTask(fmt.Sprintf("Task %d", i), fmt.Sprintf("Description %d", i))
 		task.ID = fmt.Sprintf("task-%d", i)
-		storage.CreateTask(task)
+		storage.CreateTask(context.Background(), task)
 	}
 
 	b.ResetTimer()
