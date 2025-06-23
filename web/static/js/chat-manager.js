@@ -23,11 +23,11 @@ export class ChatManager {
         // Load conversation from localStorage
         this.loadConversationFromStorage();
         
-        // Load chat mode preference
-        this.loadChatModePreference();
-        
-        // Check LLM status
-        this.checkLLMStatus();
+        // Defer UI-dependent initialization to ensure DOM is ready
+        setTimeout(() => {
+            this.loadChatModePreference();
+            this.checkLLMStatus();
+        }, 100);
     }
 
     /**
@@ -647,12 +647,14 @@ export class ChatManager {
      */
     updateChatModeInUI() {
         // Update header indicator
-        if (this.chatMode === 'translated') {
-            this.modeIndicator.textContent = '🔄';
-            this.modeBtn.title = 'Smart Assistant Mode - Translates requests to ProjectFlow actions';
-        } else {
-            this.modeIndicator.textContent = '🤖';
-            this.modeBtn.title = 'Direct LLM Mode - Chat directly with language model';
+        if (this.modeIndicator && this.modeBtn) {
+            if (this.chatMode === 'translated') {
+                this.modeIndicator.textContent = '🔄';
+                this.modeBtn.title = 'Smart Assistant Mode - Translates requests to ProjectFlow actions';
+            } else {
+                this.modeIndicator.textContent = '🤖';
+                this.modeBtn.title = 'Direct LLM Mode - Chat directly with language model';
+            }
         }
         
         // Update input placeholder
