@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -323,13 +324,19 @@ func (ps *PostgresStorage) initializeSchema() error {
 }
 
 // CreateTask creates a new task and assigns it an ID
-func (ps *PostgresStorage) CreateTask(task *models.Task) error {
+func (ps *PostgresStorage) CreateTask(ctx context.Context, task *models.Task) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
-	// Ensure tenant context is set for this operation
-	if err := ps.ensureTenantContext(); err != nil {
-		return fmt.Errorf("failed to set tenant context: %w", err)
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
 	}
 
 	// Generate UUID for new task
@@ -343,11 +350,7 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 	defer tx.Rollback()
 
 	// Set tenant context for the transaction
-	defaultTenantID, err := ps.getOrCreateDefaultTenant()
-	if err != nil {
-		return fmt.Errorf("failed to get default tenant: %w", err)
-	}
-	if err := ps.setTenantContext(tx, defaultTenantID); err != nil {
+	if err := ps.setTenantContext(tx, tenantID); err != nil {
 		return fmt.Errorf("failed to set tenant context for transaction: %w", err)
 	}
 
@@ -394,7 +397,7 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 		task.CompletedAt,
 		task.CreatedAt,
 		task.UpdatedAt,
-		defaultTenantID, // Add tenant_id to the insert
+		tenantID, // Add tenant_id to the insert
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert task: %w", err)
@@ -411,12 +414,23 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 }
 
 // GetTask retrieves a task by ID
-func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
+func (ps *PostgresStorage) GetTask(ctx context.Context, id string) (*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
-	// Ensure tenant context is set for this operation
-	if err := ps.ensureTenantContext(); err != nil {
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
+
+	// Set tenant context for this operation
+	if err := ps.setTenantContextDB(tenantID); err != nil {
 		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -438,12 +452,23 @@ func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
 }
 
 // GetTaskByDisplayID retrieves a task by its display ID (e.g., "PF-1", "PF-2")
-func (ps *PostgresStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+func (ps *PostgresStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
-	// Ensure tenant context is set for this operation
-	if err := ps.ensureTenantContext(); err != nil {
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
+
+	// Set tenant context for this operation
+	if err := ps.setTenantContextDB(tenantID); err != nil {
 		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -465,9 +490,25 @@ func (ps *PostgresStorage) GetTaskByDisplayID(displayID string) (*models.Task, e
 }
 
 // UpdateTask updates an existing task
-func (ps *PostgresStorage) UpdateTask(task *models.Task) error {
+func (ps *PostgresStorage) UpdateTask(ctx context.Context, task *models.Task) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
+
+	// Set tenant context for this operation
+	if err := ps.setTenantContextDB(tenantID); err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	// Check if task exists
 	if !ps.taskExistsUnsafe(task.ID) {
@@ -517,9 +558,20 @@ func (ps *PostgresStorage) UpdateTask(task *models.Task) error {
 }
 
 // DeleteTask deletes a task and removes it from parent's children
-func (ps *PostgresStorage) DeleteTask(id string) error {
+func (ps *PostgresStorage) DeleteTask(ctx context.Context, id string) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
 
 	// Begin transaction
 	tx, err := ps.db.Begin()
@@ -527,6 +579,11 @@ func (ps *PostgresStorage) DeleteTask(id string) error {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
+
+	// Set tenant context for the transaction
+	if err := ps.setTenantContext(tx, tenantID); err != nil {
+		return fmt.Errorf("failed to set tenant context for transaction: %w", err)
+	}
 
 	// Get the task first to find its parent and children
 	task, err := ps.getTaskUnsafeTx(tx, id)
@@ -557,12 +614,23 @@ func (ps *PostgresStorage) DeleteTask(id string) error {
 }
 
 // ListTasks returns tasks for a specific project
-func (ps *PostgresStorage) ListTasks(projectID string) ([]*models.Task, error) {
+func (ps *PostgresStorage) ListTasks(ctx context.Context, projectID string) ([]*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
-	// Ensure tenant context is set for this operation
-	if err := ps.ensureTenantContext(); err != nil {
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
+
+	// Set tenant context for this operation
+	if err := ps.setTenantContextDB(tenantID); err != nil {
 		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -598,7 +666,7 @@ func (ps *PostgresStorage) ListTasks(projectID string) ([]*models.Task, error) {
 }
 
 // GetTaskChildren returns all direct children of a task
-func (ps *PostgresStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
+func (ps *PostgresStorage) GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -629,7 +697,7 @@ func (ps *PostgresStorage) GetTaskChildren(parentID string) ([]*models.Task, err
 }
 
 // GetTaskParent returns the parent task of a given task
-func (ps *PostgresStorage) GetTaskParent(childID string) (*models.Task, error) {
+func (ps *PostgresStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -647,7 +715,7 @@ func (ps *PostgresStorage) GetTaskParent(childID string) (*models.Task, error) {
 }
 
 // GetTaskHierarchy returns all tasks organized in hierarchical structure
-func (ps *PostgresStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
+func (ps *PostgresStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -676,7 +744,7 @@ func (ps *PostgresStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
 }
 
 // TaskExists checks if a task exists
-func (ps *PostgresStorage) TaskExists(id string) bool {
+func (ps *PostgresStorage) TaskExists(ctx context.Context, id string) bool {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 	return ps.taskExistsUnsafe(id)
@@ -685,19 +753,19 @@ func (ps *PostgresStorage) TaskExists(id string) bool {
 // Project CRUD methods
 
 // CreateProject creates a new project and assigns it an ID
-func (ps *PostgresStorage) CreateProject(project *models.Project) error {
+func (ps *PostgresStorage) CreateProject(ctx context.Context, project *models.Project) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
-	// Ensure tenant context is set for this operation
-	if err := ps.ensureTenantContext(); err != nil {
-		return fmt.Errorf("failed to set tenant context: %w", err)
-	}
-
-	// Get default tenant ID for the project
-	defaultTenantID, err := ps.getOrCreateDefaultTenant()
-	if err != nil {
-		return fmt.Errorf("failed to get default tenant: %w", err)
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
 	}
 
 	// Generate UUID for new project
@@ -723,7 +791,7 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 		settingsJSON,
 		project.CreatedAt,
 		project.UpdatedAt,
-		defaultTenantID, // Add tenant_id
+		tenantID, // Add tenant_id
 	)
 
 	if err != nil {
@@ -734,7 +802,7 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 }
 
 // GetProject retrieves a project by ID
-func (ps *PostgresStorage) GetProject(id string) (*models.Project, error) {
+func (ps *PostgresStorage) GetProject(ctx context.Context, id string) (*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -778,7 +846,7 @@ func (ps *PostgresStorage) GetProject(id string) (*models.Project, error) {
 }
 
 // UpdateProject updates an existing project
-func (ps *PostgresStorage) UpdateProject(project *models.Project) error {
+func (ps *PostgresStorage) UpdateProject(ctx context.Context, project *models.Project) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
@@ -819,9 +887,25 @@ func (ps *PostgresStorage) UpdateProject(project *models.Project) error {
 }
 
 // DeleteProject deletes a project
-func (ps *PostgresStorage) DeleteProject(id string) error {
+func (ps *PostgresStorage) DeleteProject(ctx context.Context, id string) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+
+	// Extract tenant ID from context for tenant-aware operations
+	tenantID := GetTenantID(ctx)
+	if tenantID == "" {
+		// For backward compatibility, use default tenant
+		defaultTenantID, err := ps.getOrCreateDefaultTenant()
+		if err != nil {
+			return fmt.Errorf("failed to get default tenant: %w", err)
+		}
+		tenantID = defaultTenantID
+	}
+
+	// Set tenant context for this operation
+	if err := ps.setTenantContextDB(tenantID); err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	deleteSQL := "DELETE FROM projects WHERE id = $1"
 	result, err := ps.db.Exec(deleteSQL, id)
@@ -842,7 +926,7 @@ func (ps *PostgresStorage) DeleteProject(id string) error {
 }
 
 // ListProjects returns all projects
-func (ps *PostgresStorage) ListProjects() ([]*models.Project, error) {
+func (ps *PostgresStorage) ListProjects(ctx context.Context) ([]*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -896,7 +980,7 @@ func (ps *PostgresStorage) ListProjects() ([]*models.Project, error) {
 }
 
 // GetProjectByName retrieves a project by name
-func (ps *PostgresStorage) GetProjectByName(name string) (*models.Project, error) {
+func (ps *PostgresStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -935,7 +1019,7 @@ func (ps *PostgresStorage) GetProjectByName(name string) (*models.Project, error
 }
 
 // GetProjectByDisplayPrefix retrieves a project by display prefix
-func (ps *PostgresStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+func (ps *PostgresStorage) GetProjectByDisplayPrefix(ctx context.Context, displayPrefix string) (*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -974,7 +1058,7 @@ func (ps *PostgresStorage) GetProjectByDisplayPrefix(displayPrefix string) (*mod
 }
 
 // ProjectExists checks if a project exists
-func (ps *PostgresStorage) ProjectExists(id string) bool {
+func (ps *PostgresStorage) ProjectExists(ctx context.Context, id string) bool {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
@@ -1300,7 +1384,7 @@ func nullString(s string) sql.NullString {
 }
 
 // GetNextDisplayID generates and returns the next sequential display ID for a project
-func (ps *PostgresStorage) GetNextDisplayID(projectID string) (string, error) {
+func (ps *PostgresStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
