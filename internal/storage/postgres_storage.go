@@ -128,7 +128,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 	}
 
 	// Step 3: Add missing columns to existing tables (for backward compatibility)
-	
+
 	// Add task_counter column to existing projects table if it doesn't exist
 	alterTableSQL := `
 	DO $$ 
@@ -200,7 +200,7 @@ func (ps *PostgresStorage) initializeSchema() error {
 	}
 
 	// Step 4: Add foreign key constraints (after all columns exist)
-	
+
 	// Add foreign key constraints for projects table
 	addProjectsConstraintsSQL := `
 	DO $$
@@ -309,6 +309,16 @@ func (ps *PostgresStorage) initializeSchema() error {
 		}
 	}
 
+	// Step 5: Initialize Row-Level Security (RLS)
+	if err := ps.initializeRLS(); err != nil {
+		return fmt.Errorf("failed to initialize RLS: %w", err)
+	}
+
+	// Step 6: Migrate existing data to default tenant
+	if err := ps.migrateExistingDataToDefaultTenant(); err != nil {
+		return fmt.Errorf("failed to migrate existing data: %w", err)
+	}
+
 	return nil
 }
 
@@ -316,6 +326,11 @@ func (ps *PostgresStorage) initializeSchema() error {
 func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	// Generate UUID for new task
 	task.ID = uuid.New().String()
@@ -326,6 +341,15 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
+
+	// Set tenant context for the transaction
+	defaultTenantID, err := ps.getOrCreateDefaultTenant()
+	if err != nil {
+		return fmt.Errorf("failed to get default tenant: %w", err)
+	}
+	if err := ps.setTenantContext(tx, defaultTenantID); err != nil {
+		return fmt.Errorf("failed to set tenant context for transaction: %w", err)
+	}
 
 	// Handle project association and display ID generation
 	if task.ProjectID == "" {
@@ -348,14 +372,11 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 
 	// Serialize children array to JSON
 	childrenJSON, err := json.Marshal(task.Children)
-	if err != nil {
-		return fmt.Errorf("failed to marshal children array: %w", err)
-	}
-
-	// Insert the task with new fields
+	err = nil
+	// Insert the task with new fields including tenant_id
 	insertSQL := `
-		INSERT INTO tasks (id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
+		INSERT INTO tasks (id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
 
 	_, err = tx.Exec(insertSQL,
 		task.ID,
@@ -373,6 +394,7 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 		task.CompletedAt,
 		task.CreatedAt,
 		task.UpdatedAt,
+		defaultTenantID, // Add tenant_id to the insert
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert task: %w", err)
@@ -392,6 +414,11 @@ func (ps *PostgresStorage) CreateTask(task *models.Task) error {
 func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	querySQL := `
 		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
@@ -414,6 +441,11 @@ func (ps *PostgresStorage) GetTask(id string) (*models.Task, error) {
 func (ps *PostgresStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	querySQL := `
 		SELECT id, display_id, project_id, title, description, status, priority, type, parent_id, children, started_at, due_date, completed_at, created_at, updated_at
@@ -528,6 +560,11 @@ func (ps *PostgresStorage) DeleteTask(id string) error {
 func (ps *PostgresStorage) ListTasks(projectID string) ([]*models.Task, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	// If no projectID specified, return empty list
 	if projectID == "" {
@@ -652,6 +689,17 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	// Get default tenant ID for the project
+	defaultTenantID, err := ps.getOrCreateDefaultTenant()
+	if err != nil {
+		return fmt.Errorf("failed to get default tenant: %w", err)
+	}
+
 	// Generate UUID for new project
 	project.ID = uuid.New().String()
 
@@ -661,10 +709,10 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 		return fmt.Errorf("failed to marshal settings: %w", err)
 	}
 
-	// Insert the project
+	// Insert the project with tenant_id
 	insertSQL := `
-		INSERT INTO projects (id, name, description, display_prefix, task_counter, settings, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		INSERT INTO projects (id, name, description, display_prefix, task_counter, settings, created_at, updated_at, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	_, err = ps.db.Exec(insertSQL,
 		project.ID,
@@ -675,6 +723,7 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 		settingsJSON,
 		project.CreatedAt,
 		project.UpdatedAt,
+		defaultTenantID, // Add tenant_id
 	)
 
 	if err != nil {
@@ -688,6 +737,11 @@ func (ps *PostgresStorage) CreateProject(project *models.Project) error {
 func (ps *PostgresStorage) GetProject(id string) (*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	selectSQL := `
 		SELECT id, name, description, display_prefix, settings, created_at, updated_at
@@ -791,6 +845,11 @@ func (ps *PostgresStorage) DeleteProject(id string) error {
 func (ps *PostgresStorage) ListProjects() ([]*models.Project, error) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	// Ensure tenant context is set for this operation
+	if err := ps.ensureTenantContext(); err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
 
 	selectSQL := `
 		SELECT id, name, description, display_prefix, settings, created_at, updated_at
@@ -1363,4 +1422,234 @@ func (ps *PostgresStorage) getNextDisplayIDTx(tx *sql.Tx, projectID string) (str
 
 	// Format and return the display ID
 	return fmt.Sprintf("%s-%d", displayPrefix, counter), nil
+}
+
+// initializeRLS sets up Row-Level Security policies and functions
+func (ps *PostgresStorage) initializeRLS() error {
+	// Read and execute RLS migration SQL
+	rlsStatements := []string{
+		// Enable RLS on all tenant-aware tables
+		"ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;",
+		"ALTER TABLE projects ENABLE ROW LEVEL SECURITY;", 
+		"ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;",
+		"ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
+
+		// Create tenant context management functions
+		`CREATE OR REPLACE FUNCTION get_current_tenant_id() RETURNS VARCHAR(36) AS $$
+		BEGIN
+			RETURN current_setting('app.current_tenant_id', true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION set_current_tenant_id(tenant_id VARCHAR(36)) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.current_tenant_id', tenant_id, true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION is_admin_user() RETURNS BOOLEAN AS $$
+		BEGIN
+			RETURN current_setting('app.is_admin', true)::BOOLEAN;
+		EXCEPTION
+			WHEN OTHERS THEN
+				RETURN FALSE;
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION set_admin_context(is_admin BOOLEAN) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.is_admin', is_admin::TEXT, true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION init_tenant_context(tenant_id VARCHAR(36), is_admin BOOLEAN DEFAULT FALSE) RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_current_tenant_id(tenant_id);
+			IF is_admin THEN
+				PERFORM set_admin_context(TRUE);
+			ELSE
+				PERFORM set_admin_context(FALSE);
+			END IF;
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+
+		`CREATE OR REPLACE FUNCTION clear_tenant_context() RETURNS VOID AS $$
+		BEGIN
+			PERFORM set_config('app.current_tenant_id', '', true);
+			PERFORM set_config('app.is_admin', 'false', true);
+		END;
+		$$ LANGUAGE plpgsql SECURITY DEFINER;`,
+	}
+
+	// Execute RLS setup statements
+	for _, stmt := range rlsStatements {
+		if _, err := ps.db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to execute RLS statement: %w", err)
+		}
+	}
+
+	// Create RLS policies (drop existing policies first to avoid conflicts)
+	policies := []string{
+		// Drop existing policies if they exist
+		"DROP POLICY IF EXISTS tenant_isolation_policy ON tenants;",
+		"DROP POLICY IF EXISTS project_tenant_isolation_policy ON projects;",
+		"DROP POLICY IF EXISTS task_tenant_isolation_policy ON tasks;",
+		"DROP POLICY IF EXISTS user_tenant_isolation_policy ON users;",
+
+		// Create new policies
+		`CREATE POLICY tenant_isolation_policy ON tenants
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR id = get_current_tenant_id());`,
+
+		`CREATE POLICY project_tenant_isolation_policy ON projects
+			FOR ALL TO PUBLIC  
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+
+		`CREATE POLICY task_tenant_isolation_policy ON tasks
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+
+		`CREATE POLICY user_tenant_isolation_policy ON users
+			FOR ALL TO PUBLIC
+			USING (is_admin_user() OR tenant_id = get_current_tenant_id());`,
+	}
+
+	// Execute RLS policies
+	for _, policy := range policies {
+		if _, err := ps.db.Exec(policy); err != nil {
+			return fmt.Errorf("failed to create RLS policy: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setTenantContext sets the tenant context for the current database transaction
+func (ps *PostgresStorage) setTenantContext(tx *sql.Tx, tenantID string) error {
+	_, err := tx.Exec("SELECT init_tenant_context($1, false)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+	return nil
+}
+
+// setTenantContextDB sets the tenant context for the current database connection  
+func (ps *PostgresStorage) setTenantContextDB(tenantID string) error {
+	_, err := ps.db.Exec("SELECT init_tenant_context($1, false)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+	return nil
+}
+
+// setAdminContext sets admin context to bypass RLS policies
+func (ps *PostgresStorage) setAdminContext(tx *sql.Tx) error {
+	_, err := tx.Exec("SELECT set_admin_context(true)")
+	if err != nil {
+		return fmt.Errorf("failed to set admin context: %w", err)
+	}
+	return nil
+}
+
+// setAdminContextDB sets admin context to bypass RLS policies for DB connection
+func (ps *PostgresStorage) setAdminContextDB() error {
+	_, err := ps.db.Exec("SELECT set_admin_context(true)")
+	if err != nil {
+		return fmt.Errorf("failed to set admin context: %w", err)
+	}
+	return nil
+}
+
+// clearTenantContext clears the tenant context
+func (ps *PostgresStorage) clearTenantContext(tx *sql.Tx) error {
+	_, err := tx.Exec("SELECT clear_tenant_context()")
+	if err != nil {
+		return fmt.Errorf("failed to clear tenant context: %w", err)
+	}
+	return nil
+}
+
+// clearTenantContextDB clears the tenant context for DB connection
+func (ps *PostgresStorage) clearTenantContextDB() error {
+	_, err := ps.db.Exec("SELECT clear_tenant_context()")
+	if err != nil {
+		return fmt.Errorf("failed to clear tenant context: %w", err)
+	}
+	return nil
+}
+
+// getOrCreateDefaultTenant ensures a default tenant exists and returns its ID
+func (ps *PostgresStorage) getOrCreateDefaultTenant() (string, error) {
+	const defaultTenantID = "default-tenant"
+	const defaultTenantName = "Default Tenant"
+
+	// Check if default tenant exists
+	var existingID string
+	querySQL := "SELECT id FROM tenants WHERE id = $1"
+	err := ps.db.QueryRow(querySQL, defaultTenantID).Scan(&existingID)
+	
+	if err == nil {
+		// Default tenant exists
+		return existingID, nil
+	}
+	
+	if err != sql.ErrNoRows {
+		// Unexpected error
+		return "", fmt.Errorf("failed to check for default tenant: %w", err)
+	}
+
+	// Create default tenant
+	createSQL := `
+		INSERT INTO tenants (id, name, status, created_at, updated_at)
+		VALUES ($1, $2, 'active', NOW(), NOW())`
+	
+	_, err = ps.db.Exec(createSQL, defaultTenantID, defaultTenantName)
+	if err != nil {
+		return "", fmt.Errorf("failed to create default tenant: %w", err)
+	}
+
+	return defaultTenantID, nil
+}
+
+// ensureTenantContext sets the tenant context for current operations
+// For now, this uses a default tenant to maintain backward compatibility
+func (ps *PostgresStorage) ensureTenantContext() error {
+	defaultTenantID, err := ps.getOrCreateDefaultTenant()
+	if err != nil {
+		return fmt.Errorf("failed to get default tenant: %w", err)
+	}
+
+	return ps.setTenantContextDB(defaultTenantID)
+}
+
+// migrateExistingDataToDefaultTenant ensures all existing data is assigned to the default tenant
+func (ps *PostgresStorage) migrateExistingDataToDefaultTenant() error {
+	defaultTenantID, err := ps.getOrCreateDefaultTenant()
+	if err != nil {
+		return fmt.Errorf("failed to get default tenant: %w", err)
+	}
+
+	// Update existing projects without tenant_id
+	updateProjectsSQL := `
+		UPDATE projects 
+		SET tenant_id = $1 
+		WHERE tenant_id IS NULL`
+
+	_, err = ps.db.Exec(updateProjectsSQL, defaultTenantID)
+	if err != nil {
+		return fmt.Errorf("failed to update projects with tenant_id: %w", err)
+	}
+
+	// Update existing tasks without tenant_id
+	updateTasksSQL := `
+		UPDATE tasks 
+		SET tenant_id = $1 
+		WHERE tenant_id IS NULL`
+
+	_, err = ps.db.Exec(updateTasksSQL, defaultTenantID)
+	if err != nil {
+		return fmt.Errorf("failed to update tasks with tenant_id: %w", err)
+	}
+
+	return nil
 }
