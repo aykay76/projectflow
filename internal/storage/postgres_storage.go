@@ -46,8 +46,24 @@ func NewPostgresStorage(connectionString string) (*PostgresStorage, error) {
 
 // initializeSchema creates the necessary database tables and indexes
 func (ps *PostgresStorage) initializeSchema() error {
-	// Create tasks table with proper JSON support for children array
-	createTableSQL := `
+	// Step 1: Create tenants table first (required for foreign key relationships)
+	createTenantsTableSQL := `
+	CREATE TABLE IF NOT EXISTS tenants (
+		id VARCHAR(36) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL UNIQUE,
+		settings JSONB DEFAULT '{}'::jsonb,
+		status VARCHAR(20) NOT NULL DEFAULT 'active',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		CONSTRAINT check_tenant_status CHECK (status IN ('active', 'inactive', 'suspended'))
+	);`
+
+	if _, err := ps.db.Exec(createTenantsTableSQL); err != nil {
+		return fmt.Errorf("failed to create tenants table: %w", err)
+	}
+
+	// Step 2: Create base tables without tenant foreign keys (for backward compatibility)
+	createTasksTableSQL := `
 	CREATE TABLE IF NOT EXISTS tasks (
 		id VARCHAR(36) PRIMARY KEY,
 		display_id VARCHAR(50),
@@ -64,16 +80,14 @@ func (ps *PostgresStorage) initializeSchema() error {
 		completed_at TIMESTAMPTZ,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL,
-		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
 		UNIQUE(display_id)
 	);`
 
-	if _, err := ps.db.Exec(createTableSQL); err != nil {
+	if _, err := ps.db.Exec(createTasksTableSQL); err != nil {
 		return fmt.Errorf("failed to create tasks table: %w", err)
 	}
 
-	// Create projects table
+	// Create projects table without tenant foreign key initially
 	createProjectsTableSQL := `
 	CREATE TABLE IF NOT EXISTS projects (
 		id VARCHAR(36) PRIMARY KEY,
@@ -90,6 +104,31 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to create projects table: %w", err)
 	}
 
+	// Create users table (new table, can include all constraints from start)
+	createUsersTableSQL := `
+	CREATE TABLE IF NOT EXISTS users (
+		id VARCHAR(36) PRIMARY KEY,
+		tenant_id VARCHAR(36) NOT NULL,
+		username VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		role VARCHAR(50) NOT NULL DEFAULT 'user',
+		is_active BOOLEAN NOT NULL DEFAULT true,
+		last_login TIMESTAMPTZ,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+		UNIQUE(tenant_id, username),
+		UNIQUE(tenant_id, email),
+		CONSTRAINT check_user_role CHECK (role IN ('admin', 'user', 'viewer'))
+	);`
+
+	if _, err := ps.db.Exec(createUsersTableSQL); err != nil {
+		return fmt.Errorf("failed to create users table: %w", err)
+	}
+
+	// Step 3: Add missing columns to existing tables (for backward compatibility)
+	
 	// Add task_counter column to existing projects table if it doesn't exist
 	alterTableSQL := `
 	DO $$ 
@@ -107,7 +146,24 @@ func (ps *PostgresStorage) initializeSchema() error {
 		return fmt.Errorf("failed to add task_counter column: %w", err)
 	}
 
-	// Add display_id and project_id columns to existing tasks table if they don't exist
+	// Add tenant_id column to existing projects table if it doesn't exist
+	alterProjectsSQL := `
+	DO $$ 
+	BEGIN 
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='projects' AND column_name='tenant_id'
+		) THEN
+			ALTER TABLE projects ADD COLUMN tenant_id VARCHAR(36);
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterProjectsSQL); err != nil {
+		return fmt.Errorf("failed to add tenant_id column to projects: %w", err)
+	}
+
+	// Add display_id, project_id, and tenant_id columns to existing tasks table if they don't exist
 	alterTasksSQL := `
 	DO $$ 
 	BEGIN 
@@ -128,22 +184,123 @@ func (ps *PostgresStorage) initializeSchema() error {
 		) THEN
 			ALTER TABLE tasks ADD COLUMN project_id VARCHAR(36);
 		END IF;
+		
+		-- Add tenant_id column
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='tasks' AND column_name='tenant_id'
+		) THEN
+			ALTER TABLE tasks ADD COLUMN tenant_id VARCHAR(36);
+		END IF;
 	END $$;`
 
 	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
-		return fmt.Errorf("failed to add display_id and project_id columns: %w", err)
+		return fmt.Errorf("failed to add display_id, project_id, and tenant_id columns: %w", err)
+	}
+
+	// Step 4: Add foreign key constraints (after all columns exist)
+	
+	// Add foreign key constraints for projects table
+	addProjectsConstraintsSQL := `
+	DO $$
+	BEGIN
+		-- Add foreign key constraint for tenant_id if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='projects' AND constraint_name='fk_projects_tenant_id'
+		) THEN
+			ALTER TABLE projects 
+			ADD CONSTRAINT fk_projects_tenant_id 
+			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+		END IF;
+		
+		-- Update unique constraint to include tenant_id if needed
+		-- Note: This requires dropping and recreating the constraint
+		IF EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='projects' AND constraint_name='projects_name_key'
+		) THEN
+			ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_name_key;
+			ALTER TABLE projects ADD CONSTRAINT projects_tenant_name_unique UNIQUE(tenant_id, name);
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(addProjectsConstraintsSQL); err != nil {
+		return fmt.Errorf("failed to add projects constraints: %w", err)
+	}
+
+	// Add foreign key constraints for tasks table
+	addTasksConstraintsSQL := `
+	DO $$
+	BEGIN
+		-- Add parent_id foreign key if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='tasks_parent_id_fkey'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT tasks_parent_id_fkey 
+			FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL;
+		END IF;
+		
+		-- Add project_id foreign key if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='tasks_project_id_fkey'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT tasks_project_id_fkey 
+			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+		END IF;
+		
+		-- Add tenant_id foreign key if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='tasks' AND constraint_name='fk_tasks_tenant_id'
+		) THEN
+			ALTER TABLE tasks 
+			ADD CONSTRAINT fk_tasks_tenant_id 
+			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(addTasksConstraintsSQL); err != nil {
+		return fmt.Errorf("failed to add tasks constraints: %w", err)
 	}
 
 	// Create indexes for better performance
 	indexes := []string{
+		// Tenants table indexes
+		"CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);",
+		"CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at);",
+		// Tasks table indexes
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_id ON tasks(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_status ON tasks(tenant_id, status);",
+		"CREATE INDEX IF NOT EXISTS idx_tasks_tenant_priority ON tasks(tenant_id, priority);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);",
+		// Projects table indexes
+		"CREATE INDEX IF NOT EXISTS idx_projects_tenant_id ON projects(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_projects_tenant_name ON projects(tenant_id, name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);",
+		// Users table indexes
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_email ON users(tenant_id, email);",
+		"CREATE INDEX IF NOT EXISTS idx_users_tenant_username ON users(tenant_id, username);",
+		"CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);",
+		"CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);",
+		"CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login);",
 	}
 
 	for _, indexSQL := range indexes {
