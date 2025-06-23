@@ -93,13 +93,16 @@ func (ps *PostgresStorage) initializeSchema() error {
 	createProjectsTableSQL := `
 	CREATE TABLE IF NOT EXISTS projects (
 		id VARCHAR(36) PRIMARY KEY,
-		name VARCHAR(255) NOT NULL UNIQUE,
+		tenant_id VARCHAR(36),
+		name VARCHAR(255) NOT NULL,
 		description TEXT,
 		display_prefix VARCHAR(10) NOT NULL,
 		task_counter INTEGER NOT NULL DEFAULT 0,
 		settings JSONB DEFAULT '{}'::jsonb,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+		UNIQUE(tenant_id, name)
 	);`
 
 	if _, err := ps.db.Exec(createProjectsTableSQL); err != nil {
@@ -121,6 +124,34 @@ func (ps *PostgresStorage) initializeSchema() error {
 
 	if _, err := ps.db.Exec(alterTableSQL); err != nil {
 		return fmt.Errorf("failed to add task_counter column: %w", err)
+	}
+
+	// Add tenant_id column to existing projects table if it doesn't exist
+	alterProjectsSQL := `
+	DO $$ 
+	BEGIN 
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='projects' AND column_name='tenant_id'
+		) THEN
+			ALTER TABLE projects ADD COLUMN tenant_id VARCHAR(36);
+		END IF;
+		
+		-- Add foreign key constraint if it doesn't exist
+		IF NOT EXISTS (
+			SELECT constraint_name 
+			FROM information_schema.table_constraints 
+			WHERE table_name='projects' AND constraint_name='fk_projects_tenant_id'
+		) THEN
+			ALTER TABLE projects 
+			ADD CONSTRAINT fk_projects_tenant_id 
+			FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterProjectsSQL); err != nil {
+		return fmt.Errorf("failed to add tenant_id column to projects: %w", err)
 	}
 
 	// Add display_id and project_id columns to existing tasks table if they don't exist
@@ -163,6 +194,8 @@ func (ps *PostgresStorage) initializeSchema() error {
 		"CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);",
 		"CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);",
 		// Projects table indexes
+		"CREATE INDEX IF NOT EXISTS idx_projects_tenant_id ON projects(tenant_id);",
+		"CREATE INDEX IF NOT EXISTS idx_projects_tenant_name ON projects(tenant_id, name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);",
 		"CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);",
 	}
