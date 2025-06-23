@@ -69,11 +69,47 @@ For detailed chat commands and examples, see the [Chat Interface Guide](docs/cha
 
 The chat interface supports multiple LLM providers:
 
-- **OpenAI GPT**: Use OpenAI's GPT models for natural language understanding and task management.
-- **Anthropic Claude**: Leverage Anthropic's Claude AI for conversational interactions.
-- **Cohere Command R**: Utilize Cohere's Command R model for command-based task handling.
+- **🚀 Ollama**: Use local LLM models for privacy and offline capability
+- **OpenAI GPT**: Use OpenAI's GPT models for natural language understanding
+- **Groq**: Fast cloud-based LLM inference
+- **Anthropic Claude**: Leverage Anthropic's Claude AI for conversational interactions
 
-Select your preferred LLM in the settings, and configure the API keys and parameters as needed.
+#### Quick Setup with Ollama (Local LLM)
+
+For the fastest setup with privacy and no API costs:
+
+```bash
+# Install Ollama
+brew install ollama  # macOS
+# or curl -fsSL https://ollama.com/install.sh | sh  # Linux
+
+# Start Ollama and install a model
+ollama serve &
+ollama pull llama3.2
+
+# Configure ProjectFlow
+export LLM_PROVIDER=ollama
+export LLM_OLLAMA_MODEL=llama3.2
+./projectflow
+```
+
+See the [Ollama Quick Start Guide](docs/ollama-quick-start.md) for detailed setup instructions.
+
+#### Cloud LLM Providers
+
+For cloud-based LLMs, configure your API key:
+
+```bash
+# For OpenAI
+export LLM_PROVIDER=openai
+export LLM_API_KEY=your-openai-key
+export LLM_MODEL=gpt-4
+
+# For Groq
+export LLM_PROVIDER=groq
+export LLM_API_KEY=your-groq-key
+export LLM_MODEL=llama-3.1-8b-instant
+```
 
 ## Environment Variables
 
@@ -98,12 +134,16 @@ Select your preferred LLM in the settings, and configure the API keys and parame
 - `DB_SSL_MODE`: SSL mode - disable, require, verify-ca, verify-full, prefer, allow (default: prefer)
 
 **LLM Configuration (for Chat Interface):**
-- `LLM_PROVIDER`: LLM provider - groq, ollama, openai, disabled (default: groq)
-- `LLM_API_KEY`: API key for the LLM provider (required for groq, openai)
+- `LLM_PROVIDER`: LLM provider - ollama, groq, openai, disabled (default: disabled)
+- `LLM_API_KEY`: API key for cloud LLM providers (required for groq, openai)
 - `LLM_BASE_URL`: Custom base URL for the LLM provider (optional)
-- `LLM_MODEL`: Model name to use (default: llama-3.1-8b-instant for Groq)
-- `LLM_TIMEOUT`: Request timeout in seconds (default: 30)
+- `LLM_MODEL`: Model name to use (default varies by provider)
+- `LLM_TIMEOUT`: Request timeout in seconds (default: 60)
 - `LLM_MAX_TOKENS`: Maximum tokens per response (default: 1000)
+
+**Ollama-specific (for local LLM):**
+- `LLM_OLLAMA_HOST`: Ollama server URL (default: http://localhost:11434)
+- `LLM_OLLAMA_MODEL`: Ollama model name (default: llama3.2)
 
 For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postgresql-storage.md).
 
@@ -125,6 +165,12 @@ For detailed PostgreSQL setup, see [PostgreSQL Storage Documentation](docs/postg
 
 - `POST /api/chat` - Send a natural language message to the chat interface
 - `GET /api/chat/history` - Retrieve conversation history
+
+### LLM API
+
+- `GET /api/llm/info` - Get LLM provider information and status
+- `GET /api/llm/health` - Check LLM provider health
+- `POST /api/llm/chat` - Send direct messages to the LLM (bypasses ProjectFlow translation)
 
 #### Chat Request/Response
 
@@ -165,6 +211,68 @@ GET /api/chat/history?conversation_id=uuid
   ],
   "created": "2025-06-22T15:17:44.334574Z",
   "updated": "2025-06-22T15:17:44.334574Z"
+}
+```
+
+#### LLM API Examples
+
+**Get LLM Info:**
+```json
+GET /api/llm/info
+
+{
+  "enabled": true,
+  "provider": "ollama",
+  "model": "llama3.2",
+  "status": "healthy",
+  "timestamp": "2025-06-23T08:56:47.927Z",
+  "metadata": {
+    "host": "http://localhost:11434",
+    "version": "0.1.17"
+  }
+}
+```
+
+**Check LLM Health:**
+```json
+GET /api/llm/health
+
+{
+  "healthy": true,
+  "status": "healthy",
+  "provider": "ollama",
+  "timestamp": "2025-06-23T08:56:47.927Z",
+  "duration_ms": 45,
+  "suggestions": []
+}
+```
+
+**Direct LLM Chat:**
+```json
+POST /api/llm/chat
+{
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "max_tokens": 1000,
+  "temperature": 0.7
+}
+
+Response:
+{
+  "response": {
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "Hello! How can I help you today?"
+        },
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "provider": "ollama",
+  "model": "llama3.2"
 }
 ```
 

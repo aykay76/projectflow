@@ -180,6 +180,17 @@
     border-bottom-left-radius: 4px;
 }
 
+/* Additional message error styles */
+.chat-message.error .message-text {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.chat-message.error .message-text a {
+    color: var(--accent-primary);
+    text-decoration: underline;
+}
+
 /* Message Metadata */
 .chat-message-meta {
     font-size: 11px;
@@ -334,6 +345,215 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* LLM Status Panel Styles */
+.chat-status-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+
+.chat-status-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.status-indicator {
+    font-size: 14px;
+    display: inline-block;
+}
+
+.chat-status-panel {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.status-content h4 {
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-item {
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.status-item:last-child {
+    margin-bottom: 0;
+}
+
+.status-item strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.status-item.error {
+    color: var(--error-color);
+    background: var(--error-bg);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--error-color);
+}
+
+.status-healthy {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.status-unhealthy {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+.status-disabled {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.status-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.btn-refresh-status {
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-refresh-status:hover {
+    background: var(--accent-hover);
+}
+
+/* Chat Mode Panel */
+.chat-mode-panel {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px;
+    font-size: 13px;
+}
+
+.mode-content h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.mode-option:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-primary);
+}
+
+.mode-option input[type="radio"] {
+    margin: 4px 0 0 0;
+    accent-color: var(--accent-primary);
+}
+
+.mode-info strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.mode-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.mode-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-apply-mode {
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-apply-mode:hover {
+    background: var(--accent-primary-dark);
+}
+
+/* Chat Mode Button */
+.chat-mode-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 8px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.chat-mode-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+#chat-mode-indicator {
+    font-size: 16px;
 }
 
 /* Mobile Responsiveness */

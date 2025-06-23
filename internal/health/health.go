@@ -3,7 +3,9 @@ package health
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aykay76/projectflow/internal/storage"
@@ -19,15 +21,18 @@ type HealthResponse struct {
 
 // Check represents an individual health check
 type Check struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
+	Name     string                 `json:"name"`
+	Status   string                 `json:"status"`
+	Error    string                 `json:"error,omitempty"`
+	Details  map[string]interface{} `json:"details,omitempty"`
+	Duration string                 `json:"duration,omitempty"`
 }
 
 // LLMService interface for health checking
 type LLMService interface {
 	HealthCheck(ctx context.Context) error
 	IsEnabled() bool
+	GetProviderInfo() map[string]interface{}
 }
 
 // HealthChecker provides health check functionality
@@ -114,17 +119,25 @@ func (h *HealthChecker) HandleReady(w http.ResponseWriter, r *http.Request) {
 
 // checkStorage verifies storage connectivity
 func (h *HealthChecker) checkStorage() Check {
+	start := time.Now()
 	check := Check{
-		Name: "storage",
+		Name:    "storage",
+		Details: make(map[string]interface{}),
 	}
 
 	// Try to list tasks to verify storage is working (use default project "ABC")
-	_, err := h.storage.ListTasks("ABC")
+	tasks, err := h.storage.ListTasks("ABC")
+	duration := time.Since(start)
+	check.Duration = duration.String()
+
 	if err != nil {
 		check.Status = "unhealthy"
 		check.Error = err.Error()
+		check.Details["message"] = "Failed to connect to storage backend"
 	} else {
 		check.Status = "healthy"
+		check.Details["message"] = "Storage backend is operational"
+		check.Details["tasks_count"] = len(tasks)
 	}
 
 	return check
@@ -132,24 +145,64 @@ func (h *HealthChecker) checkStorage() Check {
 
 // checkLLM verifies LLM service connectivity
 func (h *HealthChecker) checkLLM() Check {
+	start := time.Now()
 	check := Check{
-		Name: "llm",
+		Name:    "llm",
+		Details: make(map[string]interface{}),
 	}
 
-	if h.llmService == nil || !h.llmService.IsEnabled() {
-		check.Status = "disabled"
+	if h.llmService == nil {
+		check.Status = "not_configured"
+		check.Details["message"] = "LLM service not configured"
 		return check
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if !h.llmService.IsEnabled() {
+		check.Status = "disabled"
+		check.Details["message"] = "LLM service is disabled in configuration"
+		return check
+	}
+
+	// Get provider information
+	providerInfo := h.llmService.GetProviderInfo()
+	for key, value := range providerInfo {
+		check.Details[key] = value
+	}
+
+	// Perform health check with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second) // Longer timeout for Ollama
 	defer cancel()
 
 	err := h.llmService.HealthCheck(ctx)
+	duration := time.Since(start)
+	check.Duration = duration.String()
+
 	if err != nil {
 		check.Status = "unhealthy"
 		check.Error = err.Error()
+
+		// Add specific guidance for common Ollama issues
+		if provider, exists := check.Details["provider"]; exists && provider == "ollama" {
+			if duration > 10*time.Second {
+				check.Details["suggestion"] = "Health check timed out - ensure Ollama is running and responsive"
+			} else if err.Error() != "" {
+				switch {
+				case strings.Contains(err.Error(), "connection refused"):
+					check.Details["suggestion"] = "Ollama appears to be offline. Start Ollama with 'ollama serve'"
+				case strings.Contains(err.Error(), "model") && strings.Contains(err.Error(), "not found"):
+					check.Details["suggestion"] = "The configured model is not available. Run 'ollama pull <model-name>' to download it"
+				case strings.Contains(err.Error(), "timeout"):
+					check.Details["suggestion"] = "Ollama is responding slowly. Consider increasing timeout or checking system resources"
+				default:
+					check.Details["suggestion"] = "Check Ollama logs and ensure it's properly configured"
+				}
+			}
+		}
 	} else {
 		check.Status = "healthy"
+		if provider, exists := check.Details["provider"]; exists {
+			check.Details["message"] = fmt.Sprintf("LLM provider '%v' is operational", provider)
+		}
 	}
 
 	return check

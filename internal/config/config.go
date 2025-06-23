@@ -31,11 +31,11 @@ type Config struct {
 	LogFormat string `env:"LOG_FORMAT" default:"text"`
 
 	// LLM configuration
-	LLMProvider  string `env:"LLM_PROVIDER" default:"groq"`
+	LLMProvider  string `env:"LLM_PROVIDER" default:"disabled"`
 	LLMAPIKey    string `env:"LLM_API_KEY" default:""`
 	LLMBaseURL   string `env:"LLM_BASE_URL" default:""`
-	LLMModel     string `env:"LLM_MODEL" default:"llama-3.1-8b-instant"`
-	LLMTimeout   int    `env:"LLM_TIMEOUT" default:"30"`
+	LLMModel     string `env:"LLM_MODEL" default:"llama3.2"`
+	LLMTimeout   int    `env:"LLM_TIMEOUT" default:"60"`
 	LLMMaxTokens int    `env:"LLM_MAX_TOKENS" default:"1000"`
 }
 
@@ -54,11 +54,11 @@ func Load() (*Config, error) {
 		DatabaseSSLMode:  getEnv("DB_SSL_MODE", "prefer"),
 		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
 		LogFormat:        getEnv("LOG_FORMAT", "text"),
-		LLMProvider:      getEnv("LLM_PROVIDER", "groq"),
+		LLMProvider:      getEnv("LLM_PROVIDER", "disabled"),
 		LLMAPIKey:        getEnv("LLM_API_KEY", ""),
 		LLMBaseURL:       getEnv("LLM_BASE_URL", ""),
-		LLMModel:         getEnv("LLM_MODEL", "llama-3.1-8b-instant"),
-		LLMTimeout:       getEnvInt("LLM_TIMEOUT", 30),
+		LLMModel:         getEnv("LLM_MODEL", "llama3.2"),
+		LLMTimeout:       getEnvInt("LLM_TIMEOUT", 60),
 		LLMMaxTokens:     getEnvInt("LLM_MAX_TOKENS", 1000),
 	}
 
@@ -194,6 +194,11 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("LLM_MAX_TOKENS must be between 1 and 10000, got: %d", c.LLMMaxTokens)
 	}
 
+	// Perform provider-specific validation
+	if err := c.ValidateOllamaConfiguration(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -292,6 +297,52 @@ func (c *Config) IsLLMEnabled() bool {
 // GetLLMTimeout returns the LLM timeout as a time.Duration
 func (c *Config) GetLLMTimeoutDuration() int {
 	return c.LLMTimeout
+}
+
+// GetOllamaBaseURL returns the Ollama base URL, defaulting if not set
+func (c *Config) GetOllamaBaseURL() string {
+	if c.LLMBaseURL != "" {
+		return c.LLMBaseURL
+	}
+	return "http://localhost:11434" // Default Ollama URL
+}
+
+// IsOllamaProvider returns true if the current LLM provider is Ollama
+func (c *Config) IsOllamaProvider() bool {
+	return c.GetLLMProvider() == "ollama"
+}
+
+// ValidateOllamaConfiguration performs Ollama-specific validation
+func (c *Config) ValidateOllamaConfiguration() error {
+	if !c.IsOllamaProvider() {
+		return nil // Skip validation if not using Ollama
+	}
+
+	// Validate base URL format for Ollama
+	baseURL := c.GetOllamaBaseURL()
+	if baseURL == "" {
+		return fmt.Errorf("LLM_BASE_URL cannot be empty when using Ollama provider")
+	}
+
+	// Basic URL validation - ensure it looks like a URL
+	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		return fmt.Errorf("LLM_BASE_URL must be a valid HTTP/HTTPS URL when using Ollama, got: %s", baseURL)
+	}
+
+	// Validate model name for Ollama (should not be empty)
+	if c.LLMModel == "" {
+		return fmt.Errorf("LLM_MODEL cannot be empty when using Ollama provider")
+	}
+
+	// Recommend longer timeout for Ollama
+	if c.LLMTimeout < 30 {
+		// This is just a warning in logs, not an error
+		slog.Warn("LLM_TIMEOUT is quite short for Ollama (local inference can be slow)",
+			"current_timeout", c.LLMTimeout,
+			"recommended_minimum", 30)
+	}
+
+	return nil
 }
 
 // getEnv returns environment variable value or default
