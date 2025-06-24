@@ -55,6 +55,32 @@ type Storage interface {
 	// Returns error if project not found
 	GetProjectByDisplayPrefix(ctx context.Context, displayPrefix string) (*models.Project, error)
 
+	// Tenant operations
+	// CreateTenant creates a new tenant in storage
+	// Returns error if tenant with same name already exists or validation fails
+	CreateTenant(ctx context.Context, tenant *models.Tenant) error
+
+	// GetTenant retrieves a tenant by its ID
+	// Returns error if tenant not found
+	GetTenant(ctx context.Context, id string) (*models.Tenant, error)
+
+	// UpdateTenant updates an existing tenant with optimistic locking
+	// Returns error if tenant not found, validation fails, or concurrent modification detected
+	UpdateTenant(ctx context.Context, tenant *models.Tenant) error
+
+	// DeleteTenant removes a tenant by ID (soft delete)
+	// Returns error if tenant not found
+	DeleteTenant(ctx context.Context, id string) error
+
+	// ListTenants returns a paginated list of tenants
+	// limit: maximum number of tenants to return (0 for no limit)
+	// offset: number of tenants to skip for pagination
+	// Returns tenants, total count, and error
+	ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error)
+
+	// TenantExists checks if a tenant exists by ID
+	TenantExists(ctx context.Context, id string) bool
+
 	// Utility operations
 	TaskExists(ctx context.Context, id string) bool
 	ProjectExists(ctx context.Context, id string) bool
