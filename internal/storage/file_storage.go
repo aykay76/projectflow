@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aykay76/projectflow/internal/models"
 	"github.com/google/uuid"
@@ -30,6 +31,12 @@ func NewFileStorage(dataDir string) (*FileStorage, error) {
 	projectsDir := filepath.Join(dataDir, "projects")
 	if err := os.MkdirAll(projectsDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create projects directory: %w", err)
+	}
+
+	// Create tenants subdirectory
+	tenantsDir := filepath.Join(dataDir, "tenants")
+	if err := os.MkdirAll(tenantsDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create tenants directory: %w", err)
 	}
 
 	fs := &FileStorage{
@@ -957,4 +964,319 @@ func (fs *FileStorage) MigrateProjectFilesToDisplayPrefix() error {
 	}
 
 	return nil
+}
+
+// Tenant CRUD Operations for File Storage
+
+// CreateTenant creates a new tenant in file storage
+func (fs *FileStorage) CreateTenant(ctx context.Context, tenant *models.Tenant) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	// Validate tenant data
+	if err := tenant.Validate(); err != nil {
+		return fmt.Errorf("tenant validation failed: %w", err)
+	}
+
+	// Generate UUID for new tenant
+	tenant.ID = uuid.New().String()
+
+	// Create tenants directory if it doesn't exist
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+	if err := os.MkdirAll(tenantsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create tenants directory: %w", err)
+	}
+
+	// Check if tenant with same name already exists
+	if exists, err := fs.tenantNameExists(tenant.Name); err != nil {
+		return fmt.Errorf("failed to check tenant name existence: %w", err)
+	} else if exists {
+		return fmt.Errorf("tenant with name '%s' already exists", tenant.Name)
+	}
+
+	// Save tenant to file
+	tenantPath := filepath.Join(tenantsDir, tenant.ID+".json")
+	data, err := json.MarshalIndent(tenant, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal tenant data: %w", err)
+	}
+
+	if err := os.WriteFile(tenantPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write tenant file: %w", err)
+	}
+
+	return nil
+}
+
+// GetTenant retrieves a tenant by its ID from file storage
+func (fs *FileStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+	tenantPath := filepath.Join(tenantsDir, id+".json")
+
+	data, err := os.ReadFile(tenantPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("tenant with id %s not found", id)
+		}
+		return nil, fmt.Errorf("failed to read tenant file: %w", err)
+	}
+
+	var tenant models.Tenant
+	if err := json.Unmarshal(data, &tenant); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal tenant data: %w", err)
+	}
+
+	// Don't return deleted tenants
+	if tenant.IsDeleted() {
+		return nil, fmt.Errorf("tenant with id %s not found", id)
+	}
+
+	return &tenant, nil
+}
+
+// UpdateTenant updates an existing tenant in file storage with optimistic locking
+func (fs *FileStorage) UpdateTenant(ctx context.Context, tenant *models.Tenant) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	// Validate tenant data
+	if err := tenant.Validate(); err != nil {
+		return fmt.Errorf("tenant validation failed: %w", err)
+	}
+
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+	tenantPath := filepath.Join(tenantsDir, tenant.ID+".json")
+
+	// Check if tenant exists and get current data for optimistic locking
+	currentData, err := os.ReadFile(tenantPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("tenant with id %s not found", tenant.ID)
+		}
+		return fmt.Errorf("failed to read current tenant file: %w", err)
+	}
+
+	var currentTenant models.Tenant
+	if err := json.Unmarshal(currentData, &currentTenant); err != nil {
+		return fmt.Errorf("failed to unmarshal current tenant data: %w", err)
+	}
+
+	// Optimistic locking check - compare timestamps
+	if !currentTenant.UpdatedAt.Equal(tenant.UpdatedAt) {
+		return fmt.Errorf("tenant has been modified by another process: expected updated_at %v, got %v", tenant.UpdatedAt, currentTenant.UpdatedAt)
+	}
+
+	// Check if tenant with same name already exists (excluding current tenant)
+	if exists, existingID, err := fs.tenantNameExistsExcluding(tenant.Name, tenant.ID); err != nil {
+		return fmt.Errorf("failed to check tenant name existence: %w", err)
+	} else if exists {
+		return fmt.Errorf("tenant with name '%s' already exists (ID: %s)", tenant.Name, existingID)
+	}
+
+	// Update timestamp
+	tenant.UpdatedAt = time.Now()
+
+	// Save updated tenant to file
+	data, err := json.MarshalIndent(tenant, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal tenant data: %w", err)
+	}
+
+	if err := os.WriteFile(tenantPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write tenant file: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteTenant removes a tenant by ID (soft delete) in file storage
+func (fs *FileStorage) DeleteTenant(ctx context.Context, id string) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+	tenantPath := filepath.Join(tenantsDir, id+".json")
+
+	// Check if tenant exists
+	data, err := os.ReadFile(tenantPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("tenant with id %s not found", id)
+		}
+		return fmt.Errorf("failed to read tenant file: %w", err)
+	}
+
+	var tenant models.Tenant
+	if err := json.Unmarshal(data, &tenant); err != nil {
+		return fmt.Errorf("failed to unmarshal tenant data: %w", err)
+	}
+
+	// Check if already deleted
+	if tenant.IsDeleted() {
+		return fmt.Errorf("tenant with id %s not found or already deleted", id)
+	}
+
+	// Soft delete: update status to 'deleted'
+	tenant.Delete() // This sets status to 'deleted' and updates timestamp
+
+	// Save updated tenant to file
+	updatedData, err := json.MarshalIndent(tenant, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated tenant data: %w", err)
+	}
+
+	if err := os.WriteFile(tenantPath, updatedData, 0644); err != nil {
+		return fmt.Errorf("failed to write updated tenant file: %w", err)
+	}
+
+	return nil
+}
+
+// ListTenants returns a paginated list of tenants from file storage
+func (fs *FileStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+
+	// Read all tenant files
+	files, err := os.ReadDir(tenantsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Tenant{}, 0, nil
+		}
+		return nil, 0, fmt.Errorf("failed to read tenants directory: %w", err)
+	}
+
+	var allTenants []*models.Tenant
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			tenantPath := filepath.Join(tenantsDir, file.Name())
+			data, err := os.ReadFile(tenantPath)
+			if err != nil {
+				continue // Skip files we can't read
+			}
+
+			var tenant models.Tenant
+			if err := json.Unmarshal(data, &tenant); err != nil {
+				continue // Skip files we can't parse
+			}
+
+			// Only include non-deleted tenants
+			if !tenant.IsDeleted() {
+				allTenants = append(allTenants, &tenant)
+			}
+		}
+	}
+
+	totalCount := len(allTenants)
+
+	// Apply pagination
+	var result []*models.Tenant
+	if offset < totalCount {
+		end := offset + limit
+		if limit <= 0 || end > totalCount {
+			end = totalCount
+		}
+		result = allTenants[offset:end]
+	}
+
+	return result, totalCount, nil
+}
+
+// TenantExists checks if a tenant exists by ID in file storage
+func (fs *FileStorage) TenantExists(ctx context.Context, id string) bool {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+	tenantPath := filepath.Join(tenantsDir, id+".json")
+
+	data, err := os.ReadFile(tenantPath)
+	if err != nil {
+		return false
+	}
+
+	var tenant models.Tenant
+	if err := json.Unmarshal(data, &tenant); err != nil {
+		return false
+	}
+
+	// Only return true for non-deleted tenants
+	return !tenant.IsDeleted()
+}
+
+// Helper functions for file storage tenant operations
+
+// tenantNameExists checks if a tenant with the given name already exists
+func (fs *FileStorage) tenantNameExists(name string) (bool, error) {
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+
+	files, err := os.ReadDir(tenantsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read tenants directory: %w", err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			tenantPath := filepath.Join(tenantsDir, file.Name())
+			data, err := os.ReadFile(tenantPath)
+			if err != nil {
+				continue // Skip files we can't read
+			}
+
+			var tenant models.Tenant
+			if err := json.Unmarshal(data, &tenant); err != nil {
+				continue // Skip files we can't parse
+			}
+
+			// Check name match for non-deleted tenants
+			if !tenant.IsDeleted() && tenant.Name == name {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// tenantNameExistsExcluding checks if a tenant with the given name exists, excluding a specific tenant ID
+func (fs *FileStorage) tenantNameExistsExcluding(name, excludeID string) (bool, string, error) {
+	tenantsDir := filepath.Join(fs.dataDir, "tenants")
+
+	files, err := os.ReadDir(tenantsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, "", nil
+		}
+		return false, "", fmt.Errorf("failed to read tenants directory: %w", err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			tenantPath := filepath.Join(tenantsDir, file.Name())
+			data, err := os.ReadFile(tenantPath)
+			if err != nil {
+				continue // Skip files we can't read
+			}
+
+			var tenant models.Tenant
+			if err := json.Unmarshal(data, &tenant); err != nil {
+				continue // Skip files we can't parse
+			}
+
+			// Check name match for non-deleted tenants, excluding the specified ID
+			if !tenant.IsDeleted() && tenant.Name == name && tenant.ID != excludeID {
+				return true, tenant.ID, nil
+			}
+		}
+	}
+
+	return false, "", nil
 }

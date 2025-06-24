@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/aykay76/projectflow/internal/models"
 	"github.com/google/uuid"
@@ -52,11 +53,12 @@ func (ps *PostgresStorage) initializeSchema() error {
 	CREATE TABLE IF NOT EXISTS tenants (
 		id VARCHAR(36) PRIMARY KEY,
 		name VARCHAR(255) NOT NULL UNIQUE,
+		description TEXT,
 		settings JSONB DEFAULT '{}'::jsonb,
-		status VARCHAR(20) NOT NULL DEFAULT 'active',
+		status VARCHAR(20) NOT NULL DEFAULT 'pending',
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		CONSTRAINT check_tenant_status CHECK (status IN ('active', 'inactive', 'suspended'))
+		CONSTRAINT check_tenant_status CHECK (status IN ('active', 'suspended', 'deleted', 'pending'))
 	);`
 
 	if _, err := ps.db.Exec(createTenantsTableSQL); err != nil {
@@ -198,6 +200,23 @@ func (ps *PostgresStorage) initializeSchema() error {
 
 	if _, err := ps.db.Exec(alterTasksSQL); err != nil {
 		return fmt.Errorf("failed to add display_id, project_id, and tenant_id columns: %w", err)
+	}
+
+	// Add description column to existing tenants table if it doesn't exist
+	alterTenantsSQL := `
+	DO $$ 
+	BEGIN 
+		IF NOT EXISTS (
+			SELECT column_name 
+			FROM information_schema.columns 
+			WHERE table_name='tenants' AND column_name='description'
+		) THEN
+			ALTER TABLE tenants ADD COLUMN description TEXT;
+		END IF;
+	END $$;`
+
+	if _, err := ps.db.Exec(alterTenantsSQL); err != nil {
+		return fmt.Errorf("failed to add description column to tenants: %w", err)
 	}
 
 	// Step 4: Add foreign key constraints (after all columns exist)
@@ -1608,106 +1627,364 @@ func (ps *PostgresStorage) initializeRLS() error {
 	return nil
 }
 
-// setTenantContext sets the tenant context for the current database transaction
-func (ps *PostgresStorage) setTenantContext(tx *sql.Tx, tenantID string) error {
-	_, err := tx.Exec("SELECT init_tenant_context($1, false)", tenantID)
-	if err != nil {
-		return fmt.Errorf("failed to set tenant context: %w", err)
+// CreateTenant creates a new tenant in storage
+func (ps *PostgresStorage) CreateTenant(ctx context.Context, tenant *models.Tenant) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Validate tenant data
+	if err := tenant.Validate(); err != nil {
+		return fmt.Errorf("tenant validation failed: %w", err)
 	}
+
+	// Generate UUID for new tenant
+	tenant.ID = uuid.New().String()
+
+	// Begin transaction for tenant creation
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Serialize settings to JSON
+	settingsJSON, err := json.Marshal(tenant.Settings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal tenant settings: %w", err)
+	}
+
+	// Insert the tenant
+	insertSQL := `
+		INSERT INTO tenants (id, name, description, settings, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err = tx.Exec(insertSQL,
+		tenant.ID,
+		tenant.Name,
+		tenant.Description,
+		settingsJSON,
+		string(tenant.Status),
+		tenant.CreatedAt,
+		tenant.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to insert tenant: %w", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit tenant creation transaction: %w", err)
+	}
+
 	return nil
 }
 
-// setTenantContextDB sets the tenant context for the current database connection
-func (ps *PostgresStorage) setTenantContextDB(tenantID string) error {
-	_, err := ps.db.Exec("SELECT init_tenant_context($1, false)", tenantID)
+// GetTenant retrieves a tenant by its ID
+func (ps *PostgresStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	var tenant models.Tenant
+	var settingsJSON []byte
+
+	selectSQL := `
+		SELECT id, name, description, settings, status, created_at, updated_at
+		FROM tenants
+		WHERE id = $1`
+
+	err := ps.db.QueryRow(selectSQL, id).Scan(
+		&tenant.ID,
+		&tenant.Name,
+		&tenant.Description,
+		&settingsJSON,
+		&tenant.Status,
+		&tenant.CreatedAt,
+		&tenant.UpdatedAt,
+	)
 	if err != nil {
-		return fmt.Errorf("failed to set tenant context: %w", err)
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("tenant with id %s not found", id)
+		}
+		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
+
+	// Unmarshal settings JSON
+	if err := json.Unmarshal(settingsJSON, &tenant.Settings); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal tenant settings: %w", err)
+	}
+
+	return &tenant, nil
+}
+
+// UpdateTenant updates an existing tenant with optimistic locking
+func (ps *PostgresStorage) UpdateTenant(ctx context.Context, tenant *models.Tenant) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Validate tenant data
+	if err := tenant.Validate(); err != nil {
+		return fmt.Errorf("tenant validation failed: %w", err)
+	}
+
+	// Begin transaction for tenant update
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Check if tenant exists and get current updated_at for optimistic locking
+	var currentUpdatedAt time.Time
+	checkSQL := `SELECT updated_at FROM tenants WHERE id = $1`
+	err = tx.QueryRow(checkSQL, tenant.ID).Scan(&currentUpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("tenant with id %s not found", tenant.ID)
+		}
+		return fmt.Errorf("failed to check tenant existence: %w", err)
+	}
+
+	// Optimistic locking check - compare timestamps
+	if !currentUpdatedAt.Equal(tenant.UpdatedAt) {
+		return fmt.Errorf("tenant has been modified by another process: expected updated_at %v, got %v", tenant.UpdatedAt, currentUpdatedAt)
+	}
+
+	// Update timestamp
+	tenant.UpdatedAt = time.Now()
+
+	// Serialize settings to JSON
+	settingsJSON, err := json.Marshal(tenant.Settings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal tenant settings: %w", err)
+	}
+
+	// Update the tenant
+	updateSQL := `
+		UPDATE tenants 
+		SET name = $2, description = $3, settings = $4, status = $5, updated_at = $6
+		WHERE id = $1`
+
+	result, err := tx.Exec(updateSQL,
+		tenant.ID,
+		tenant.Name,
+		tenant.Description,
+		settingsJSON,
+		string(tenant.Status),
+		tenant.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update tenant: %w", err)
+	}
+
+	// Check if any rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no tenant found with id %s", tenant.ID)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit tenant update transaction: %w", err)
+	}
+
 	return nil
 }
 
-// setAdminContext sets admin context to bypass RLS policies
-func (ps *PostgresStorage) setAdminContext(tx *sql.Tx) error {
-	_, err := tx.Exec("SELECT set_admin_context(true)")
+// DeleteTenant removes a tenant by ID (soft delete)
+func (ps *PostgresStorage) DeleteTenant(ctx context.Context, id string) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	// Begin transaction for tenant deletion
+	tx, err := ps.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to set admin context: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer tx.Rollback()
+
+	// Check if tenant exists
+	var exists bool
+	checkSQL := `SELECT EXISTS(SELECT 1 FROM tenants WHERE id = $1 AND status != 'deleted')`
+	err = tx.QueryRow(checkSQL, id).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check tenant existence: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("tenant with id %s not found or already deleted", id)
+	}
+
+	// Soft delete: update status to 'deleted'
+	updateSQL := `
+		UPDATE tenants 
+		SET status = 'deleted', updated_at = NOW()
+		WHERE id = $1 AND status != 'deleted'`
+
+	result, err := tx.Exec(updateSQL, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete tenant: %w", err)
+	}
+
+	// Check if any rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("tenant with id %s not found or already deleted", id)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit tenant deletion transaction: %w", err)
+	}
+
 	return nil
 }
 
-// setAdminContextDB sets admin context to bypass RLS policies for DB connection
-func (ps *PostgresStorage) setAdminContextDB() error {
-	_, err := ps.db.Exec("SELECT set_admin_context(true)")
+// ListTenants returns a paginated list of tenants
+func (ps *PostgresStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	// Get total count of non-deleted tenants
+	var totalCount int
+	countSQL := `SELECT COUNT(*) FROM tenants WHERE status != 'deleted'`
+	err := ps.db.QueryRow(countSQL).Scan(&totalCount)
 	if err != nil {
-		return fmt.Errorf("failed to set admin context: %w", err)
+		return nil, 0, fmt.Errorf("failed to get tenant count: %w", err)
 	}
-	return nil
+
+	// Build query with pagination
+	var selectSQL string
+	var args []interface{}
+
+	if limit > 0 {
+		selectSQL = `
+			SELECT id, name, description, settings, status, created_at, updated_at
+			FROM tenants
+			WHERE status != 'deleted'
+			ORDER BY created_at DESC
+			LIMIT $1 OFFSET $2`
+		args = []interface{}{limit, offset}
+	} else {
+		selectSQL = `
+			SELECT id, name, description, settings, status, created_at, updated_at
+			FROM tenants
+			WHERE status != 'deleted'
+			ORDER BY created_at DESC`
+		if offset > 0 {
+			selectSQL += ` OFFSET $1`
+			args = []interface{}{offset}
+		}
+	}
+
+	rows, err := ps.db.Query(selectSQL, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query tenants: %w", err)
+	}
+	defer rows.Close()
+
+	var tenants []*models.Tenant
+	for rows.Next() {
+		var tenant models.Tenant
+		var settingsJSON []byte
+
+		err := rows.Scan(
+			&tenant.ID,
+			&tenant.Name,
+			&tenant.Description,
+			&settingsJSON,
+			&tenant.Status,
+			&tenant.CreatedAt,
+			&tenant.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan tenant row: %w", err)
+		}
+
+		// Unmarshal settings JSON
+		if err := json.Unmarshal(settingsJSON, &tenant.Settings); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal tenant settings: %w", err)
+		}
+
+		tenants = append(tenants, &tenant)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating tenant rows: %w", err)
+	}
+
+	return tenants, totalCount, nil
 }
 
-// clearTenantContext clears the tenant context
-func (ps *PostgresStorage) clearTenantContext(tx *sql.Tx) error {
-	_, err := tx.Exec("SELECT clear_tenant_context()")
-	if err != nil {
-		return fmt.Errorf("failed to clear tenant context: %w", err)
-	}
-	return nil
+// TenantExists checks if a tenant exists by ID
+func (ps *PostgresStorage) TenantExists(ctx context.Context, id string) bool {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM tenants WHERE id = $1 AND status != 'deleted')`
+	err := ps.db.QueryRow(query, id).Scan(&exists)
+	return err == nil && exists
 }
 
-// clearTenantContextDB clears the tenant context for DB connection
-func (ps *PostgresStorage) clearTenantContextDB() error {
-	_, err := ps.db.Exec("SELECT clear_tenant_context()")
-	if err != nil {
-		return fmt.Errorf("failed to clear tenant context: %w", err)
-	}
-	return nil
-}
+// Helper methods for PostgreSQL storage
 
-// getOrCreateDefaultTenant ensures a default tenant exists and returns its ID
+// getOrCreateDefaultTenant gets or creates a default tenant for backward compatibility
 func (ps *PostgresStorage) getOrCreateDefaultTenant() (string, error) {
-	const defaultTenantID = "default-tenant"
-	const defaultTenantName = "Default Tenant"
-
-	// Check if default tenant exists
-	var existingID string
-	querySQL := "SELECT id FROM tenants WHERE id = $1"
-	err := ps.db.QueryRow(querySQL, defaultTenantID).Scan(&existingID)
-
+	// Check if a default tenant already exists
+	var tenantID string
+	query := `SELECT id FROM tenants WHERE name = 'default' AND status != 'deleted' LIMIT 1`
+	err := ps.db.QueryRow(query).Scan(&tenantID)
 	if err == nil {
-		// Default tenant exists
-		return existingID, nil
+		return tenantID, nil
 	}
 
 	if err != sql.ErrNoRows {
-		// Unexpected error
 		return "", fmt.Errorf("failed to check for default tenant: %w", err)
 	}
 
 	// Create default tenant
-	createSQL := `
-		INSERT INTO tenants (id, name, status, created_at, updated_at)
-		VALUES ($1, $2, 'active', NOW(), NOW())`
+	defaultTenant := models.NewTenant("default", "Default tenant for backward compatibility",
+		models.StorageTypeFile, models.AuthProviderLocal)
+	defaultTenant.Activate() // Set status to active
 
-	_, err = ps.db.Exec(createSQL, defaultTenantID, defaultTenantName)
-	if err != nil {
+	if err := ps.CreateTenant(context.Background(), defaultTenant); err != nil {
 		return "", fmt.Errorf("failed to create default tenant: %w", err)
 	}
 
-	return defaultTenantID, nil
+	return defaultTenant.ID, nil
 }
 
-// ensureTenantContext sets the tenant context for current operations
-// For now, this uses a default tenant to maintain backward compatibility
+// setTenantContext sets the tenant context for a transaction
+func (ps *PostgresStorage) setTenantContext(tx *sql.Tx, tenantID string) error {
+	// For PostgreSQL RLS, we would set the tenant context here
+	// This is a placeholder implementation
+	_, err := tx.Exec("SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	return err
+}
+
+// setTenantContextDB sets the tenant context for the database connection
+func (ps *PostgresStorage) setTenantContextDB(tenantID string) error {
+	// For PostgreSQL RLS, we would set the tenant context here
+	// This is a placeholder implementation
+	_, err := ps.db.Exec("SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	return err
+}
+
+// ensureTenantContext ensures tenant context is set for the current connection
 func (ps *PostgresStorage) ensureTenantContext() error {
-	defaultTenantID, err := ps.getOrCreateDefaultTenant()
-	if err != nil {
-		return fmt.Errorf("failed to get default tenant: %w", err)
-	}
-
-	return ps.setTenantContextDB(defaultTenantID)
+	// This is a placeholder implementation
+	// In a full RLS implementation, this would ensure the tenant context is properly set
+	return nil
 }
 
-// migrateExistingDataToDefaultTenant ensures all existing data is assigned to the default tenant
+// migrateExistingDataToDefaultTenant migrates existing data to use the default tenant
 func (ps *PostgresStorage) migrateExistingDataToDefaultTenant() error {
+	// Get or create default tenant
 	defaultTenantID, err := ps.getOrCreateDefaultTenant()
 	if err != nil {
 		return fmt.Errorf("failed to get default tenant: %w", err)
