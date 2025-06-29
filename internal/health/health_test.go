@@ -25,33 +25,49 @@ func (m *MockStorage) ListTasks(ctx context.Context, projectID string) ([]*model
 }
 
 func (m *MockStorage) GetTask(ctx context.Context, id string) (*models.Task, error) { return nil, nil }
-func (m *MockStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) { return nil, nil }
-func (m *MockStorage) CreateTask(ctx context.Context, task *models.Task) error      { return nil }
-func (m *MockStorage) UpdateTask(ctx context.Context, task *models.Task) error      { return nil }
-func (m *MockStorage) DeleteTask(ctx context.Context, id string) error              { return nil }
+func (m *MockStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) {
+	return nil, nil
+}
+func (m *MockStorage) CreateTask(ctx context.Context, task *models.Task) error { return nil }
+func (m *MockStorage) UpdateTask(ctx context.Context, task *models.Task) error { return nil }
+func (m *MockStorage) DeleteTask(ctx context.Context, id string) error         { return nil }
 func (m *MockStorage) GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error) {
 	return nil, nil
 }
-func (m *MockStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) { return nil, nil }
-func (m *MockStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) { return nil, nil }
-func (m *MockStorage) ListProjects(ctx context.Context) ([]*models.Project, error)           { return nil, nil }
-func (m *MockStorage) GetProject(ctx context.Context, id string) (*models.Project, error)     { return nil, nil }
-func (m *MockStorage) CreateProject(ctx context.Context, project *models.Project) error       { return nil }
-func (m *MockStorage) UpdateProject(ctx context.Context, project *models.Project) error       { return nil }
-func (m *MockStorage) DeleteProject(ctx context.Context, id string) error                     { return nil }
-func (m *MockStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) { return nil, nil }
-func (m *MockStorage) Close() error                                      { return nil }
-func (m *MockStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) { return "1", nil }
+func (m *MockStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) {
+	return nil, nil
+}
+func (m *MockStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
+	return nil, nil
+}
+func (m *MockStorage) ListProjects(ctx context.Context) ([]*models.Project, error) { return nil, nil }
+func (m *MockStorage) GetProject(ctx context.Context, id string) (*models.Project, error) {
+	return nil, nil
+}
+func (m *MockStorage) CreateProject(ctx context.Context, project *models.Project) error { return nil }
+func (m *MockStorage) UpdateProject(ctx context.Context, project *models.Project) error { return nil }
+func (m *MockStorage) DeleteProject(ctx context.Context, id string) error               { return nil }
+func (m *MockStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) {
+	return nil, nil
+}
+func (m *MockStorage) Close() error { return nil }
+func (m *MockStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) {
+	return "1", nil
+}
 func (m *MockStorage) GetProjectByDisplayPrefix(ctx context.Context, prefix string) (*models.Project, error) {
 	return nil, nil
 }
 func (m *MockStorage) CreateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
-func (m *MockStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) { return nil, nil }
+func (m *MockStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) {
+	return nil, nil
+}
 func (m *MockStorage) UpdateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
-func (m *MockStorage) DeleteTenant(ctx context.Context, id string) error { return nil }
-func (m *MockStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) { return nil, 0, nil }
-func (m *MockStorage) TenantExists(ctx context.Context, id string) bool { return false }
-func (m *MockStorage) TaskExists(ctx context.Context, id string) bool { return false }
+func (m *MockStorage) DeleteTenant(ctx context.Context, id string) error             { return nil }
+func (m *MockStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) {
+	return nil, 0, nil
+}
+func (m *MockStorage) TenantExists(ctx context.Context, id string) bool  { return false }
+func (m *MockStorage) TaskExists(ctx context.Context, id string) bool    { return false }
 func (m *MockStorage) ProjectExists(ctx context.Context, id string) bool { return false }
 
 // MockLLMService for testing

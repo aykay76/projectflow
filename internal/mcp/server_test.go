@@ -188,10 +188,14 @@ func (m *mockStorage) Close() error {
 
 // Tenant operations - stubs for interface compliance
 func (m *mockStorage) CreateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
-func (m *mockStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) { return nil, nil }
+func (m *mockStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) {
+	return nil, nil
+}
 func (m *mockStorage) UpdateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
-func (m *mockStorage) DeleteTenant(ctx context.Context, id string) error { return nil }
-func (m *mockStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) { return nil, 0, nil }
+func (m *mockStorage) DeleteTenant(ctx context.Context, id string) error             { return nil }
+func (m *mockStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) {
+	return nil, 0, nil
+}
 func (m *mockStorage) TenantExists(ctx context.Context, id string) bool { return false }
 
 func TestMCPServer_Initialize(t *testing.T) {
