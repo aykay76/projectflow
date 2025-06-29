@@ -37,7 +37,7 @@ func (m *mockStorage) GetTask(ctx context.Context, id string) (*models.Task, err
 	return task, nil
 }
 
-func (m *mockStorage) UpdateTask(task *models.Task) error {
+func (m *mockStorage) UpdateTask(ctx context.Context, task *models.Task) error {
 	if _, exists := m.tasks[task.ID]; !exists {
 		return ErrTaskNotFound
 	}
@@ -45,7 +45,7 @@ func (m *mockStorage) UpdateTask(task *models.Task) error {
 	return nil
 }
 
-func (m *mockStorage) DeleteTask(id string) error {
+func (m *mockStorage) DeleteTask(ctx context.Context, id string) error {
 	if _, exists := m.tasks[id]; !exists {
 		return ErrTaskNotFound
 	}
@@ -53,7 +53,7 @@ func (m *mockStorage) DeleteTask(id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListTasks(projectID string) ([]*models.Task, error) {
+func (m *mockStorage) ListTasks(ctx context.Context, projectID string) ([]*models.Task, error) {
 	tasks := make([]*models.Task, 0, len(m.tasks))
 	for _, task := range m.tasks {
 		// Filter by project ID if specified
@@ -64,7 +64,7 @@ func (m *mockStorage) ListTasks(projectID string) ([]*models.Task, error) {
 	return tasks, nil
 }
 
-func (m *mockStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
+func (m *mockStorage) GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error) {
 	var children []*models.Task
 	for _, task := range m.tasks {
 		if task.ParentID == parentID {
@@ -74,7 +74,7 @@ func (m *mockStorage) GetTaskChildren(parentID string) ([]*models.Task, error) {
 	return children, nil
 }
 
-func (m *mockStorage) GetTaskParent(childID string) (*models.Task, error) {
+func (m *mockStorage) GetTaskParent(ctx context.Context, childID string) (*models.Task, error) {
 	child, exists := m.tasks[childID]
 	if !exists {
 		return nil, ErrTaskNotFound
@@ -82,10 +82,10 @@ func (m *mockStorage) GetTaskParent(childID string) (*models.Task, error) {
 	if child.ParentID == "" {
 		return nil, ErrTaskNotFound
 	}
-	return m.GetTask(child.ParentID)
+	return m.GetTask(ctx, child.ParentID)
 }
 
-func (m *mockStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
+func (m *mockStorage) GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error) {
 	var rootTasks []*models.HierarchyTask
 	for _, task := range m.tasks {
 		if task.ParentID == "" {
@@ -100,12 +100,12 @@ func (m *mockStorage) GetTaskHierarchy() ([]*models.HierarchyTask, error) {
 }
 
 // Project operations
-func (m *mockStorage) CreateProject(project *models.Project) error {
+func (m *mockStorage) CreateProject(ctx context.Context, project *models.Project) error {
 	m.projects[project.ID] = project
 	return nil
 }
 
-func (m *mockStorage) GetProject(id string) (*models.Project, error) {
+func (m *mockStorage) GetProject(ctx context.Context, id string) (*models.Project, error) {
 	project, exists := m.projects[id]
 	if !exists {
 		return nil, errors.New("project not found")
@@ -113,7 +113,7 @@ func (m *mockStorage) GetProject(id string) (*models.Project, error) {
 	return project, nil
 }
 
-func (m *mockStorage) UpdateProject(project *models.Project) error {
+func (m *mockStorage) UpdateProject(ctx context.Context, project *models.Project) error {
 	if _, exists := m.projects[project.ID]; !exists {
 		return errors.New("project not found")
 	}
@@ -121,7 +121,7 @@ func (m *mockStorage) UpdateProject(project *models.Project) error {
 	return nil
 }
 
-func (m *mockStorage) DeleteProject(id string) error {
+func (m *mockStorage) DeleteProject(ctx context.Context, id string) error {
 	if _, exists := m.projects[id]; !exists {
 		return errors.New("project not found")
 	}
@@ -129,7 +129,7 @@ func (m *mockStorage) DeleteProject(id string) error {
 	return nil
 }
 
-func (m *mockStorage) ListProjects() ([]*models.Project, error) {
+func (m *mockStorage) ListProjects(ctx context.Context) ([]*models.Project, error) {
 	projects := make([]*models.Project, 0, len(m.projects))
 	for _, project := range m.projects {
 		projects = append(projects, project)
@@ -137,7 +137,7 @@ func (m *mockStorage) ListProjects() ([]*models.Project, error) {
 	return projects, nil
 }
 
-func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
+func (m *mockStorage) GetProjectByName(ctx context.Context, name string) (*models.Project, error) {
 	for _, project := range m.projects {
 		if project.Name == name {
 			return project, nil
@@ -146,7 +146,7 @@ func (m *mockStorage) GetProjectByName(name string) (*models.Project, error) {
 	return nil, errors.New("project not found")
 }
 
-func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
+func (m *mockStorage) GetNextDisplayID(ctx context.Context, projectID string) (string, error) {
 	project, exists := m.projects[projectID]
 	if !exists {
 		return "", errors.New("project not found")
@@ -154,7 +154,7 @@ func (m *mockStorage) GetNextDisplayID(projectID string) (string, error) {
 	return project.DisplayPrefix + "-1", nil
 }
 
-func (m *mockStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.Project, error) {
+func (m *mockStorage) GetProjectByDisplayPrefix(ctx context.Context, displayPrefix string) (*models.Project, error) {
 	for _, project := range m.projects {
 		if project.DisplayPrefix == displayPrefix {
 			return project, nil
@@ -163,7 +163,7 @@ func (m *mockStorage) GetProjectByDisplayPrefix(displayPrefix string) (*models.P
 	return nil, errors.New("project not found")
 }
 
-func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error) {
+func (m *mockStorage) GetTaskByDisplayID(ctx context.Context, displayID string) (*models.Task, error) {
 	for _, task := range m.tasks {
 		if task.DisplayID == displayID {
 			return task, nil
@@ -172,12 +172,12 @@ func (m *mockStorage) GetTaskByDisplayID(displayID string) (*models.Task, error)
 	return nil, errors.New("task not found")
 }
 
-func (m *mockStorage) TaskExists(id string) bool {
+func (m *mockStorage) TaskExists(ctx context.Context, id string) bool {
 	_, exists := m.tasks[id]
 	return exists
 }
 
-func (m *mockStorage) ProjectExists(id string) bool {
+func (m *mockStorage) ProjectExists(ctx context.Context, id string) bool {
 	_, exists := m.projects[id]
 	return exists
 }
@@ -185,6 +185,18 @@ func (m *mockStorage) ProjectExists(id string) bool {
 func (m *mockStorage) Close() error {
 	return nil
 }
+
+// Tenant operations - stubs for interface compliance
+func (m *mockStorage) CreateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
+func (m *mockStorage) GetTenant(ctx context.Context, id string) (*models.Tenant, error) {
+	return nil, nil
+}
+func (m *mockStorage) UpdateTenant(ctx context.Context, tenant *models.Tenant) error { return nil }
+func (m *mockStorage) DeleteTenant(ctx context.Context, id string) error             { return nil }
+func (m *mockStorage) ListTenants(ctx context.Context, limit, offset int) ([]*models.Tenant, int, error) {
+	return nil, 0, nil
+}
+func (m *mockStorage) TenantExists(ctx context.Context, id string) bool { return false }
 
 func TestMCPServer_Initialize(t *testing.T) {
 	storage := newMockStorage()
@@ -281,7 +293,7 @@ func TestMCPServer_ListTasks(t *testing.T) {
 
 	// Create a test task
 	task := models.NewTask("Test Task", "Test Description")
-	storage.CreateTask(task)
+	storage.CreateTask(context.Background(), task)
 
 	args := map[string]interface{}{}
 	result, err := server.handleListTasks(args)
