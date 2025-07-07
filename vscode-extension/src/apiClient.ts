@@ -17,8 +17,7 @@ export interface Task {
 	started_at?: string;
 }
 
-export interface HierarchyTask {
-	task: Task;
+export interface HierarchyTask extends Task {
 	child_tasks: HierarchyTask[];
 }
 
@@ -58,7 +57,14 @@ export class ProjectFlowApiClient {
 	private apiKey?: string;
 
 	constructor() {
+		console.log('[ProjectFlowApiClient] Constructor called');
 		this.updateConfiguration();
+		console.log('[ProjectFlowApiClient] Initial configuration loaded:', {
+			baseUrl: this.baseUrl,
+			project: this.project,
+			hasApiKey: !!this.apiKey
+		});
+		
 		this.client = axios.create({
 			baseURL: this.baseUrl,
 			timeout: 10000,
@@ -66,6 +72,7 @@ export class ProjectFlowApiClient {
 				'Content-Type': 'application/json',
 			},
 		});
+		console.log('[ProjectFlowApiClient] HTTP client created with baseURL:', this.baseUrl);
 
 		// Add request interceptor for authentication
 		this.client.interceptors.request.use((config) => {
@@ -79,20 +86,33 @@ export class ProjectFlowApiClient {
 		this.client.interceptors.response.use(
 			(response) => response,
 			(error) => {
-				console.error('ProjectFlow API Error:', error);
+				console.error('[ProjectFlowApiClient] HTTP request failed:', error);
 				return Promise.reject(error);
 			}
 		);
+		
+		console.log('[ProjectFlowApiClient] Constructor completed');
 	}
 
 	public updateConfiguration(): void {
 		const config = vscode.workspace.getConfiguration('projectflow');
+		const oldBaseUrl = this.baseUrl;
+		const oldProject = this.project;
+		const oldApiKey = this.apiKey;
+		
 		this.baseUrl = config.get<string>('serverUrl', 'http://localhost:16191');
 		this.project = config.get<string>('project', 'PF');
 		this.apiKey = config.get<string>('apiKey');
 
+		console.log('[ProjectFlowApiClient] Configuration updated:', {
+			serverUrl: { old: oldBaseUrl, new: this.baseUrl },
+			project: { old: oldProject, new: this.project },
+			hasApiKey: { old: !!oldApiKey, new: !!this.apiKey }
+		});
+
 		if (this.client) {
 			this.client.defaults.baseURL = this.baseUrl;
+			console.log('[ProjectFlowApiClient] HTTP client baseURL updated to:', this.baseUrl);
 		}
 	}
 
@@ -117,10 +137,27 @@ export class ProjectFlowApiClient {
 
 	async getTaskHierarchy(): Promise<HierarchyTask[]> {
 		try {
+			console.log('[ProjectFlowApiClient] Requesting task hierarchy for project:', this.project);
+			console.log('[ProjectFlowApiClient] Request URL:', `${this.baseUrl}/api/hierarchy?project_id=${this.project}`);
+			
 			// Include project filtering in the hierarchy request
 			const response = await this.client.get<HierarchyTask[]>(`/api/hierarchy?project_id=${this.project}`);
+			
+			console.log('[ProjectFlowApiClient] Task hierarchy response status:', response.status);
+			console.log('[ProjectFlowApiClient] Task hierarchy response data length:', response.data.length);
+			console.log('[ProjectFlowApiClient] Task hierarchy response data:', JSON.stringify(response.data, null, 2));
+			
 			return response.data;
 		} catch (error) {
+			console.error('[ProjectFlowApiClient] Error fetching task hierarchy:', error);
+			if (axios.isAxiosError(error)) {
+				console.error('[ProjectFlowApiClient] Axios error details:', {
+					status: error.response?.status,
+					statusText: error.response?.statusText,
+					data: error.response?.data,
+					headers: error.response?.headers
+				});
+			}
 			throw this.handleError(error, 'Failed to fetch task hierarchy');
 		}
 	}
@@ -175,9 +212,22 @@ export class ProjectFlowApiClient {
 
 	async getConnectionStatus(): Promise<{ connected: boolean; error?: string }> {
 		try {
+			console.log('[ProjectFlowApiClient] Checking connection to:', this.baseUrl);
 			const response = await this.client.get('/health');
+			console.log('[ProjectFlowApiClient] Health check response status:', response.status);
+			console.log('[ProjectFlowApiClient] Health check response data:', response.data);
 			return { connected: response.status === 200 };
 		} catch (error) {
+			console.error('[ProjectFlowApiClient] Health check failed:', error);
+			if (axios.isAxiosError(error)) {
+				console.error('[ProjectFlowApiClient] Health check axios error details:', {
+					status: error.response?.status,
+					statusText: error.response?.statusText,
+					data: error.response?.data,
+					code: error.code,
+					message: error.message
+				});
+			}
 			return { 
 				connected: false, 
 				error: this.handleError(error, 'Connection failed').message 

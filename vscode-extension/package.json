@@ -30,8 +30,7 @@
       "explorer": [
         {
           "id": "projectflow-tasks",
-          "name": "ProjectFlow Tasks",
-          "when": "config.projectflow.enabled"
+          "name": "ProjectFlow Tasks"
         }
       ]
     },

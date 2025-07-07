@@ -6,37 +6,46 @@ let taskProvider: ProjectFlowTaskProvider;
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('ProjectFlow extension is now active!');
+	console.log('[ProjectFlow Extension] Activation starting...');
 
 	// Initialize the API client
 	const apiClient = new ProjectFlowApiClient();
+	console.log('[ProjectFlow Extension] API client initialized');
 
 	// Create status bar item
 	statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	statusBarItem.command = 'projectflow.checkConnection';
 	context.subscriptions.push(statusBarItem);
+	console.log('[ProjectFlow Extension] Status bar item created');
 
 	// Check initial connection
+	console.log('[ProjectFlow Extension] Checking initial connection...');
 	updateConnectionStatus(apiClient);
 
 	// Create the task provider
+	console.log('[ProjectFlow Extension] Creating task provider...');
 	taskProvider = new ProjectFlowTaskProvider(apiClient);
 
 	// Register the tree data provider
+	console.log('[ProjectFlow Extension] Registering tree data provider...');
 	const treeView = vscode.window.createTreeView('projectflow-tasks', {
 		treeDataProvider: taskProvider,
 		showCollapseAll: true
 	});
+	console.log('[ProjectFlow Extension] Tree view created successfully');
 
 	// Show welcome message when view is first opened
 	treeView.onDidChangeVisibility((e) => {
+		console.log('[ProjectFlow Extension] Tree view visibility changed:', e.visible);
 		if (e.visible) {
+			console.log('[ProjectFlow Extension] Tree view now visible, updating connection status...');
 			updateConnectionStatus(apiClient);
 		}
 	});
 
 	// Register commands
 	const refreshCommand = vscode.commands.registerCommand('projectflow.refreshTasks', () => {
+		console.log('[ProjectFlow Extension] Refresh tasks command triggered');
 		taskProvider.refresh();
 	});
 
@@ -255,11 +264,15 @@ export function activate(context: vscode.ExtensionContext) {
 	// Watch for configuration changes
 	vscode.workspace.onDidChangeConfiguration(event => {
 		if (event.affectsConfiguration('projectflow')) {
+			console.log('[ProjectFlow Extension] Configuration changed, updating API client and refreshing tasks');
 			// Update API client configuration when ProjectFlow settings change
 			apiClient.updateConfiguration();
 			taskProvider.refresh();
 		}
 	});
+
+	console.log('[ProjectFlow Extension] Activation completed successfully');
+	console.log('[ProjectFlow Extension] All commands and providers registered');
 }
 
 export function deactivate() {
@@ -270,15 +283,20 @@ export function deactivate() {
 }
 
 async function updateConnectionStatus(apiClient: ProjectFlowApiClient) {
+	console.log('[ProjectFlow Extension] Updating connection status...');
 	const status = await apiClient.getConnectionStatus();
+	console.log('[ProjectFlow Extension] Connection status result:', status);
+	
 	if (status.connected) {
 		statusBarItem.text = `$(check) ProjectFlow`;
 		statusBarItem.tooltip = `Connected to ${apiClient.getServerUrl()}`;
 		statusBarItem.backgroundColor = undefined;
+		console.log('[ProjectFlow Extension] Status bar updated: Connected');
 	} else {
 		statusBarItem.text = `$(error) ProjectFlow`;
 		statusBarItem.tooltip = `Disconnected: ${status.error}`;
 		statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+		console.log('[ProjectFlow Extension] Status bar updated: Disconnected -', status.error);
 	}
 	statusBarItem.show();
 }
