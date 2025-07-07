@@ -1,0 +1,170 @@
+{
+  "name": "projectflow",
+  "displayName": "ProjectFlow",
+  "description": "VS Code extension for ProjectFlow task management with hierarchical tree view",
+  "version": "0.1.0",
+  "publisher": "aykay76",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aykay76/projectflow.git",
+    "directory": "vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "task management",
+    "project management",
+    "hierarchy",
+    "productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "projectflow-tasks",
+          "name": "ProjectFlow Tasks"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "projectflow.refreshTasks",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectflow.createTask",
+        "title": "Create Task",
+        "icon": "$(add)"
+      },
+      {
+        "command": "projectflow.editTask",
+        "title": "Edit Task"
+      },
+      {
+        "command": "projectflow.deleteTask",
+        "title": "Delete Task"
+      },
+      {
+        "command": "projectflow.markTaskComplete",
+        "title": "Mark Complete"
+      },
+      {
+        "command": "projectflow.markTaskInProgress",
+        "title": "Mark In Progress"
+      },
+      {
+        "command": "projectflow.openTask",
+        "title": "Open Task Details"
+      },
+      {
+        "command": "projectflow.checkConnection",
+        "title": "Check Connection",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "projectflow.switchProject",
+        "title": "Switch Project",
+        "icon": "$(folder)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "projectflow.refreshTasks",
+          "when": "view == projectflow-tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "projectflow.createTask",
+          "when": "view == projectflow-tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "projectflow.switchProject",
+          "when": "view == projectflow-tasks",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "projectflow.editTask",
+          "when": "view == projectflow-tasks && viewItem == task"
+        },
+        {
+          "command": "projectflow.markTaskComplete",
+          "when": "view == projectflow-tasks && viewItem == task"
+        },
+        {
+          "command": "projectflow.markTaskInProgress",
+          "when": "view == projectflow-tasks && viewItem == task"
+        },
+        {
+          "command": "projectflow.deleteTask",
+          "when": "view == projectflow-tasks && viewItem == task"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ProjectFlow",
+      "properties": {
+        "projectflow.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ProjectFlow extension"
+        },
+        "projectflow.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:16191",
+          "description": "ProjectFlow server URL"
+        },
+        "projectflow.project": {
+          "type": "string",
+          "default": "PF",
+          "description": "Default project ID"
+        },
+        "projectflow.apiKey": {
+          "type": "string",
+          "description": "API key for authentication (optional)"
+        },
+        "projectflow.refreshInterval": {
+          "type": "number",
+          "default": 30000,
+          "description": "Auto-refresh interval in milliseconds (0 to disable)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "@vscode/vsce": "^2.15.0",
+    "eslint": "^8.28.0",
+    "mocha": "^11.7.1",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
