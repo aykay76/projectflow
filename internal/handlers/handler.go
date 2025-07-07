@@ -89,12 +89,25 @@ func (h *Handler) HandleHierarchy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hierarchyTasks, err := h.storage.GetTaskHierarchy(context.Background())
+	ctx := r.Context()
+	requestID := middleware.GetRequestID(ctx)
+
+	// Get project_id from query parameters, default to "PF" for backwards compatibility
+	projectID := r.URL.Query().Get("project_id")
+	if projectID == "" {
+		projectID = "PF"
+	}
+
+	logger.InfoContext(ctx, "Getting task hierarchy", "project_id", projectID, "request_id", requestID)
+
+	hierarchyTasks, err := h.storage.GetTaskHierarchyByProject(context.Background(), projectID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get task hierarchy", "error", err, "project_id", projectID, "request_id", requestID)
 		http.Error(w, "Failed to get task hierarchy", http.StatusInternalServerError)
 		return
 	}
 
+	logger.InfoContext(ctx, "Task hierarchy loaded successfully", "count", len(hierarchyTasks), "project_id", projectID, "request_id", requestID)
 	json.NewEncoder(w).Encode(hierarchyTasks)
 }
 

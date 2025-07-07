@@ -194,7 +194,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (status.connected) {
 			vscode.window.showInformationMessage(`Connected to ProjectFlow at ${apiClient.getServerUrl()}`);
 		} else {
-			vscode.window.showErrorMessage(`Failed to connect to ProjectFlow: ${status.error}`);
+			vscode.window.showErrorMessage(`Failed to connect to ProjectFlow at ${apiClient.getServerUrl()}: ${status.error}`);
 		}
 	});
 
@@ -255,6 +255,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// Watch for configuration changes
 	vscode.workspace.onDidChangeConfiguration(event => {
 		if (event.affectsConfiguration('projectflow')) {
+			// Update API client configuration when ProjectFlow settings change
+			apiClient.updateConfiguration();
 			taskProvider.refresh();
 		}
 	});

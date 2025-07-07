@@ -60,6 +60,7 @@ export class ProjectFlowApiClient {
 	constructor() {
 		this.updateConfiguration();
 		this.client = axios.create({
+			baseURL: this.baseUrl,
 			timeout: 10000,
 			headers: {
 				'Content-Type': 'application/json',
@@ -106,7 +107,8 @@ export class ProjectFlowApiClient {
 
 	async getTasks(): Promise<Task[]> {
 		try {
-			const response = await this.client.get<Task[]>('/api/tasks');
+			// Include project filtering in the tasks request
+			const response = await this.client.get<Task[]>(`/api/tasks?project_id=${this.project}`);
 			return response.data;
 		} catch (error) {
 			throw this.handleError(error, 'Failed to fetch tasks');
@@ -115,7 +117,8 @@ export class ProjectFlowApiClient {
 
 	async getTaskHierarchy(): Promise<HierarchyTask[]> {
 		try {
-			const response = await this.client.get<HierarchyTask[]>('/api/hierarchy');
+			// Include project filtering in the hierarchy request
+			const response = await this.client.get<HierarchyTask[]>(`/api/hierarchy?project_id=${this.project}`);
 			return response.data;
 		} catch (error) {
 			throw this.handleError(error, 'Failed to fetch task hierarchy');

@@ -20,9 +20,19 @@ export class ProjectFlowTaskProvider implements vscode.TreeDataProvider<TaskItem
 			// Root level - get hierarchy
 			try {
 				const hierarchy = await this.apiClient.getTaskHierarchy();
-				return hierarchy.map(item => this.createTaskItem(item.task, item.child_tasks));
+				return hierarchy.map(item => {
+					try {
+						return this.createTaskItem(item.task, item.child_tasks);
+					} catch (error) {
+						console.error('Error creating task item:', error);
+						// Skip malformed tasks but log the issue
+						return null;
+					}
+				}).filter(item => item !== null) as TaskItem[];
 			} catch (error) {
-				vscode.window.showErrorMessage(`Failed to load tasks: ${error}`);
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.error('Failed to load task hierarchy:', error);
+				vscode.window.showErrorMessage(`Failed to load tasks: ${errorMessage}`);
 				return [];
 			}
 		} else {
@@ -32,6 +42,12 @@ export class ProjectFlowTaskProvider implements vscode.TreeDataProvider<TaskItem
 	}
 
 	private createTaskItem(task: Task, childTasks?: HierarchyTask[]): TaskItem {
+		// Add defensive check for task and required properties
+		if (!task || !task.title) {
+			console.error('Invalid task object:', task);
+			throw new Error(`Invalid task: missing required properties. Task: ${JSON.stringify(task)}`);
+		}
+
 		const hasChildren = childTasks && childTasks.length > 0;
 		const item = new TaskItem(
 			task.title,
@@ -64,7 +80,15 @@ export class ProjectFlowTaskProvider implements vscode.TreeDataProvider<TaskItem
 
 		// Add children if they exist
 		if (hasChildren) {
-			item.children = childTasks!.map(child => this.createTaskItem(child.task, child.child_tasks));
+			item.children = childTasks!.map(child => {
+				try {
+					return this.createTaskItem(child.task, child.child_tasks);
+				} catch (error) {
+					console.error('Error creating child task item:', error);
+					// Skip malformed child tasks
+					return null;
+				}
+			}).filter(item => item !== null) as TaskItem[];
 		}
 
 		return item;

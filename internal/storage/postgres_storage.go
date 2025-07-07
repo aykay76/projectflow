@@ -762,6 +762,39 @@ func (ps *PostgresStorage) GetTaskHierarchy(ctx context.Context) ([]*models.Hier
 	return rootTasks, nil
 }
 
+// GetTaskHierarchyByProject returns all tasks organized in hierarchical structure for a specific project
+func (ps *PostgresStorage) GetTaskHierarchyByProject(ctx context.Context, projectID string) ([]*models.HierarchyTask, error) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	// Get tasks for specific project using the public method without locking
+	// Temporarily unlock to call the public method, then relock
+	ps.mu.RUnlock()
+	tasks, err := ps.ListTasks(ctx, projectID)
+	ps.mu.RLock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map for quick lookup
+	taskMap := make(map[string]*models.Task)
+	for _, task := range tasks {
+		taskMap[task.ID] = task
+	}
+
+	// Build the hierarchy by finding root tasks (no parent) and recursively building children
+	var rootTasks []*models.HierarchyTask
+	for _, task := range tasks {
+		if task.ParentID == "" {
+			hierarchyTask := ps.buildHierarchyTask(task, taskMap)
+			rootTasks = append(rootTasks, hierarchyTask)
+		}
+	}
+
+	return rootTasks, nil
+}
+
 // TaskExists checks if a task exists
 func (ps *PostgresStorage) TaskExists(ctx context.Context, id string) bool {
 	ps.mu.RLock()

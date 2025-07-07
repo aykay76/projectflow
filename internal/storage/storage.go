@@ -21,6 +21,7 @@ type Storage interface {
 	GetTaskChildren(ctx context.Context, parentID string) ([]*models.Task, error)
 	GetTaskParent(ctx context.Context, childID string) (*models.Task, error)
 	GetTaskHierarchy(ctx context.Context) ([]*models.HierarchyTask, error)
+	GetTaskHierarchyByProject(ctx context.Context, projectID string) ([]*models.HierarchyTask, error)
 
 	// Project operations
 
